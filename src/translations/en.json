@@ -17,7 +17,7 @@
   "services": "Services",
   "contact": "Contact",
   "language": "Language",
-  "home": "[en:home]",
+  "home": "home",
   "name": "Full Name",
   "phone": "Phone Number",
   "select_date": "Select a date",

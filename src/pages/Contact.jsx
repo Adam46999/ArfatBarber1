@@ -58,13 +58,13 @@ function Contact() {
 
         {/* Social Media */}
         <div className="flex justify-center gap-6 text-2xl text-gold" data-aos="fade-up" data-aos-delay="300">
-          <a href="https://instagram.com" target="_blank" rel="noreferrer" className="hover:text-white transition">
+          <a href="https://www.instagram.com/arafat_barber/" target="_blank" rel="noreferrer" className="hover:text-white transition">
             <FaInstagram />
           </a>
           <a href="https://facebook.com" target="_blank" rel="noreferrer" className="hover:text-white transition">
             <FaFacebook />
           </a>
-          <a href="https://tiktok.com" target="_blank" rel="noreferrer" className="hover:text-white transition">
+          <a href="https://www.tiktok.com/@arfatbarber?_t=ZS-8wPoMn00kvX&_r=1" target="_blank" rel="noreferrer" className="hover:text-white transition">
             <FaTiktok />
           </a>
         </div>

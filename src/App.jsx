@@ -1,4 +1,4 @@
-import Header from "./components/Header";
+import Header from "./components/layout/Header";
 import AppRoutes from "./routes";
 import "./i18n";
 import { useTranslation } from "react-i18next";

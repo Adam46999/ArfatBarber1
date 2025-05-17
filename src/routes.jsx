@@ -1,7 +1,7 @@
 import { Routes, Route } from 'react-router-dom';
 import Home from './pages/Home';
 import BookingIntro from './pages/BookingIntro'; // أضف هذا السطر
-import BookingForm from './components/BookingForm';
+import BookingForm from "./components/booking/BookingForm";
 import NotFound from './pages/NotFound';
 import About from './pages/About';
 import Contact from './pages/Contact';

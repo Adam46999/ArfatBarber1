@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
 import { useTranslation } from "react-i18next";
+import DateSelector from "./DateSelector";
+import TimeSlots from "./TimeSlots";
+import ServiceSelector from "./ServiceSelector";
 
 const workingHours = {
   Sunday: null,
@@ -27,7 +28,7 @@ const generateTimeSlots = (from, to) => {
   while (current <= end) {
     const time = current.toTimeString().slice(0, 5);
     slots.push(time);
-    current.setMinutes(current.getMinutes() + 60);
+    current.setMinutes(current.getMinutes() + 30);
   }
 
   return slots;
@@ -76,7 +77,7 @@ function BookingForm() {
   };
 
   return (
-<section className={`min-h-screen bg-[#1e1e1e] text-light ${fontClass} flex items-center justify-center py-16 px-4`}>
+    <section className={`min-h-screen bg-[#1e1e1e] text-light ${fontClass} flex items-center justify-center py-16 px-4`}>
       <div
         className="w-full max-w-xl p-8 bg-white text-darkText rounded-lg shadow-lg"
         data-aos="fade-up"
@@ -112,51 +113,34 @@ function BookingForm() {
               className="w-full border border-gray-300 p-3 rounded-md"
             />
 
-            <DatePicker
-              selected={form.date}
+            <DateSelector
+              selectedDate={form.date}
               onChange={(date) => setForm({ ...form, date, time: "" })}
-              dateFormat="yyyy-MM-dd"
-              minDate={new Date()}
-              className="w-full border border-gray-300 p-3 rounded-md"
-              placeholderText={t("select_date") || "Select a date"}
-              required
+              placeholder={t("select_date") || "Select a date"}
             />
 
             {form.date && availableTimes.length > 0 ? (
-              <div className="grid grid-cols-3 gap-2">
-                {availableTimes.map((time) => (
-                  <button
-                    type="button"
-                    key={time}
-                    onClick={() => setForm({ ...form, time })}
-                    className={`p-2 border rounded-md text-sm font-semibold transition duration-200 ${
-                      form.time === time
-                        ? "bg-primary text-light"
-                        : "bg-gray-100 hover:bg-gray-200"
-                    }`}
-                  >
-                    {time}
-                  </button>
-                ))}
-              </div>
+              <TimeSlots
+                availableTimes={availableTimes}
+                selectedTime={form.time}
+                onSelect={(time) => setForm({ ...form, time })}
+              />
             ) : form.date ? (
               <p className="text-red-500 text-sm">
                 ❌ {t("no_hours") || "No available hours for this day (Closed)."}
               </p>
             ) : null}
 
-            <select
-              name="service"
+            <ServiceSelector
               value={form.service}
               onChange={handleChange}
-              required
-              className="w-full border border-gray-300 p-3 rounded-md"
-            >
-              <option value="">{t("choose_service") || "Choose a Service"}</option>
-              <option value="Haircut">{t("service_haircut") || "Haircut"}</option>
-              <option value="Beard Trim">{t("service_beard") || "Beard Trim"}</option>
-              <option value="Haircut & Beard">{t("service_combo") || "Haircut & Beard"}</option>
-            </select>
+              options={{
+                placeholder: t("choose_service") || "Choose a Service",
+                haircut: t("service_haircut") || "Haircut",
+                beard: t("service_beard") || "Beard Trim",
+                combo: t("service_combo") || "Haircut & Beard",
+              }}
+            />
 
             <button
               type="submit"
