@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useState } from "react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay, Thumbs } from "swiper/modules";
@@ -17,15 +18,15 @@ const images = [
 
 function InstagramSlider() {
   const [thumbsSwiper, setThumbsSwiper] = useState(null);
+  const { t } = useTranslation();
 
   return (
     <section className="bg-gray-50 py-20 px-4 md:px-16 text-center">
       <div className="max-w-5xl mx-auto bg-white rounded-2xl shadow-xl p-8 md:p-12">
         <h2 className="text-3xl md:text-4xl font-heading font-bold text-gold mb-10">
-          قصّات من لمساتنا
+          {t("slider_title") || "Cuts from our hands"}
         </h2>
 
-        {/* السلايدر الرئيسي */}
         <div className="rounded-xl overflow-hidden shadow-md">
           <Swiper
             modules={[Autoplay, Thumbs]}
@@ -48,7 +49,6 @@ function InstagramSlider() {
           </Swiper>
         </div>
 
-        {/* الصور المصغّرة */}
         <div className="mt-6">
           <Swiper
             modules={[Thumbs]}

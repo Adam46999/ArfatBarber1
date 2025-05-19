@@ -6,14 +6,16 @@ function LanguageSwitcher() {
   const changeLanguage = (lng) => {
     i18n.changeLanguage(lng);
     document.documentElement.dir = lng === "ar" || lng === "he" ? "rtl" : "ltr";
+    document.documentElement.lang = lng;
+    localStorage.setItem("lang", lng);
   };
 
   return (
     <div className="relative">
       <select
         onChange={(e) => changeLanguage(e.target.value)}
-        defaultValue={i18n.language}
-        className="bg-gray-800 text-white px-2 py-1 rounded text-sm"
+        value={i18n.language}
+        className="bg-white text-primary px-3 py-2 rounded-md border text-sm shadow focus:outline-none"
       >
         <option value="en">English</option>
         <option value="ar">عربي</option>

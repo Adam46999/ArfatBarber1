@@ -1,6 +1,13 @@
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { FaWhatsapp, FaPhone, FaEnvelope, FaInstagram, FaFacebook, FaTiktok } from "react-icons/fa";
+import {
+  FaWhatsapp,
+  FaPhone,
+  FaEnvelope,
+  FaInstagram,
+  FaFacebook,
+  FaTiktok,
+} from "react-icons/fa";
 import AOS from "aos";
 import "aos/dist/aos.css";
 
@@ -22,7 +29,7 @@ function Contact() {
         <div data-aos="fade-up" className="mb-10 rounded-xl overflow-hidden shadow-lg">
           <iframe
             title="Location"
-            src="https://www.google.com/maps/embed?pb=!1m18!..." // 🔁 ضع هنا الرابط الدقيق
+            src="https://www.google.com/maps/embed?pb=..." // ضع رابطك الحقيقي
             width="100%"
             height="350"
             style={{ border: 0 }}
@@ -32,7 +39,7 @@ function Contact() {
           ></iframe>
         </div>
 
-        {/* Action Buttons */}
+        {/* أزرار التواصل */}
         <div className="grid md:grid-cols-3 gap-6 mb-12" data-aos="fade-up" data-aos-delay="200">
           <a
             href="https://wa.me/9725XXXXXXXX"
@@ -52,12 +59,16 @@ function Contact() {
             href="mailto:info@arfatbarber.com"
             className="bg-rose-600 hover:bg-rose-700 text-white py-3 rounded-lg font-semibold flex items-center justify-center gap-2 transition"
           >
-            <FaEnvelope /> Email
+            <FaEnvelope /> {t("email") || "Email"}
           </a>
         </div>
 
-        {/* Social Media */}
-        <div className="flex justify-center gap-6 text-2xl text-gold" data-aos="fade-up" data-aos-delay="300">
+        {/* شبكات التواصل */}
+        <div
+          className="flex justify-center gap-6 text-2xl text-gold"
+          data-aos="fade-up"
+          data-aos-delay="300"
+        >
           <a href="https://www.instagram.com/arafat_barber/" target="_blank" rel="noreferrer" className="hover:text-white transition">
             <FaInstagram />
           </a>

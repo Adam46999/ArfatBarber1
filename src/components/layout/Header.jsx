@@ -2,6 +2,8 @@ import { useTranslation } from "react-i18next";
 import LanguageSwitcher from "./LanguageSwitcher";
 import { Link } from "react-router-dom";
 import { useState } from "react";
+import logo from "../../assets/arfatblacklogo.png"; // ✅ المسار الصحيح
+
 
 function Header() {
   const { t, i18n } = useTranslation();
@@ -14,9 +16,14 @@ function Header() {
     <header className={`bg-primary text-light shadow-md fixed top-0 left-0 w-full z-50 ${fontClass}`}>
       <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
         {/* Logo */}
-        <Link to="/" className="text-2xl md:text-3xl font-bold tracking-wide text-gold">
-          Arfat Barber
-        </Link>
+        <Link to="/" className="flex items-center gap-3 text-2xl md:text-3xl font-bold tracking-wide text-gold">
+  <img
+    src={logo}
+    alt="Arfat Barber Logo"
+    className="w-10 h-10 md:w-12 md:h-12 object-contain rounded-full"
+  />
+  Arfat Barber
+</Link>
 
         {/* Desktop Navigation */}
 <nav className="hidden md:flex gap-x-10 items-center text-lg font-heading tracking-wide px-2">

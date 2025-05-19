@@ -15,11 +15,15 @@ i18n
   .use(initReactI18next)
   .init({
     resources,
-    lng: 'en',
-    fallbackLng: 'en',
-    interpolation: {
-      escapeValue: false,
-    },
+    lng: localStorage.getItem("lang") || "en",
+    fallbackLng: "en",
+    interpolation: { escapeValue: false },
   });
+
+i18n.on('languageChanged', (lng) => {
+  document.documentElement.dir = lng === 'ar' || lng === 'he' ? 'rtl' : 'ltr';
+  document.documentElement.lang = lng;
+  localStorage.setItem("lang", lng);
+});
 
 export default i18n;
