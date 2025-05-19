@@ -34,12 +34,13 @@ function HeroSection() {
           {t("hero_subtitle") ||
             "There is a distinction between a beauty salon and a hair salon."}
         </p>
-        <Link
-          to="/booking-form"
-          className="bg-gold hover:bg-yellow-400 text-primary font-semibold px-6 py-3 rounded shadow-md transition"
-        >
-          {t("book_now") || "Book Now"}
-        </Link>
+        <a
+  href="#booking"
+  className="bg-gold hover:bg-yellow-400 text-primary font-semibold px-6 py-3 rounded shadow-md transition"
+>
+  {t("book_now") || "Book Now"}
+</a>
+
       </div>
     </section>
   );

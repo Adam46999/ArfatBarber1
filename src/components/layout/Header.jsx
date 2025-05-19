@@ -28,12 +28,13 @@ function Header() {
 
         {/* Right side: Book + Language */}
         <div className="hidden md:flex items-center gap-4">
-          <Link
-            to="/booking-form"
-            className="bg-gold text-primary font-semibold px-4 py-2 rounded hover:bg-darkText hover:text-light transition"
-          >
-            {t("book_now")}
-          </Link>
+          <a
+  href="#booking"
+  className="bg-gold text-primary font-semibold px-4 py-2 rounded hover:bg-darkText hover:text-light transition"
+>
+  {t("book_now")}
+</a>
+
           <LanguageSwitcher />
         </div>
 
