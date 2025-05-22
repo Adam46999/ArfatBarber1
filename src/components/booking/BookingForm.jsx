@@ -138,7 +138,6 @@ function BookingForm() {
                 placeholder: t("choose_service") || "Choose a Service",
                 haircut: t("service_haircut") || "Haircut",
                 beard: t("service_beard") || "Beard Trim",
-                combo: t("service_combo") || "Haircut & Beard",
               }}
             />
 

@@ -5,9 +5,8 @@ import {
   FaFacebook,
   FaTiktok,
   FaPhone,
-  FaWaze,
 } from "react-icons/fa";
-import { BiMap } from "react-icons/bi"; // أيقونة خرائط ناعمة
+import { SiWaze } from "react-icons/si"; // ✅ أيقونة Waze
 import AOS from "aos";
 import "aos/dist/aos.css";
 
@@ -17,7 +16,10 @@ function ContactSection() {
   const fontClass = isRTL ? "font-ar" : "font-body";
 
   useEffect(() => {
-    AOS.init({ duration: 1000 });
+    AOS.init({
+      duration: 1000,
+      once: true, // ✅ مهم لظهور العناصر دائمًا حتى بدون scroll
+    });
   }, []);
 
   return (
@@ -37,7 +39,7 @@ function ContactSection() {
         className="flex items-center justify-center gap-2 text-gold hover:text-white transition text-lg mb-2"
         data-aos="fade-up"
       >
-        <BiMap size={22} />
+        <SiWaze size={22} className="text-gold" />
         {t("address") || "Ba'aneh - Ghaddara Street"}
       </a>
 

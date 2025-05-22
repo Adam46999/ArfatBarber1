@@ -126,7 +126,6 @@ function BookingSection() {
                 {[
                   { id: "haircut", label: t("service_haircut") },
                   { id: "beard", label: t("service_beard") },
-                  { id: "combo", label: t("service_combo") },
                 ].map((service) => (
                   <button
                     key={service.id}

@@ -14,9 +14,13 @@ import "aos/dist/aos.css";
 function Contact() {
   const { t } = useTranslation();
 
-  useEffect(() => {
-    AOS.init({ duration: 1000 });
-  }, []);
+ useEffect(() => {
+  AOS.init({
+    duration: 1000,
+    once: true,
+  });
+}, []);
+
 
   return (
     <section className="min-h-screen bg-primary text-light px-6 py-20 font-body">
@@ -42,7 +46,7 @@ function Contact() {
         {/* أزرار تواصل مباشرة */}
         <div className="grid md:grid-cols-3 gap-6 mb-12" data-aos="fade-up" data-aos-delay="100">
           <a
-            href="https://wa.me/9725XXXXXXXX"
+            href="https://wa.me/972549896985"
             target="_blank"
             rel="noopener noreferrer"
             className="bg-gold text-primary hover:bg-darkText hover:text-light py-3 rounded-lg font-semibold flex items-center justify-center gap-2 transition-all duration-300 shadow"
@@ -50,7 +54,7 @@ function Contact() {
             <FaWhatsapp /> WhatsApp
           </a>
           <a
-            href="tel:+9725XXXXXXXX"
+            href="tel:+972549896985"
             className="bg-gold text-primary hover:bg-darkText hover:text-light py-3 rounded-lg font-semibold flex items-center justify-center gap-2 transition-all duration-300 shadow"
           >
             <FaPhone /> {t("call") || "Call"}
