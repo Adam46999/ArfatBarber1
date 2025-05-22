@@ -57,6 +57,22 @@ function BookingSection() {
       <div className="max-w-xl mx-auto">
         <h2 className="text-4xl font-bold mb-8 text-center text-gold">{t("book_now")}</h2>
 
+        {/* ✅ صندوق ساعات العمل يظهر دائمًا */}
+        <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-md mb-6">
+          <h3 className="text-lg font-bold text-gold mb-2 flex items-center gap-2">
+            <span>🕒</span> {t("working_hours") || "ساعات العمل"}
+          </h3>
+          <ul className="text-sm text-gray-700 leading-relaxed font-medium">
+            <li>الأحد: مغلق</li>
+            <li>الإثنين: 12:00 - 21:00</li>
+            <li>الثلاثاء: 12:00 - 21:00</li>
+            <li>الأربعاء: 12:00 - 21:00</li>
+            <li>الخميس: 12:00 - 22:00</li>
+            <li>الجمعة: 13:00 - 23:30</li>
+            <li>السبت: 11:00 - 19:30</li>
+          </ul>
+        </div>
+
         <div className="bg-white shadow-xl rounded-2xl p-8 space-y-6 border border-gray-100">
           {submitted && (
             <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg text-center">
