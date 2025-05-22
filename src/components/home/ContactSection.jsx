@@ -1,33 +1,88 @@
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import {
+  FaInstagram,
+  FaFacebook,
+  FaTiktok,
+  FaPhone,
+  FaWaze,
+} from "react-icons/fa";
+import { BiMap } from "react-icons/bi"; // أيقونة خرائط ناعمة
 import AOS from "aos";
 import "aos/dist/aos.css";
-import { Link } from "react-router-dom";
 
 function ContactSection() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isRTL = i18n.language === "ar" || i18n.language === "he";
+  const fontClass = isRTL ? "font-ar" : "font-body";
 
   useEffect(() => {
     AOS.init({ duration: 1000 });
   }, []);
 
   return (
-    <section className="py-20 px-6 md:px-20 bg-primary text-white text-center font-body">
-      <h2 className="text-3xl md:text-4xl font-heading font-bold mb-6 text-gold" data-aos="fade-up">
+    <section className={`py-20 px-6 md:px-20 bg-primary text-white text-center ${fontClass}`}>
+      <h2
+        className="text-3xl md:text-4xl font-heading font-bold mb-6 text-gold"
+        data-aos="fade-up"
+      >
         {t("contact") || "Contact Us"}
       </h2>
 
-      <p className="mb-2" data-aos="fade-up" data-aos-delay="100">📍 123 Barber Street, City</p>
-      <p className="mb-2" data-aos="fade-up" data-aos-delay="200">📞 +123 456 7890</p>
-      <p className="mb-6" data-aos="fade-up" data-aos-delay="300">✉️ info@arfatbarber.com</p>
-
-      <Link
-        to="/booking-form"
-        className="inline-block bg-gold hover:bg-yellow-400 text-primary font-semibold px-6 py-3 rounded shadow-md transition"
-        data-aos="zoom-in"
+      {/* ✅ الموقع مع رابط Waze */}
+      <a
+        href="https://waze.com/ul?ll=32.93047,35.27657&navigate=yes"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center justify-center gap-2 text-gold hover:text-white transition text-lg mb-2"
+        data-aos="fade-up"
       >
-        {t("start_booking") || "Start Booking"}
-      </Link>
+        <BiMap size={22} />
+        {t("address") || "Ba'aneh - Ghaddara Street"}
+      </a>
+
+      {/* ✅ رقم الهاتف */}
+      <a
+        href="tel:+972549896985"
+        className="flex items-center justify-center gap-2 text-gold hover:text-white transition text-lg mb-6"
+        data-aos="fade-up"
+        data-aos-delay="100"
+      >
+        <FaPhone size={20} />
+        +972 54-989-6985
+      </a>
+
+      {/* ✅ أيقونات السوشيال ميديا */}
+      <div
+        className="flex justify-center gap-4"
+        data-aos="fade-up"
+        data-aos-delay="200"
+      >
+        <a
+          href="https://www.instagram.com/arafat_barber/"
+          target="_blank"
+          rel="noreferrer"
+          className="w-10 h-10 flex items-center justify-center border-2 border-gold rounded-full text-gold hover:bg-gold hover:text-primary transition"
+        >
+          <FaInstagram size={20} />
+        </a>
+        <a
+          href="https://facebook.com"
+          target="_blank"
+          rel="noreferrer"
+          className="w-10 h-10 flex items-center justify-center border-2 border-gold rounded-full text-gold hover:bg-gold hover:text-primary transition"
+        >
+          <FaFacebook size={20} />
+        </a>
+        <a
+          href="https://www.tiktok.com/@arfatbarber"
+          target="_blank"
+          rel="noreferrer"
+          className="w-10 h-10 flex items-center justify-center border-2 border-gold rounded-full text-gold hover:bg-gold hover:text-primary transition"
+        >
+          <FaTiktok size={20} />
+        </a>
+      </div>
     </section>
   );
 }
