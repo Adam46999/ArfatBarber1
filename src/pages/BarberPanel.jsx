@@ -114,7 +114,7 @@ function BarberPanel() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+<div className="min-h-screen bg-gray-50 p-6 pt-24">
       <div className="max-w-2xl mx-auto bg-white p-6 rounded-xl shadow-md">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold text-gold">{t("manage_times")}</h1>
