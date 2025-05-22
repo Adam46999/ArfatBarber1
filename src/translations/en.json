@@ -28,6 +28,30 @@
   "slider_title": "Cuts from our hands",
   "call": "Call",
   "email": "Email",
-  "address": "📍 Ba'aneh - Ghaddara Street"
+  "address": "📍 Ba'aneh - Ghaddara Street",
+  "working_hours": "Working Hours",
+  "open_now": "We are open now",
+  "closed_today": "We are closed today",
+  "sunday": "Sunday",
+  "monday": "Monday",
+  "tuesday": "Tuesday",
+  "wednesday": "Wednesday",
+  "thursday": "Thursday",
+  "friday": "Friday",
+  "saturday": "Saturday",
+  "closed": "Closed",
+  "barber_panel": "Barber Panel",
+"enter_password": "Enter Password",
+"login": "Login",
+"manage_times": "Manage Blocked Times",
+"remove_selected_times": "Remove Selected Times",
+"closed_day": "This day is closed",
+"wrong_password": "Incorrect password",
+"logout": "تسجيل الخروج",
+"times_removed_success": "✅ Selected times for this day have been successfully removed",
+"time_restored_success": "✅ Time slot restored successfully"
+
+
+
 
 }

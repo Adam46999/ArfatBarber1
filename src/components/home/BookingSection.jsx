@@ -1,22 +1,47 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
-function generateTimeSlots(start = "09:00", end = "17:30") {
+const workingHours = {
+  0: null,
+  1: { from: "12:00", to: "21:00" },
+  2: { from: "12:00", to: "21:00" },
+  3: { from: "12:00", to: "21:00" },
+  4: { from: "12:00", to: "22:00" },
+  5: { from: "13:00", to: "23:30" },
+  6: { from: "11:00", to: "19:30" }
+};
+
+function generateTimeSlots(from, to) {
   const slots = [];
-  let [hour, minute] = start.split(":").map(Number);
-  const [endHour, endMinute] = end.split(":").map(Number);
+  const [fromHour, fromMinute] = from.split(":").map(Number);
+  const [toHour, toMinute] = to.split(":").map(Number);
+  let current = new Date();
+  current.setHours(fromHour, fromMinute, 0, 0);
+  const end = new Date();
+  end.setHours(toHour, toMinute, 0, 0);
 
-  while (hour < endHour || (hour === endHour && minute <= endMinute)) {
-    const timeStr = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
-    slots.push(timeStr);
-    minute += 30;
-    if (minute >= 60) {
-      minute = 0;
-      hour += 1;
-    }
+  while (current <= end) {
+    const time = current.toTimeString().slice(0, 5);
+    slots.push(time);
+    current.setMinutes(current.getMinutes() + 30);
   }
-
   return slots;
+}
+
+function isOpenNow() {
+  const now = new Date();
+  const day = now.getDay();
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  const todayHours = workingHours[day];
+
+  if (!todayHours) return false;
+
+  const [fromHour, fromMinute] = todayHours.from.split(":").map(Number);
+  const [toHour, toMinute] = todayHours.to.split(":").map(Number);
+  const fromMinutes = fromHour * 60 + fromMinute;
+  const toMinutes = toHour * 60 + toMinute;
+
+  return currentMinutes >= fromMinutes && currentMinutes <= toMinutes;
 }
 
 function BookingSection() {
@@ -30,10 +55,28 @@ function BookingSection() {
   const [selectedTime, setSelectedTime] = useState("");
   const [selectedService, setSelectedService] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [availableTimes, setAvailableTimes] = useState([]);
 
-  const allTimes = generateTimeSlots();
-  const bookedTimes = ["10:30", "14:00"];
-  const availableTimes = allTimes.filter(time => !bookedTimes.includes(time));
+  useEffect(() => {
+    if (!selectedDate) return;
+
+    const dateObj = new Date(selectedDate);
+    const weekday = dateObj.getDay(); // 0 - 6
+    const dayHours = workingHours[weekday];
+
+    if (!dayHours) {
+      setAvailableTimes([]);
+      return;
+    }
+
+    const all = generateTimeSlots(dayHours.from, dayHours.to);
+
+    const blocked = JSON.parse(localStorage.getItem("blockedTimes") || "{}");
+    const blockedForDate = blocked[selectedDate] || [];
+
+    const filtered = all.filter((time) => !blockedForDate.includes(time));
+    setAvailableTimes(filtered);
+  }, [selectedDate]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -57,19 +100,23 @@ function BookingSection() {
       <div className="max-w-xl mx-auto">
         <h2 className="text-4xl font-bold mb-8 text-center text-gold">{t("book_now")}</h2>
 
-        {/* ✅ صندوق ساعات العمل يظهر دائمًا */}
         <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-md mb-6">
           <h3 className="text-lg font-bold text-gold mb-2 flex items-center gap-2">
-            <span>🕒</span> {t("working_hours") || "ساعات العمل"}
+            <span>🕒</span> {t("working_hours")}
           </h3>
+
+          <p className={`mb-3 text-sm font-semibold ${isOpenNow() ? "text-green-600" : "text-red-600"}`}>
+            {isOpenNow() ? t("open_now") : t("closed_today")}
+          </p>
+
           <ul className="text-sm text-gray-700 leading-relaxed font-medium">
-            <li>الأحد: مغلق</li>
-            <li>الإثنين: 12:00 - 21:00</li>
-            <li>الثلاثاء: 12:00 - 21:00</li>
-            <li>الأربعاء: 12:00 - 21:00</li>
-            <li>الخميس: 12:00 - 22:00</li>
-            <li>الجمعة: 13:00 - 23:30</li>
-            <li>السبت: 11:00 - 19:30</li>
+            <li>{t("sunday")}: {t("closed")}</li>
+            <li>{t("monday")}: 12:00 - 21:00</li>
+            <li>{t("tuesday")}: 12:00 - 21:00</li>
+            <li>{t("wednesday")}: 12:00 - 21:00</li>
+            <li>{t("thursday")}: 12:00 - 22:00</li>
+            <li>{t("friday")}: 13:00 - 23:30</li>
+            <li>{t("saturday")}: 11:00 - 19:30</li>
           </ul>
         </div>
 
@@ -81,7 +128,6 @@ function BookingSection() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
-
             <div>
               <label className="block mb-1 font-semibold text-gray-700">{t("name")}</label>
               <input
@@ -109,13 +155,16 @@ function BookingSection() {
               <input
                 type="date"
                 value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
+                onChange={(e) => {
+                  setSelectedDate(e.target.value);
+                  setSelectedTime("");
+                }}
                 className="w-full p-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-gold"
                 required
               />
             </div>
 
-            {selectedDate && (
+            {selectedDate && availableTimes.length > 0 && (
               <div>
                 <label className="block mb-2 font-semibold text-gray-700">{t("choose_time")}</label>
                 <div className="grid grid-cols-3 md:grid-cols-4 gap-3">
@@ -125,7 +174,7 @@ function BookingSection() {
                       key={time}
                       onClick={() => setSelectedTime(time)}
                       className={`py-2 px-3 rounded-md text-sm font-medium border transition 
-                      ${selectedTime === time
+                        ${selectedTime === time
                           ? "bg-gold text-primary border-gold shadow"
                           : "bg-gray-100 text-gray-800 border-gray-300 hover:bg-gold hover:text-primary"}`}
                     >
@@ -136,12 +185,16 @@ function BookingSection() {
               </div>
             )}
 
+            {selectedDate && availableTimes.length === 0 && (
+              <p className="text-red-500 text-sm font-medium">{t("no_hours")}</p>
+            )}
+
             <div>
               <label className="block mb-2 font-semibold text-gray-700">{t("choose_service")}</label>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {[
                   { id: "haircut", label: t("service_haircut") },
-                  { id: "beard", label: t("service_beard") },
+                  { id: "beard", label: t("service_beard") }
                 ].map((service) => (
                   <button
                     key={service.id}

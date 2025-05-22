@@ -47,6 +47,14 @@ function Footer() {
           </a>
         </div>
       </div>
+      <button
+  onClick={() => window.location.href = "/barber"}
+  className="fixed bottom-4 right-4 text-white text-xl z-50 hover:text-gold transition"
+  title="دخول الحلاق"
+>
+  ✂️
+</button>
+
     </footer>
   );
 }
