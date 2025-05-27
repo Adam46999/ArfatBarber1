@@ -1,7 +1,16 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { db } from "../../firebase";
-import { doc, getDoc } from "firebase/firestore";
+import {
+  doc,
+  getDoc,
+  collection,
+  addDoc,
+  serverTimestamp,
+  query,
+  where,
+  getDocs,
+} from "firebase/firestore";
 
 const workingHours = {
   Sunday: null,
@@ -73,10 +82,21 @@ function BookingSection() {
         const docRef = doc(db, "blockedTimes", selectedDate);
         const docSnap = await getDoc(docRef);
         const blocked = docSnap.exists() ? docSnap.data().times || [] : [];
-        const filtered = all.filter((time) => !blocked.includes(time));
+
+        // ✅ احضر كل الساعات المحجوزة فعلياً
+        const q = query(
+          collection(db, "bookings"),
+          where("selectedDate", "==", selectedDate)
+        );
+        const snapshot = await getDocs(q);
+        const booked = snapshot.docs.map((doc) => doc.data().selectedTime);
+
+        const unavailable = [...new Set([...blocked, ...booked])];
+
+        const filtered = all.filter((time) => !unavailable.includes(time));
         setAvailableTimes(filtered);
       } catch (error) {
-        console.error("🔥 Error getting blocked times from Firestore:", error);
+        console.error("🔥 Error getting times from Firestore:", error);
         setAvailableTimes([]);
       }
     };
@@ -84,22 +104,46 @@ function BookingSection() {
     fetchBlockedTimes();
   }, [selectedDate]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!fullName || !phoneNumber || !selectedDate || !selectedTime || !selectedService) {
       alert(t("fill_required_fields"));
       return;
     }
 
-    // ✅ في هذه النسخة لم نرسل إلى Firestore (يمكنك إضافتها لاحقًا هنا)
-    setSubmitted(true);
-    setTimeout(() => setSubmitted(false), 3000);
+    try {
+      const q = query(
+        collection(db, "bookings"),
+        where("selectedDate", "==", selectedDate),
+        where("selectedTime", "==", selectedTime)
+      );
+      const snapshot = await getDocs(q);
+      if (!snapshot.empty) {
+        alert(t("time_already_booked") || "هذه الساعة محجوزة بالفعل، يرجى اختيار ساعة أخرى.");
+        return;
+      }
 
-    setFullName("");
-    setPhoneNumber("");
-    setSelectedDate("");
-    setSelectedTime("");
-    setSelectedService("");
+      await addDoc(collection(db, "bookings"), {
+        fullName,
+        phoneNumber,
+        selectedDate,
+        selectedTime,
+        selectedService,
+        createdAt: serverTimestamp(),
+      });
+
+      setSubmitted(true);
+      setTimeout(() => setSubmitted(false), 3000);
+
+      setFullName("");
+      setPhoneNumber("");
+      setSelectedDate("");
+      setSelectedTime("");
+      setSelectedService("");
+    } catch (error) {
+      console.error("Error saving booking:", error);
+      alert("حدث خطأ أثناء حفظ الحجز، يرجى المحاولة لاحقًا.");
+    }
   };
 
   return (

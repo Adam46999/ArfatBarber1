@@ -9,6 +9,10 @@ import {
   updateDoc,
   arrayUnion,
   arrayRemove,
+  collection,
+  query,
+  where,
+  getDocs,
 } from "firebase/firestore";
 
 const workingHours = {
@@ -41,6 +45,16 @@ function getDayName(dateStr) {
   return date.toLocaleDateString("en-US", { weekday: "long" });
 }
 
+async function isTimeBooked(date, time) {
+  const q = query(
+    collection(db, "bookings"),
+    where("selectedDate", "==", date),
+    where("selectedTime", "==", time)
+  );
+  const snap = await getDocs(q);
+  return !snap.empty;
+}
+
 function BarberPanel() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -50,8 +64,11 @@ function BarberPanel() {
   const [restoreMessage, setRestoreMessage] = useState("");
 
   useEffect(() => {
+    if (!selectedDate) {
+      setBlockedTimes([]);
+      return;
+    }
     const fetchBlockedTimes = async () => {
-      if (!selectedDate) return;
       const ref = doc(db, "blockedTimes", selectedDate);
       const snapshot = await getDoc(ref);
       if (snapshot.exists()) {
@@ -60,13 +77,19 @@ function BarberPanel() {
         setBlockedTimes([]);
       }
     };
-
     fetchBlockedTimes();
   }, [selectedDate]);
 
-  const handleToggleTime = (time) => {
+  const handleToggleTime = async (time) => {
+    if (!selectedDate) return;
+
     if (blockedTimes.includes(time)) {
-      // ✅ Unblock
+      const isBooked = await isTimeBooked(selectedDate, time);
+      if (isBooked) {
+        alert("لا يمكنك إلغاء ساعة محجوزة بالفعل.");
+        return;
+      }
+
       const updated = blockedTimes.filter((t) => t !== time);
       setBlockedTimes(updated);
       const ref = doc(db, "blockedTimes", selectedDate);
@@ -81,6 +104,7 @@ function BarberPanel() {
   };
 
   const handleRemoveTimes = async () => {
+    if (!selectedDate || selectedTimes.length === 0) return;
     const ref = doc(db, "blockedTimes", selectedDate);
     const snapshot = await getDoc(ref);
     if (!snapshot.exists()) {
@@ -95,27 +119,31 @@ function BarberPanel() {
     alert(t("times_removed_success"));
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("barberUser"); // حذف حالة تسجيل الدخول
-    navigate("/login"); // إعادة التوجيه لصفحة تسجيل الدخول
-  };
-
   const dayName = selectedDate ? getDayName(selectedDate) : "";
   const times =
     workingHours[dayName]?.from &&
     generateTimeSlots(workingHours[dayName].from, workingHours[dayName].to);
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6 pt-24">
-      <div className="max-w-2xl mx-auto bg-white p-6 rounded-xl shadow-md">
+    <div className="min-h-screen bg-gray-50 p-6 pt-24 font-body">
+      <div className="max-w-4xl mx-auto bg-white p-6 rounded-xl shadow-md">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold text-gold">{t("manage_times")}</h1>
-          <button
-            onClick={handleLogout}
-            className="text-sm text-red-600 hover:text-red-800 font-semibold underline"
-          >
-            {t("logout")}
-          </button>
+
+          <div className="flex gap-4">
+            <button
+              onClick={() => navigate("/admin-bookings")}
+              className="text-sm text-blue-600 hover:text-blue-800 font-semibold underline"
+            >
+              {t("admin_bookings")}
+            </button>
+            <button
+              onClick={() => navigate("/")}
+              className="text-sm text-red-600 hover:text-red-800 font-semibold underline"
+            >
+              {t("logout")}
+            </button>
+          </div>
         </div>
 
         {restoreMessage && (
@@ -124,7 +152,9 @@ function BarberPanel() {
           </div>
         )}
 
-        <label className="block mb-2 font-semibold text-gray-700">{t("select_date")}</label>
+        <label className="block mb-2 font-semibold text-gray-700">
+          {t("select_date")}
+        </label>
         <input
           type="date"
           value={selectedDate}
