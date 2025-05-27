@@ -51,7 +51,13 @@
 "wrong_password": "كلمة المرور غير صحيحة",
 "logout": "تسجيل الخروج",
 "times_removed_success": "✅ تم حذف الساعات المحددة لهذا اليوم بنجاح",
-"time_restored_success": "✅ تم استرجاع الساعة بنجاح"
+"time_restored_success": "✅ تم استرجاع الساعة بنجاح",
+"admin_bookings": "لوحة الحجوزات",
+"no_bookings": "لا يوجد حجوزات حتى الآن",
+"date_added": "تاريخ الإضافة",
+"clear_filter": "إزالة الفلتر"
+
+
 
 
 

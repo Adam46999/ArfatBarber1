@@ -28,7 +28,6 @@ function Header() {
         {/* Desktop Navigation */}
 <nav className="hidden md:flex gap-x-10 items-center text-lg font-heading tracking-wide px-2">
           <Link to="/" className="hover:text-gold transition">{t("home")}</Link>
-          <Link to="/about" className="hover:text-gold transition">{t("about")}</Link>
           <a href="#services" className="hover:text-gold transition">{t("services")}</a>
           <Link to="/contact" className="hover:text-gold transition">{t("contact")}</Link>
         </nav>
