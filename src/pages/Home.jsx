@@ -3,6 +3,7 @@ import ContactSection from "../components/home/ContactSection";
 import InstagramSlider from "../components/home/InstagramSlider";
 import BookingSection from "../components/booking/BookingSection";
 import SecretBarberButton from "../components/shared/SecretBarberButton";
+import BookingTracker from "../components/booking/BookingTracker";
 
 function Home() {
   return (
@@ -11,7 +12,7 @@ function Home() {
 <InstagramSlider />
 
         <BookingSection />
-
+<BookingTracker />
       <ContactSection />
           <SecretBarberButton />
 

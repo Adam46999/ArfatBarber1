@@ -26,8 +26,8 @@ const workingHours = {
 
 const generateTimeSlots = (from, to) => {
   const slots = [];
-  const [fromHour, fromMinute] = from.split(":").map(Number);
-  const [toHour, toMinute] = to.split(":").map(Number);
+  const [fromHour, fromMinute] = from.split(":" ).map(Number);
+  const [toHour, toMinute] = to.split(":" ).map(Number);
   let current = new Date();
   current.setHours(fromHour, fromMinute, 0, 0);
   const end = new Date();
@@ -199,7 +199,12 @@ function BarberPanel() {
               {t("admin_bookings")}
             </button>
             <button
-              onClick={() => navigate("/barber")}
+              onClick={() => {
+                if (window.confirm("هل أنت متأكد أنك تريد تسجيل الخروج؟")) {
+                  localStorage.removeItem("barberUser");
+                  navigate("/login");
+                }
+              }}
               className="text-sm text-red-600 hover:text-red-800 font-semibold underline"
             >
               {t("logout")}
@@ -214,9 +219,7 @@ function BarberPanel() {
         )}
 
         <label className="block mb-2 font-semibold text-gray-700">{t("select_date")}</label>
-
         <DateDropdown selectedDate={selectedDate} onChange={setSelectedDate} />
-
         <input
           type="date"
           value={selectedDate}
