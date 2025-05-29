@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+// ✅ BookingSection.jsx - يعرض الكود برسالة دائمة ويقوم بالتمرير التلقائي إليها، بدون إخفاء تلقائي، ولا زر تعديل
+import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { db } from "../../firebase";
 import {
@@ -24,8 +25,8 @@ const workingHours = {
 
 function generateTimeSlots(from, to) {
   const slots = [];
-  const [fromHour, fromMinute] = from.split(":").map(Number);
-  const [toHour, toMinute] = to.split(":").map(Number);
+  const [fromHour, fromMinute] = from.split(":" ).map(Number);
+  const [toHour, toMinute] = to.split(":" ).map(Number);
   const current = new Date();
   current.setHours(fromHour, fromMinute, 0, 0);
   const end = new Date();
@@ -44,8 +45,8 @@ function isOpenNow() {
   const currentMinutes = now.getHours() * 60 + now.getMinutes();
   const todayHours = workingHours[day];
   if (!todayHours) return false;
-  const [fromHour, fromMinute] = todayHours.from.split(":").map(Number);
-  const [toHour, toMinute] = todayHours.to.split(":").map(Number);
+  const [fromHour, fromMinute] = todayHours.from.split(":" ).map(Number);
+  const [toHour, toMinute] = todayHours.to.split(":" ).map(Number);
   const fromMinutes = fromHour * 60 + fromMinute;
   const toMinutes = toHour * 60 + toMinute;
   return currentMinutes >= fromMinutes && currentMinutes <= toMinutes;
@@ -55,6 +56,7 @@ function BookingSection() {
   const { t, i18n } = useTranslation();
   const isArabic = i18n.language === "ar";
   const fontClass = isArabic ? "font-ar" : "font-body";
+  const messageRef = useRef(null);
 
   const [fullName, setFullName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -63,6 +65,7 @@ function BookingSection() {
   const [selectedService, setSelectedService] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [availableTimes, setAvailableTimes] = useState([]);
+  const [code, setCode] = useState("");
 
   useEffect(() => {
     if (!selectedDate) return;
@@ -83,7 +86,6 @@ function BookingSection() {
         const docSnap = await getDoc(docRef);
         const blocked = docSnap.exists() ? docSnap.data().times || [] : [];
 
-        // ✅ احضر كل الساعات المحجوزة فعلياً
         const q = query(
           collection(db, "bookings"),
           where("selectedDate", "==", selectedDate)
@@ -92,7 +94,6 @@ function BookingSection() {
         const booked = snapshot.docs.map((doc) => doc.data().selectedTime);
 
         const unavailable = [...new Set([...blocked, ...booked])];
-
         const filtered = all.filter((time) => !unavailable.includes(time));
         setAvailableTimes(filtered);
       } catch (error) {
@@ -123,17 +124,21 @@ function BookingSection() {
         return;
       }
 
+      const bookingCode = Math.random().toString(36).substring(2, 8);
+      setCode(bookingCode);
+
       await addDoc(collection(db, "bookings"), {
         fullName,
         phoneNumber,
         selectedDate,
         selectedTime,
         selectedService,
+        bookingCode,
         createdAt: serverTimestamp(),
       });
 
       setSubmitted(true);
-      setTimeout(() => setSubmitted(false), 3000);
+      if (messageRef.current) messageRef.current.scrollIntoView({ behavior: "smooth" });
 
       setFullName("");
       setPhoneNumber("");
@@ -162,8 +167,11 @@ function BookingSection() {
 
         <div className="bg-white shadow-xl rounded-2xl p-8 space-y-6 border border-gray-100">
           {submitted && (
-            <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg text-center">
-              ✅ {t("thank_you")}
+            <div
+              ref={messageRef}
+              className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg text-center text-lg"
+            >
+              ✅ {t("thank_you")}<br />🔐 {t("your_code")}: <strong>{code}</strong>
             </div>
           )}
 

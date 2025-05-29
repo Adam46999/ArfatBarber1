@@ -18,7 +18,7 @@
   "service_beard": "Beard Trim",
   "service_combo": "Haircut + Beard",
   "confirm_booking": "Confirm Booking",
-  "thank_you": "Thank you! Your appointment has been received.",
+  "thank_you": "Thank you! Your booking was received. Keep the code to verify or cancel.",
   "no_hours": "No available hours for this day (Closed).",
   "fill_required_fields": "Please fill all required fields.",
   "all_rights": "All rights reserved.",
@@ -41,23 +41,25 @@
   "saturday": "Saturday",
   "closed": "Closed",
   "barber_panel": "Barber Panel",
-"enter_password": "Enter Password",
-"login": "Login",
-"manage_times": "Manage Blocked Times",
-"remove_selected_times": "Remove Selected Times",
-"closed_day": "This day is closed",
-"wrong_password": "Incorrect password",
-"logout": "تسجيل الخروج",
-"times_removed_success": "✅ Selected times for this day have been successfully removed",
-"time_restored_success": "✅ Time slot restored successfully",
-"admin_bookings": "Admin Bookings",
-"no_bookings": "No bookings found yet",
-"date_added": "Created At",
-"clear_filter": "Clear Filter"
-
-
-
-
-
-
+  "enter_password": "Enter Password",
+  "login": "Login",
+  "manage_times": "Manage Blocked Times",
+  "remove_selected_times": "Remove Selected Times",
+  "closed_day": "This day is closed",
+  "wrong_password": "Incorrect password",
+  "logout": "Logout",
+  "times_removed_success": "✅ Selected times for this day have been successfully removed",
+  "time_restored_success": "✅ Time slot restored successfully",
+  "admin_bookings": "Admin Bookings",
+  "no_bookings": "No bookings found yet",
+  "date_added": "Created At",
+  "clear_filter": "Clear Filter",
+  "check_booking": "Check Booking 🔍",
+  "check": "Check",
+  "loading": "Checking...",
+  "cancel_booking": "Cancel Booking",
+  "booking_canceled": "Booking canceled successfully.",
+  "no_booking_found": "No booking found for this number.",
+  "enter_code": "Enter code",
+  "code_required": "Please enter the code to cancel the booking"
 }

@@ -18,7 +18,7 @@
   "service_beard": "קיצוץ זקן",
   "service_combo": "תספורת + זקן",
   "confirm_booking": "אישור הזמנה",
-  "thank_you": "תודה! ההזמנה שלך התקבלה.",
+  "thank_you": "תודה! ההזמנה התקבלה. שמור את הקוד לבדיקה או ביטול.",
   "no_hours": "אין שעות פנויות ליום זה (סגור).",
   "fill_required_fields": "אנא מלא את כל השדות הנדרשים",
   "all_rights": "כל הזכויות שמורות.",
@@ -32,7 +32,7 @@
   "working_hours": "שעות פעילות",
   "open_now": "אנחנו פתוחים עכשיו",
   "closed_today": "אנחנו סגורים היום",
-   "sunday": "ראשון",
+  "sunday": "ראשון",
   "monday": "שני",
   "tuesday": "שלישי",
   "wednesday": "רביעי",
@@ -41,23 +41,25 @@
   "saturday": "שבת",
   "closed": "סגור",
   "barber_panel": "לוח שליטה לספר",
-"enter_password": "הכנס סיסמה",
-"login": "כניסה",
-"manage_times": "ניהול שעות חסומות",
-"remove_selected_times": "מחק את השעות שנבחרו",
-"closed_day": "היום סגור",
-"wrong_password": "הסיסמה שגויה",
-"logout": "התנתק",
-"times_removed_success": "✅ השעות שנבחרו ליום זה הוסרו בהצלחה",
-"time_restored_success": "✅ השעה שוחזרה בהצלחה",
-"admin_bookings": "צפייה בהזמנות",
-"no_bookings": "אין הזמנות עדיין",
-"date_added": "נוסף בתאריך",
-"clear_filter": "נקה סינון"
-
-
-
-
-
-
+  "enter_password": "הכנס סיסמה",
+  "login": "כניסה",
+  "manage_times": "ניהול שעות חסומות",
+  "remove_selected_times": "מחק את השעות שנבחרו",
+  "closed_day": "היום סגור",
+  "wrong_password": "הסיסמה שגויה",
+  "logout": "התנתק",
+  "times_removed_success": "✅ השעות שנבחרו הוסרו בהצלחה",
+  "time_restored_success": "✅ השעה שוחזרה בהצלחה",
+  "admin_bookings": "צפייה בהזמנות",
+  "no_bookings": "אין הזמנות עדיין",
+  "date_added": "נוסף בתאריך",
+  "clear_filter": "נקה סינון",
+  "check_booking": "בדוק את ההזמנה 🔍",
+  "check": "בדוק",
+  "loading": "בודק...",
+  "cancel_booking": "ביטול הזמנה",
+  "booking_canceled": "ההזמנה בוטלה בהצלחה.",
+  "no_booking_found": "לא נמצאה הזמנה למספר הזה.",
+  "enter_code": "הכנס קוד",
+  "code_required": "יש להזין את הקוד כדי לבטל"
 }

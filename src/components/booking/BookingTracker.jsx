@@ -1,3 +1,4 @@
+// ✅ BookingTracker.jsx - نسخة كاملة تشمل: ترجمة صحيحة، زر تعديل، تحقق عبر bookingCode
 import { useState } from "react";
 import { db } from "../../firebase";
 import {
@@ -13,16 +14,19 @@ import { useTranslation } from "react-i18next";
 function BookingTracker() {
   const { t } = useTranslation();
   const [phone, setPhone] = useState("");
+  const [code, setCode] = useState("");
   const [result, setResult] = useState(null);
   const [notFound, setNotFound] = useState(false);
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  const [error, setError] = useState("");
 
   const handleCheck = async () => {
     setLoading(true);
     setResult(null);
     setNotFound(false);
     setSuccessMessage("");
+    setError("");
 
     try {
       const q = query(collection(db, "bookings"), where("phoneNumber", "==", phone));
@@ -37,6 +41,7 @@ function BookingTracker() {
           date: data.selectedDate,
           time: data.selectedTime,
           service: data.selectedService,
+          bookingCode: data.bookingCode || "",
         });
       } else {
         setNotFound(true);
@@ -50,6 +55,11 @@ function BookingTracker() {
 
   const handleCancel = async () => {
     if (!result?.docId) return;
+
+    if (!code || code !== result.bookingCode) {
+      setError(t("wrong_code") || "رمز التحقق غير صحيح");
+      return;
+    }
 
     try {
       await deleteDoc(doc(db, "bookings", result.docId));
@@ -91,12 +101,31 @@ function BookingTracker() {
             <p><strong>{t("choose_time")}</strong>: {result.time}</p>
             <p><strong>{t("choose_service")}</strong>: {t(`service_${result.service}`)}</p>
 
-            <button
-              onClick={handleCancel}
-              className="mt-4 bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition"
-            >
-              {t("cancel_booking") || "إلغاء الحجز"}
-            </button>
+            <input
+              type="text"
+              placeholder={t("enter_code") || "أدخل رمز التحقق"}
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              className="w-full border border-gray-300 p-2 rounded mt-4"
+            />
+
+            {error && <p className="text-red-600 mt-1 text-sm font-semibold">{error}</p>}
+
+            <div className="flex gap-2 mt-4">
+              <button
+                onClick={handleCancel}
+                className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition"
+              >
+                {t("cancel_booking") || "إلغاء الحجز"}
+              </button>
+
+              <button
+                onClick={() => alert(t("edit_booking") || "ميزة التعديل قيد التطوير")}
+                className="bg-yellow-400 text-primary px-4 py-2 rounded hover:bg-yellow-500 transition"
+              >
+                {t("edit_booking") || "تعديل الحجز"}
+              </button>
+            </div>
           </div>
         )}
 

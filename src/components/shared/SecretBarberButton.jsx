@@ -1,22 +1,20 @@
-import { useTranslation } from "react-i18next";
+// ✅ SecretBarberButton.jsx
 import { useNavigate } from "react-router-dom";
 
 function SecretBarberButton() {
-  const { i18n } = useTranslation();
-  const isRTL = i18n.language === "ar" || i18n.language === "he";
   const navigate = useNavigate();
 
   return (
-    <button
-      onClick={() => {
-        console.log("✅ الزر اشتغل");  // 🔥 هذا السطر للتأكد
-        navigate("/barber");
-      }}
-      className={`fixed bottom-3 ${isRTL ? "left-3" : "right-3"} text-white text-2xl z-50 hover:text-gold transition`}
-      title="دخول الحلاق"
-    >
-      ✂️
-    </button>
+    <div className="w-full text-center mt-6">
+      <button
+        onClick={() => navigate("/login")}
+        title="دخول الحلاق"
+        className="font-heading text-gold text-2xl md:text-3xl tracking-wide hover:text-yellow-300 transition-all"
+        style={{ fontWeight: 700, letterSpacing: "1px" }}
+      >
+        Arfat Barber
+      </button>
+    </div>
   );
 }
 
