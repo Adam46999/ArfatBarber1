@@ -119,12 +119,7 @@ function BookingTracker() {
                 {t("cancel_booking") || "إلغاء الحجز"}
               </button>
 
-              <button
-                onClick={() => alert(t("edit_booking") || "ميزة التعديل قيد التطوير")}
-                className="bg-yellow-400 text-primary px-4 py-2 rounded hover:bg-yellow-500 transition"
-              >
-                {t("edit_booking") || "تعديل الحجز"}
-              </button>
+              
             </div>
           </div>
         )}

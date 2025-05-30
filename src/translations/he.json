@@ -7,9 +7,8 @@
   "book_now": "הזמן עכשיו",
   "start_booking": "התחל הזמנה",
   "welcome": "ברוך הבא אל Arfat Barber",
-  "hero_title": "אנחנו מבינים את הסגנון שלך",
-  "hero_subtitle": "יש הבדל בין מספרת נשים למספרת גברים.",
-  "name": "שם מלא",
+"hero_subtitle": "אנחנו מעניקים לך מראה שמתאים ומשקף אותך בפשטות ובאלגנטיות."
+,  "name": "שם מלא",
   "phone": "מספר טלפון",
   "select_date": "בחר תאריך",
   "choose_time": "בחר שעה",
@@ -31,7 +30,7 @@
   "address": "📍 בענה - רחוב גדרה",
   "working_hours": "שעות פעילות",
   "open_now": "אנחנו פתוחים עכשיו",
-  "closed_today": "אנחנו סגורים היום",
+  "closed_today": "אנחנו סגורים עכשיו",
   "sunday": "ראשון",
   "monday": "שני",
   "tuesday": "שלישי",
@@ -61,5 +60,7 @@
   "booking_canceled": "ההזמנה בוטלה בהצלחה.",
   "no_booking_found": "לא נמצאה הזמנה למספר הזה.",
   "enter_code": "הכנס קוד",
+  "hero_title": "סגנון שמתאים לך, בפשטות"
+,
   "code_required": "יש להזין את הקוד כדי לבטל"
 }

@@ -163,6 +163,20 @@ function BookingSection() {
           <p className={`mb-3 text-sm font-semibold ${isOpenNow() ? "text-green-600" : "text-red-600"}`}>
             {isOpenNow() ? t("open_now") : t("closed_today")}
           </p>
+          <div className="mt-4">
+  <h4 className="text-base font-semibold text-gold mb-2">{t("working_hours")}</h4>
+  <ul className="text-sm text-gray-700 space-y-1">
+    {Object.entries(workingHours).map(([day, hours]) => (
+      <li key={day} className="flex justify-between">
+        <span>{t(day.toLowerCase())}</span>
+        <span className={`${hours ? "" : "text-red-500"}`}>
+          {hours ? `${hours.from} – ${hours.to}` : t("closed")}
+        </span>
+      </li>
+    ))}
+  </ul>
+</div>
+
         </div>
 
         <div className="bg-white shadow-xl rounded-2xl p-8 space-y-6 border border-gray-100">
@@ -178,7 +192,26 @@ function BookingSection() {
           <form onSubmit={handleSubmit} className="space-y-5">
             <input type="text" placeholder={t("name")} className="w-full p-3 border border-gray-300 rounded-xl" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
             <input type="tel" placeholder={t("phone")} className="w-full p-3 border border-gray-300 rounded-xl" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} required />
-            <input type="date" className="w-full p-3 border border-gray-300 rounded-xl" value={selectedDate} onChange={(e) => { setSelectedDate(e.target.value); setSelectedTime(""); }} required />
+<input
+  type="date"
+  min={new Date().toISOString().split("T")[0]} // ✅ يمنع تواريخ الماضي
+  value={selectedDate}
+  onChange={(e) => {
+    const dateStr = e.target.value;
+    const dayName = new Date(dateStr).toLocaleDateString("en-US", { weekday: "long" });
+    const closedDays = ["Sunday"]; // ✅ الأيام المغلقة
+    if (closedDays.includes(dayName)) {
+      alert("⚠️ هذا اليوم مغلق ولا يمكن الحجز فيه.");
+      setSelectedDate("");
+      setSelectedTime("");
+    } else {
+      setSelectedDate(dateStr);
+      setSelectedTime("");
+    }
+  }}
+  className="w-full p-3 border border-gray-300 rounded-xl"
+  required
+/>
 
             {selectedDate && availableTimes.length > 0 && (
               <div>

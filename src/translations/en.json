@@ -7,9 +7,8 @@
   "book_now": "Book Now",
   "start_booking": "Start Booking",
   "welcome": "Welcome to Arfat Barber",
-  "hero_title": "We Know Your Style Better",
-  "hero_subtitle": "There is a distinction between a beauty salon and a hair salon.",
-  "name": "Full Name",
+"hero_subtitle": "We offer you a look that suits and reflects you effortlessly and elegantly."
+,  "name": "Full Name",
   "phone": "Phone Number",
   "select_date": "Select a date",
   "choose_time": "Choose Time",
@@ -31,7 +30,7 @@
   "address": "📍 Ba'aneh - Ghaddara Street",
   "working_hours": "Working Hours",
   "open_now": "We are open now",
-  "closed_today": "We are closed today",
+  "closed_today": "We are closed now",
   "sunday": "Sunday",
   "monday": "Monday",
   "tuesday": "Tuesday",
@@ -61,5 +60,7 @@
   "booking_canceled": "Booking canceled successfully.",
   "no_booking_found": "No booking found for this number.",
   "enter_code": "Enter code",
+  "hero_title": "A style that suits you, effortlessly"
+,
   "code_required": "Please enter the code to cancel the booking"
 }
