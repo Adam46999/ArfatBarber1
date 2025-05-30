@@ -66,6 +66,7 @@ function BookingSection() {
   const [submitted, setSubmitted] = useState(false);
   const [availableTimes, setAvailableTimes] = useState([]);
   const [code, setCode] = useState("");
+const [bookings, setBookings] = useState([]);
 
   useEffect(() => {
     if (!selectedDate) return;
@@ -104,6 +105,23 @@ function BookingSection() {
 
     fetchBlockedTimes();
   }, [selectedDate]);
+useEffect(() => {
+  if (!phoneNumber) {
+    setBookings([]);
+    return;
+  }
+  const fetchBookingsByPhone = async () => {
+    try {
+      const q = query(collection(db, "bookings"), where("phoneNumber", "==", phoneNumber));
+      const snapshot = await getDocs(q);
+      const data = snapshot.docs.map((doc) => doc.data());
+      setBookings(data);
+    } catch (error) {
+      console.error("Error fetching bookings:", error);
+    }
+  };
+  fetchBookingsByPhone();
+}, [phoneNumber]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -111,6 +129,18 @@ function BookingSection() {
       alert(t("fill_required_fields"));
       return;
     }
+const existingBookingsQuery = query(
+  collection(db, "bookings"),
+  where("phoneNumber", "==", phoneNumber)
+);
+const existingSnapshot = await getDocs(existingBookingsQuery);
+
+if (!existingSnapshot.empty) {
+  const confirmNew = window.confirm("⚠️ يوجد لديك حجوزات سابقة برقم الهاتف هذا. هل تريد إضافة حجز جديد؟");
+  if (!confirmNew) {
+    return; // المستخدم رفض إضافة حجز جديد
+  }
+}
 
     try {
       const q = query(
@@ -149,6 +179,9 @@ function BookingSection() {
       console.error("Error saving booking:", error);
       alert("حدث خطأ أثناء حفظ الحجز، يرجى المحاولة لاحقًا.");
     }
+
+    // ⚠️ تأكيد لو فيه حجوزات سابقة لنفس الرقم
+
   };
 
   return (
@@ -163,19 +196,22 @@ function BookingSection() {
           <p className={`mb-3 text-sm font-semibold ${isOpenNow() ? "text-green-600" : "text-red-600"}`}>
             {isOpenNow() ? t("open_now") : t("closed_today")}
           </p>
-          <div className="mt-4">
-  <h4 className="text-base font-semibold text-gold mb-2">{t("working_hours")}</h4>
-  <ul className="text-sm text-gray-700 space-y-1">
-    {Object.entries(workingHours).map(([day, hours]) => (
-      <li key={day} className="flex justify-between">
-        <span>{t(day.toLowerCase())}</span>
-        <span className={`${hours ? "" : "text-red-500"}`}>
-          {hours ? `${hours.from} – ${hours.to}` : t("closed")}
-        </span>
-      </li>
-    ))}
-  </ul>
+          <div className="divide-y divide-gray-100 border-t border-gray-100 pt-3">
+  {Object.entries(workingHours).map(([day, hours]) => (
+    <div
+      key={day}
+      className="flex justify-between py-2 text-sm font-medium text-gray-700"
+    >
+      <span className="capitalize">{t(day.toLowerCase())}</span>
+      {hours ? (
+        <span className="text-gray-900">{hours.from} – {hours.to}</span>
+      ) : (
+        <span className="text-red-600">{t("closed")}</span>
+      )}
+    </div>
+  ))}
 </div>
+
 
         </div>
 
@@ -267,6 +303,20 @@ function BookingSection() {
               {t("confirm_booking")}
             </button>
           </form>
+          {phoneNumber && bookings.length > 0 && (
+  <div className="mt-6 bg-white p-4 border rounded shadow text-sm">
+    <h4 className="font-bold mb-2 text-gold">حجوزاتك الحالية:</h4>
+    <ul className="space-y-1">
+      {bookings.map((b, idx) => (
+        <li key={idx} className="flex justify-between border-b pb-1">
+          <span>{b.selectedDate} - {b.selectedTime}</span>
+          <span className="text-gray-600">{b.selectedService}</span>
+        </li>
+      ))}
+    </ul>
+  </div>
+)}
+
         </div>
       </div>
     </section>

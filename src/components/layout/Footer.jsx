@@ -70,7 +70,6 @@ function Footer() {
         {/* الحقوق */}
         <div className="text-center text-sm mt-6 space-y-1 text-light">
           <p>© 2025 Arfat Barber. {t("all_rights")}</p>
-          <p>{t("footer_note")}</p>
         </div>
       </div>
 
