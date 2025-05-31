@@ -1,4 +1,7 @@
+// src/components/layout/BackToTopButton.jsx
+
 import { useEffect, useState } from "react";
+import { FaChevronUp } from "react-icons/fa";
 
 function BackToTopButton() {
   const [visible, setVisible] = useState(false);
@@ -11,7 +14,6 @@ function BackToTopButton() {
         setVisible(false);
       }
     };
-
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
@@ -23,13 +25,18 @@ function BackToTopButton() {
   return (
     <button
       onClick={scrollToTop}
-      title="Back to top"
-      className={`fixed bottom-20 right-4 z-40 p-3 rounded-full bg-gold text-primary shadow-lg transition-all duration-300
-        ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"}
-        hover:bg-darkText hover:text-light
+      title="العودة للأعلى"
+      className={`
+        fixed bottom-20 right-5 z-50 flex items-center justify-center
+        w-12 h-12 rounded-full
+        bg-gold text-white text-xl
+        shadow-lg
+        transform transition-all duration-300
+        ${visible ? "opacity-100 scale-100" : "opacity-0 scale-75 pointer-events-none"}
+        hover:bg-yellow-500
       `}
     >
-      ↑
+      <FaChevronUp />
     </button>
   );
 }
