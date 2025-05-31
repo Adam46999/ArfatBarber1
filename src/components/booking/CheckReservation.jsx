@@ -21,7 +21,10 @@ function CheckReservation() {
       if (querySnapshot.empty) {
         setNotFound(true);
       } else {
-        const data = querySnapshot.docs.map((doc) => doc.data());
+        const data = querySnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
         setResults(data);
       }
     } catch (error) {
@@ -48,7 +51,9 @@ function CheckReservation() {
         {t("check") || "تحقق"}
       </button>
 
-      {notFound && <p className="mt-4 text-red-600">{t("no_booking_found") || "لا يوجد حجوزات"}</p>}
+      {notFound && (
+        <p className="mt-4 text-red-600">{t("no_booking_found") || "لا يوجد حجوزات"}</p>
+      )}
 
       {results.length > 0 && (
         <div className="mt-6 space-y-3">
@@ -62,6 +67,7 @@ function CheckReservation() {
               <p><strong>{t("select_date") || "التاريخ"}:</strong> {result.selectedDate}</p>
               <p><strong>{t("choose_time") || "الساعة"}:</strong> {result.selectedTime}</p>
               <p><strong>{t("choose_service") || "الخدمة"}:</strong> {result.selectedService}</p>
+              <p><strong>🔐 كود الحجز:</strong> {result.bookingCode || "-"}</p>
             </div>
           ))}
         </div>

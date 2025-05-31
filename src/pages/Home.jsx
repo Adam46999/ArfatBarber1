@@ -7,7 +7,7 @@ import InstagramSlider from "../components/home/InstagramSlider";
 import BookingSection from "../components/booking/BookingSection";
 import BookingTracker from "../components/booking/BookingTracker";
 import Footer from "../components/layout/Footer"; // ✅ استدعاء الفوتر الجديد
-
+import BackToTopButton from "../components/BackToTopButton";
 function Home() {
   const location = useLocation();
 
@@ -31,6 +31,7 @@ function Home() {
       <BookingSection />
       <BookingTracker />
       <Footer /> {/* ✅ هذا هو المكان الصحيح للفوتر والزر بداخله */}
+    <BackToTopButton />
     </main>
   );
 }

@@ -1,4 +1,3 @@
-// ✅ BookingSection.jsx - يعرض الكود برسالة دائمة ويقوم بالتمرير التلقائي إليها، بدون إخفاء تلقائي، ولا زر تعديل
 import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { db } from "../../firebase";
@@ -25,8 +24,8 @@ const workingHours = {
 
 function generateTimeSlots(from, to) {
   const slots = [];
-  const [fromHour, fromMinute] = from.split(":" ).map(Number);
-  const [toHour, toMinute] = to.split(":" ).map(Number);
+  const [fromHour, fromMinute] = from.split(":").map(Number);
+  const [toHour, toMinute] = to.split(":").map(Number);
   const current = new Date();
   current.setHours(fromHour, fromMinute, 0, 0);
   const end = new Date();
@@ -45,8 +44,8 @@ function isOpenNow() {
   const currentMinutes = now.getHours() * 60 + now.getMinutes();
   const todayHours = workingHours[day];
   if (!todayHours) return false;
-  const [fromHour, fromMinute] = todayHours.from.split(":" ).map(Number);
-  const [toHour, toMinute] = todayHours.to.split(":" ).map(Number);
+  const [fromHour, fromMinute] = todayHours.from.split(":").map(Number);
+  const [toHour, toMinute] = todayHours.to.split(":").map(Number);
   const fromMinutes = fromHour * 60 + fromMinute;
   const toMinutes = toHour * 60 + toMinute;
   return currentMinutes >= fromMinutes && currentMinutes <= toMinutes;
@@ -66,11 +65,10 @@ function BookingSection() {
   const [submitted, setSubmitted] = useState(false);
   const [availableTimes, setAvailableTimes] = useState([]);
   const [code, setCode] = useState("");
-const [bookings, setBookings] = useState([]);
+  const [bookings, setBookings] = useState([]);
 
   useEffect(() => {
     if (!selectedDate) return;
-
     const fetchBlockedTimes = async () => {
       const dateObj = new Date(selectedDate);
       const weekday = dateObj.toLocaleDateString("en-US", { weekday: "long" });
@@ -79,21 +77,14 @@ const [bookings, setBookings] = useState([]);
         setAvailableTimes([]);
         return;
       }
-
       const all = generateTimeSlots(dayHours.from, dayHours.to);
-
       try {
         const docRef = doc(db, "blockedTimes", selectedDate);
         const docSnap = await getDoc(docRef);
         const blocked = docSnap.exists() ? docSnap.data().times || [] : [];
-
-        const q = query(
-          collection(db, "bookings"),
-          where("selectedDate", "==", selectedDate)
-        );
+        const q = query(collection(db, "bookings"), where("selectedDate", "==", selectedDate));
         const snapshot = await getDocs(q);
         const booked = snapshot.docs.map((doc) => doc.data().selectedTime);
-
         const unavailable = [...new Set([...blocked, ...booked])];
         const filtered = all.filter((time) => !unavailable.includes(time));
         setAvailableTimes(filtered);
@@ -102,26 +93,32 @@ const [bookings, setBookings] = useState([]);
         setAvailableTimes([]);
       }
     };
-
     fetchBlockedTimes();
   }, [selectedDate]);
-useEffect(() => {
-  if (!phoneNumber) {
-    setBookings([]);
-    return;
-  }
-  const fetchBookingsByPhone = async () => {
-    try {
-      const q = query(collection(db, "bookings"), where("phoneNumber", "==", phoneNumber));
-      const snapshot = await getDocs(q);
-      const data = snapshot.docs.map((doc) => doc.data());
-      setBookings(data);
-    } catch (error) {
-      console.error("Error fetching bookings:", error);
+
+  useEffect(() => {
+    if (!phoneNumber) {
+      setBookings([]);
+      return;
     }
-  };
-  fetchBookingsByPhone();
-}, [phoneNumber]);
+    const fetchBookingsByPhone = async () => {
+      try {
+        const q = query(collection(db, "bookings"), where("phoneNumber", "==", phoneNumber));
+        const snapshot = await getDocs(q);
+        const data = snapshot.docs.map((doc) => doc.data());
+        setBookings(data);
+      } catch (error) {
+        console.error("Error fetching bookings:", error);
+      }
+    };
+    fetchBookingsByPhone();
+  }, [phoneNumber]);
+
+  useEffect(() => {
+    if (submitted && messageRef.current) {
+      messageRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [submitted]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -129,19 +126,12 @@ useEffect(() => {
       alert(t("fill_required_fields"));
       return;
     }
-const existingBookingsQuery = query(
-  collection(db, "bookings"),
-  where("phoneNumber", "==", phoneNumber)
-);
-const existingSnapshot = await getDocs(existingBookingsQuery);
-
-if (!existingSnapshot.empty) {
-  const confirmNew = window.confirm("⚠️ يوجد لديك حجوزات سابقة برقم الهاتف هذا. هل تريد إضافة حجز جديد؟");
-  if (!confirmNew) {
-    return; // المستخدم رفض إضافة حجز جديد
-  }
-}
-
+    const existingBookingsQuery = query(collection(db, "bookings"), where("phoneNumber", "==", phoneNumber));
+    const existingSnapshot = await getDocs(existingBookingsQuery);
+    if (!existingSnapshot.empty) {
+      const confirmNew = window.confirm("⚠️ يوجد لديك حجوزات سابقة برقم الهاتف هذا. هل تريد إضافة حجز جديد؟");
+      if (!confirmNew) return;
+    }
     try {
       const q = query(
         collection(db, "bookings"),
@@ -153,10 +143,8 @@ if (!existingSnapshot.empty) {
         alert(t("time_already_booked") || "هذه الساعة محجوزة بالفعل، يرجى اختيار ساعة أخرى.");
         return;
       }
-
       const bookingCode = Math.random().toString(36).substring(2, 8);
       setCode(bookingCode);
-
       await addDoc(collection(db, "bookings"), {
         fullName,
         phoneNumber,
@@ -166,10 +154,7 @@ if (!existingSnapshot.empty) {
         bookingCode,
         createdAt: serverTimestamp(),
       });
-
       setSubmitted(true);
-      if (messageRef.current) messageRef.current.scrollIntoView({ behavior: "smooth" });
-
       setFullName("");
       setPhoneNumber("");
       setSelectedDate("");
@@ -179,9 +164,6 @@ if (!existingSnapshot.empty) {
       console.error("Error saving booking:", error);
       alert("حدث خطأ أثناء حفظ الحجز، يرجى المحاولة لاحقًا.");
     }
-
-    // ⚠️ تأكيد لو فيه حجوزات سابقة لنفس الرقم
-
   };
 
   return (
@@ -197,30 +179,22 @@ if (!existingSnapshot.empty) {
             {isOpenNow() ? t("open_now") : t("closed_today")}
           </p>
           <div className="divide-y divide-gray-100 border-t border-gray-100 pt-3">
-  {Object.entries(workingHours).map(([day, hours]) => (
-    <div
-      key={day}
-      className="flex justify-between py-2 text-sm font-medium text-gray-700"
-    >
-      <span className="capitalize">{t(day.toLowerCase())}</span>
-      {hours ? (
-        <span className="text-gray-900">{hours.from} – {hours.to}</span>
-      ) : (
-        <span className="text-red-600">{t("closed")}</span>
-      )}
-    </div>
-  ))}
-</div>
-
-
+            {Object.entries(workingHours).map(([day, hours]) => (
+              <div key={day} className="flex justify-between py-2 text-sm font-medium text-gray-700">
+                <span className="capitalize">{t(day.toLowerCase())}</span>
+                {hours ? (
+                  <span className="text-gray-900">{hours.from} – {hours.to}</span>
+                ) : (
+                  <span className="text-red-600">{t("closed")}</span>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
 
         <div className="bg-white shadow-xl rounded-2xl p-8 space-y-6 border border-gray-100">
           {submitted && (
-            <div
-              ref={messageRef}
-              className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg text-center text-lg"
-            >
+            <div ref={messageRef} className="fade-in bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg text-center text-lg">
               ✅ {t("thank_you")}<br />🔐 {t("your_code")}: <strong>{code}</strong>
             </div>
           )}
@@ -228,26 +202,26 @@ if (!existingSnapshot.empty) {
           <form onSubmit={handleSubmit} className="space-y-5">
             <input type="text" placeholder={t("name")} className="w-full p-3 border border-gray-300 rounded-xl" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
             <input type="tel" placeholder={t("phone")} className="w-full p-3 border border-gray-300 rounded-xl" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} required />
-<input
-  type="date"
-  min={new Date().toISOString().split("T")[0]} // ✅ يمنع تواريخ الماضي
-  value={selectedDate}
-  onChange={(e) => {
-    const dateStr = e.target.value;
-    const dayName = new Date(dateStr).toLocaleDateString("en-US", { weekday: "long" });
-    const closedDays = ["Sunday"]; // ✅ الأيام المغلقة
-    if (closedDays.includes(dayName)) {
-      alert("⚠️ هذا اليوم مغلق ولا يمكن الحجز فيه.");
-      setSelectedDate("");
-      setSelectedTime("");
-    } else {
-      setSelectedDate(dateStr);
-      setSelectedTime("");
-    }
-  }}
-  className="w-full p-3 border border-gray-300 rounded-xl"
-  required
-/>
+            <input
+              type="date"
+              min={new Date().toISOString().split("T")[0]}
+              value={selectedDate}
+              onChange={(e) => {
+                const dateStr = e.target.value;
+                const dayName = new Date(dateStr).toLocaleDateString("en-US", { weekday: "long" });
+                const closedDays = ["Sunday"];
+                if (closedDays.includes(dayName)) {
+                  alert("⚠️ هذا اليوم مغلق ولا يمكن الحجز فيه.");
+                  setSelectedDate("");
+                  setSelectedTime("");
+                } else {
+                  setSelectedDate(dateStr);
+                  setSelectedTime("");
+                }
+              }}
+              className="w-full p-3 border border-gray-300 rounded-xl"
+              required
+            />
 
             {selectedDate && availableTimes.length > 0 && (
               <div>
@@ -303,22 +277,24 @@ if (!existingSnapshot.empty) {
               {t("confirm_booking")}
             </button>
           </form>
-          {phoneNumber && bookings.length > 0 && (
-  <div className="mt-6 bg-white p-4 border rounded shadow text-sm">
-    <h4 className="font-bold mb-2 text-gold">حجوزاتك الحالية:</h4>
-    <ul className="space-y-1">
-      {bookings.map((b, idx) => (
-        <li key={idx} className="flex justify-between border-b pb-1">
-          <span>{b.selectedDate} - {b.selectedTime}</span>
-          <span className="text-gray-600">{b.selectedService}</span>
-        </li>
-      ))}
-    </ul>
-  </div>
-)}
 
+          {phoneNumber && bookings.length > 0 && (
+            <div className="mt-6 bg-white p-4 border rounded shadow text-sm">
+              <h4 className="font-bold mb-2 text-gold">حجوزاتك الحالية:</h4>
+              <ul className="space-y-1">
+                {bookings.map((b, idx) => (
+                  <li key={idx} className="flex justify-between border-b pb-1">
+                    <span>{b.selectedDate} - {b.selectedTime}</span>
+                    <span className="text-gray-600">{b.selectedService}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       </div>
+
+      
     </section>
   );
 }
