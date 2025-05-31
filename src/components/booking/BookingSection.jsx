@@ -1,6 +1,8 @@
+// src/components/booking/BookingSection.jsx
+
 import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { db } from "../../firebase";
+import { db } from "../../firebase"; // تأكد من المسار الصحيح
 import {
   doc,
   getDoc,
@@ -67,6 +69,34 @@ function BookingSection() {
   const [code, setCode] = useState("");
   const [bookings, setBookings] = useState([]);
 
+  // ---------- دالة Input Mask للـ “رقم الهاتف” يبدأ بـ 05 وطوله 10 أرقام ----------
+  const handlePhoneChange = (e) => {
+    let digitsOnly = e.target.value.replace(/\D/g, ""); // إزالة أي حرف غير رقم
+
+    // إذا تجاوز طول الأرقام 10 أرقام، اقتصره على 10
+    if (digitsOnly.length > 10) {
+      digitsOnly = digitsOnly.slice(0, 10);
+    }
+
+    // تأكد أن الرقم يبدأ بـ "05"
+    if (digitsOnly.length >= 1 && digitsOnly[0] !== "0") {
+      digitsOnly = ""; // إذا أول رقم ليس 0، نعيد القيمة فارغة
+    }
+    if (digitsOnly.length >= 2 && digitsOnly.slice(0, 2) !== "05") {
+      digitsOnly = digitsOnly.slice(0, 1); // إذا أول رقمين ليسا "05"، نحتفظ فقط بـ "0"
+    }
+
+    // بعد التأكد من صحة البداية: نسق الرقم مع شرطة "-" بعد الرقم الثالث
+    if (digitsOnly.length > 3) {
+      const part1 = digitsOnly.slice(0, 3); // "05X"
+      const part2 = digitsOnly.slice(3);    // باقي الأرقام
+      setPhoneNumber(`${part1}-${part2}`);
+    } else {
+      setPhoneNumber(digitsOnly);
+    }
+  };
+  // ------------------------------------------------------------
+
   useEffect(() => {
     if (!selectedDate) return;
     const fetchBlockedTimes = async () => {
@@ -82,7 +112,10 @@ function BookingSection() {
         const docRef = doc(db, "blockedTimes", selectedDate);
         const docSnap = await getDoc(docRef);
         const blocked = docSnap.exists() ? docSnap.data().times || [] : [];
-        const q = query(collection(db, "bookings"), where("selectedDate", "==", selectedDate));
+        const q = query(
+          collection(db, "bookings"),
+          where("selectedDate", "==", selectedDate)
+        );
         const snapshot = await getDocs(q);
         const booked = snapshot.docs.map((doc) => doc.data().selectedTime);
         const unavailable = [...new Set([...blocked, ...booked])];
@@ -101,9 +134,15 @@ function BookingSection() {
       setBookings([]);
       return;
     }
+    // عند البحث، نشيل الشرطات "–" لأننا نخزن الأرقام رقميًا في Firestore
+    const cleanPhone = phoneNumber.replace(/\D/g, "");
+
     const fetchBookingsByPhone = async () => {
       try {
-        const q = query(collection(db, "bookings"), where("phoneNumber", "==", phoneNumber));
+        const q = query(
+          collection(db, "bookings"),
+          where("phoneNumber", "==", cleanPhone)
+        );
         const snapshot = await getDocs(q);
         const data = snapshot.docs.map((doc) => doc.data());
         setBookings(data);
@@ -122,16 +161,35 @@ function BookingSection() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!fullName || !phoneNumber || !selectedDate || !selectedTime || !selectedService) {
+
+    if (
+      !fullName ||
+      !phoneNumber ||
+      !selectedDate ||
+      !selectedTime ||
+      !selectedService
+    ) {
       alert(t("fill_required_fields"));
       return;
     }
-    const existingBookingsQuery = query(collection(db, "bookings"), where("phoneNumber", "==", phoneNumber));
+
+    // إزالة أي حرف غير رقم قبل الإرسال
+    const cleanPhone = phoneNumber.replace(/\D/g, "");
+
+    // التحقق من الحجوزات السابقة لرقم الهاتف نفسه
+    const existingBookingsQuery = query(
+      collection(db, "bookings"),
+      where("phoneNumber", "==", cleanPhone)
+    );
     const existingSnapshot = await getDocs(existingBookingsQuery);
     if (!existingSnapshot.empty) {
-      const confirmNew = window.confirm("⚠️ يوجد لديك حجوزات سابقة برقم الهاتف هذا. هل تريد إضافة حجز جديد؟");
+      const confirmNew = window.confirm(
+        "⚠️ يوجد لديك حجوزات سابقة برقم الهاتف هذا. هل تريد إضافة حجز جديد؟"
+      );
       if (!confirmNew) return;
     }
+
+    // التأكد أن الوقت المختار غير محجوز مسبقًا
     try {
       const q = query(
         collection(db, "bookings"),
@@ -140,20 +198,29 @@ function BookingSection() {
       );
       const snapshot = await getDocs(q);
       if (!snapshot.empty) {
-        alert(t("time_already_booked") || "هذه الساعة محجوزة بالفعل، يرجى اختيار ساعة أخرى.");
+        alert(
+          t("time_already_booked") ||
+            "هذه الساعة محجوزة بالفعل، يرجى اختيار ساعة أخرى."
+        );
         return;
       }
+
+      // إنشاؤه كود عشوائي للحجز
       const bookingCode = Math.random().toString(36).substring(2, 8);
       setCode(bookingCode);
+
+      // حفظ الحجز في Firestore
       await addDoc(collection(db, "bookings"), {
         fullName,
-        phoneNumber,
+        phoneNumber: cleanPhone,
         selectedDate,
         selectedTime,
         selectedService,
         bookingCode,
         createdAt: serverTimestamp(),
       });
+
+      // إعادة تهيئة الحقول بعد الحفظ
       setSubmitted(true);
       setFullName("");
       setPhoneNumber("");
@@ -169,21 +236,32 @@ function BookingSection() {
   return (
     <section id="booking" className={`bg-[#f8f8f8] text-primary py-16 px-4 ${fontClass}`}>
       <div className="max-w-xl mx-auto">
-        <h2 className="text-4xl font-bold mb-8 text-center text-gold">{t("book_now")}</h2>
+        <h2 className="text-4xl font-bold mb-8 text-center text-gold">
+          {t("book_now")}
+        </h2>
 
         <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-md mb-6">
           <h3 className="text-lg font-bold text-gold mb-2 flex items-center gap-2">
             <span>🕒</span> {t("working_hours")}
           </h3>
-          <p className={`mb-3 text-sm font-semibold ${isOpenNow() ? "text-green-600" : "text-red-600"}`}>
+          <p
+            className={`mb-3 text-sm font-semibold ${
+              isOpenNow() ? "text-green-600" : "text-red-600"
+            }`}
+          >
             {isOpenNow() ? t("open_now") : t("closed_today")}
           </p>
           <div className="divide-y divide-gray-100 border-t border-gray-100 pt-3">
             {Object.entries(workingHours).map(([day, hours]) => (
-              <div key={day} className="flex justify-between py-2 text-sm font-medium text-gray-700">
+              <div
+                key={day}
+                className="flex justify-between py-2 text-sm font-medium text-gray-700"
+              >
                 <span className="capitalize">{t(day.toLowerCase())}</span>
                 {hours ? (
-                  <span className="text-gray-900">{hours.from} – {hours.to}</span>
+                  <span className="text-gray-900">
+                    {hours.from} – {hours.to}
+                  </span>
                 ) : (
                   <span className="text-red-600">{t("closed")}</span>
                 )}
@@ -194,21 +272,47 @@ function BookingSection() {
 
         <div className="bg-white shadow-xl rounded-2xl p-8 space-y-6 border border-gray-100">
           {submitted && (
-            <div ref={messageRef} className="fade-in bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg text-center text-lg">
-              ✅ {t("thank_you")}<br />🔐 {t("your_code")}: <strong>{code}</strong>
+            <div
+              ref={messageRef}
+              className="fade-in bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg text-center text-lg"
+            >
+              ✅ {t("thank_you")}
+              <br />🔐 {t("your_code")}: <strong>{code}</strong>
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
-            <input type="text" placeholder={t("name")} className="w-full p-3 border border-gray-300 rounded-xl" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
-            <input type="tel" placeholder={t("phone")} className="w-full p-3 border border-gray-300 rounded-xl" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} required />
+            {/* ---------- حقل الاسم ---------- */}
+            <input
+              type="text"
+              placeholder={t("name")}
+              className="w-full p-3 border border-gray-300 rounded-xl"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              required
+            />
+
+            {/* ---------- حقل رقم الهاتف مع Input Mask ---------- */}
+            <input
+              type="tel"
+              placeholder={t("phone")}
+              className="w-full p-3 border border-gray-300 rounded-xl"
+              value={phoneNumber}
+              onChange={handlePhoneChange}
+              required
+            />
+            {/* مثال التنسيق النهائي: "05X-XXXXXXX" (10 أرقام) */}
+
+            {/* ---------- حقل اختيار التاريخ ---------- */}
             <input
               type="date"
               min={new Date().toISOString().split("T")[0]}
               value={selectedDate}
               onChange={(e) => {
                 const dateStr = e.target.value;
-                const dayName = new Date(dateStr).toLocaleDateString("en-US", { weekday: "long" });
+                const dayName = new Date(dateStr).toLocaleDateString("en-US", {
+                  weekday: "long",
+                });
                 const closedDays = ["Sunday"];
                 if (closedDays.includes(dayName)) {
                   alert("⚠️ هذا اليوم مغلق ولا يمكن الحجز فيه.");
@@ -223,9 +327,12 @@ function BookingSection() {
               required
             />
 
+            {/* ---------- اختيارات الأوقات حسب التاريخ ---------- */}
             {selectedDate && availableTimes.length > 0 && (
               <div>
-                <label className="block mb-2 font-semibold text-gray-700">{t("choose_time")}</label>
+                <label className="block mb-2 font-semibold text-gray-700">
+                  {t("choose_time")}
+                </label>
                 <div className="grid grid-cols-3 md:grid-cols-4 gap-3">
                   {availableTimes.map((time) => (
                     <button
@@ -233,9 +340,11 @@ function BookingSection() {
                       key={time}
                       onClick={() => setSelectedTime(time)}
                       className={`py-2 px-3 rounded-md text-sm font-medium border transition 
-                        ${selectedTime === time
-                          ? "bg-gold text-primary border-gold shadow"
-                          : "bg-gray-100 text-gray-800 border-gray-300 hover:bg-gold hover:text-primary"}`}
+                        ${
+                          selectedTime === time
+                            ? "bg-gold text-primary border-gold shadow"
+                            : "bg-gray-100 text-gray-800 border-gray-300 hover:bg-gold hover:text-primary"
+                        }`}
                     >
                       {time}
                     </button>
@@ -245,11 +354,16 @@ function BookingSection() {
             )}
 
             {selectedDate && availableTimes.length === 0 && (
-              <p className="text-red-500 text-sm font-medium">{t("no_hours")}</p>
+              <p className="text-red-500 text-sm font-medium">
+                {t("no_hours")}
+              </p>
             )}
 
+            {/* ---------- اختيار الخدمة ---------- */}
             <div>
-              <label className="block mb-2 font-semibold text-gray-700">{t("choose_service")}</label>
+              <label className="block mb-2 font-semibold text-gray-700">
+                {t("choose_service")}
+              </label>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {[
                   { id: "haircut", label: t("service_haircut") },
@@ -260,9 +374,11 @@ function BookingSection() {
                     type="button"
                     onClick={() => setSelectedService(service.id)}
                     className={`py-2 px-3 rounded-md font-medium border transition 
-                      ${selectedService === service.id
-                        ? "bg-gold text-primary border-gold shadow"
-                        : "bg-gray-100 text-gray-800 border-gray-300 hover:bg-gold hover:text-primary"}`}
+                      ${
+                        selectedService === service.id
+                          ? "bg-gold text-primary border-gold shadow"
+                          : "bg-gray-100 text-gray-800 border-gray-300 hover:bg-gold hover:text-primary"
+                      }`}
                   >
                     {service.label}
                   </button>
@@ -270,6 +386,7 @@ function BookingSection() {
               </div>
             </div>
 
+            {/* ---------- زر تأكيد الحجز ---------- */}
             <button
               type="submit"
               className="w-full mt-4 bg-gold text-primary py-3 rounded-xl font-bold hover:bg-darkText hover:text-light transition"
@@ -278,13 +395,16 @@ function BookingSection() {
             </button>
           </form>
 
+          {/* ---------- عرض الحجوزات الحالية (إن وُجدت) ---------- */}
           {phoneNumber && bookings.length > 0 && (
             <div className="mt-6 bg-white p-4 border rounded shadow text-sm">
               <h4 className="font-bold mb-2 text-gold">حجوزاتك الحالية:</h4>
               <ul className="space-y-1">
                 {bookings.map((b, idx) => (
                   <li key={idx} className="flex justify-between border-b pb-1">
-                    <span>{b.selectedDate} - {b.selectedTime}</span>
+                    <span>
+                      {b.selectedDate} - {b.selectedTime}
+                    </span>
                     <span className="text-gray-600">{b.selectedService}</span>
                   </li>
                 ))}
@@ -294,7 +414,7 @@ function BookingSection() {
         </div>
       </div>
 
-      
+      {/* ملاحظة: أزلنا زر “العودة للأعلى” القديم من هنا */}
     </section>
   );
 }
