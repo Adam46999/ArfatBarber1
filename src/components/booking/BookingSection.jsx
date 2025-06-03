@@ -89,6 +89,10 @@ function BookingSection() {
   const [availableTimes, setAvailableTimes] = useState([]);
   const [code, setCode] = useState("");
   const [bookings, setBookings] = useState([]);
+  // ✅ progress bar
+const [step, setStep] = useState(1);
+const [progress, setProgress] = useState(0);
+
 
   // ---------- دالة Input Mask للـ “رقم الهاتف” يبدأ بـ 05 وطوله 10 أرقام ----------
   const handlePhoneChange = (e) => {
@@ -179,6 +183,18 @@ function BookingSection() {
       messageRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [submitted]);
+  useEffect(() => {
+  let currentStep = 0;
+  if (fullName) currentStep++;
+  if (phoneNumber) currentStep++;
+  if (selectedDate) currentStep++;
+  if (selectedTime) currentStep++;
+  if (selectedService) currentStep++;
+  setStep(currentStep);
+  setProgress((currentStep / 5) * 100); // شريط التقدم كنسبة مئوية
+}, [fullName, phoneNumber, selectedDate, selectedTime, selectedService]);
+
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -316,6 +332,18 @@ function BookingSection() {
               <br />🔐 {t("your_code")}: <strong>{code}</strong>
             </div>
           )}
+{/* ✅ شريط التقدم قبل الـ form مباشرةً */}
+<div className="flex justify-between items-center mb-6">
+  <div className="flex-1 h-1 bg-gray-300 rounded-full">
+    <div
+      className="h-1 bg-gold rounded-full transition-all duration-300"
+      style={{ width: `${progress}%` }}
+    ></div>
+  </div>
+  <div className="ml-4 text-sm font-semibold text-gray-600">
+    {t("step") || "Step"} {step} / 5
+  </div>
+</div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* ---------- حقل الاسم ---------- */}
