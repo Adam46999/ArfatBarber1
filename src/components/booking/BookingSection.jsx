@@ -40,18 +40,39 @@ function generateTimeSlots(from, to) {
   return slots;
 }
 
-function isOpenNow() {
+
+function getOpeningStatus() {
   const now = new Date();
-  const day = now.toLocaleDateString("en-US", { weekday: "long" });
-  const currentMinutes = now.getHours() * 60 + now.getMinutes();
-  const todayHours = workingHours[day];
-  if (!todayHours) return false;
+  const dayName = now.toLocaleDateString("en-US", { weekday: "long" });
+  const todayHours = workingHours[dayName];
+  if (!todayHours) return "close";
+
   const [fromHour, fromMinute] = todayHours.from.split(":").map(Number);
   const [toHour, toMinute] = todayHours.to.split(":").map(Number);
-  const fromMinutes = fromHour * 60 + fromMinute;
-  const toMinutes = toHour * 60 + toMinute;
-  return currentMinutes >= fromMinutes && currentMinutes <= toMinutes;
+
+  const from = new Date();
+  from.setHours(fromHour, fromMinute, 0, 0);
+  const to = new Date();
+  to.setHours(toHour, toMinute, 0, 0);
+
+  const minutesUntilOpen = (from - now) / (1000 * 60);
+  const minutesUntilClose = (to - now) / (1000 * 60);
+
+  if (now < from && minutesUntilOpen <= 60 && minutesUntilOpen > 0) {
+    return "opening_soon";
+  }
+
+  if (now >= from && now <= to && minutesUntilClose <= 60 && minutesUntilClose > 0) {
+    return "closing_soon";
+  }
+
+  if (now >= from && now <= to) {
+    return "open";
+  }
+
+  return "close";
 }
+
 
 function BookingSection() {
   const { t, i18n } = useTranslation();
@@ -244,13 +265,28 @@ function BookingSection() {
           <h3 className="text-lg font-bold text-gold mb-2 flex items-center gap-2">
             <span>🕒</span> {t("working_hours")}
           </h3>
-          <p
-            className={`mb-3 text-sm font-semibold ${
-              isOpenNow() ? "text-green-600" : "text-red-600"
-            }`}
-          >
-            {isOpenNow() ? t("open_now") : t("closed_today")}
-          </p>
+          {(() => {
+  const status = getOpeningStatus();
+  let textColor = "text-red-600";
+  let message = t("closed_today");
+
+  if (status === "open") {
+    textColor = "text-green-600";
+    message = t("open_now");
+  } else if (status === "opening_soon") {
+    textColor = "text-yellow-600";
+    message = "سنفتح قريبًا";
+  } else if (status === "closing_soon") {
+    textColor = "text-yellow-600";
+    message = "سنغلق قريبًا";
+  }
+
+  return (
+    <p className={`mb-3 text-sm font-semibold ${textColor}`}>
+      {message}
+    </p>
+  );
+})()}
           <div className="divide-y divide-gray-100 border-t border-gray-100 pt-3">
             {Object.entries(workingHours).map(([day, hours]) => (
               <div
@@ -419,4 +455,4 @@ function BookingSection() {
   );
 }
 
-export default BookingSection;
+export default BookingSection
