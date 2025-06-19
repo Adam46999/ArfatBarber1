@@ -15,7 +15,7 @@ exports.sendBookingNotification = functions.firestore
     const time = booking.selectedTime || "بدون وقت";
     const date = booking.selectedDate || "بدون تاريخ";
 
-    // استخراج اسم اليوم من التاريخ
+    // استخراج اسم اليوم من التاريخ (بالعربية)
     const weekdayName = new Date(date).toLocaleDateString("ar-EG", {
       weekday: "long",
     });
@@ -39,4 +39,6 @@ exports.sendBookingNotification = functions.firestore
     } catch (error) {
       console.error("❌ فشل إرسال الإشعار:", error);
     }
+
+    return null;
   });

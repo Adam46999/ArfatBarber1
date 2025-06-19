@@ -1,4 +1,6 @@
 // src/components/booking/BookingSection.jsx
+ import { getMessaging, getToken } from "firebase/messaging";
+import { app } from "../../firebase"; // تأكد من أن المسار صحيح حسب مشروعك
 
 import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
@@ -197,6 +199,7 @@ const [progress, setProgress] = useState(0);
 
 
   const handleSubmit = async (e) => {
+   
     e.preventDefault();
 
     if (
@@ -209,6 +212,15 @@ const [progress, setProgress] = useState(0);
       alert(t("fill_required_fields"));
       return;
     }
+let fcmToken = "";
+try {
+  const messaging = getMessaging(app);
+  fcmToken = await getToken(messaging, {
+    vapidKey: "BMSKYpj6OfL2RinVjw4jUNlL-Hbi1Ev4eiTibIKlvFwqSULUm42ricVJRcKbptmiepuDbl3andf-F2tf7Cmr-U8",
+  });
+} catch (err) {
+  console.warn("FCM token error", err);
+}
 
     // إزالة أي حرف غير رقم قبل الإرسال
     const cleanPhone = phoneNumber.replace(/\D/g, "");
@@ -225,6 +237,9 @@ const [progress, setProgress] = useState(0);
       );
       if (!confirmNew) return;
     }
+    const bookingCode = Math.random().toString(36).substring(2, 8);
+setCode(bookingCode); // هذا السطر اختياري لعرض الكود للمستخدم بعد الحجز
+
 
     // التأكد أن الوقت المختار غير محجوز مسبقًا
     try {
@@ -243,19 +258,23 @@ const [progress, setProgress] = useState(0);
       }
 
       // إنشاؤه كود عشوائي للحجز
-      const bookingCode = Math.random().toString(36).substring(2, 8);
-      setCode(bookingCode);
+      const bookingDateTime = new Date(`${selectedDate}T${selectedTime}:00`);
+const timestamp = bookingDateTime.getTime();
 
-      // حفظ الحجز في Firestore
-      await addDoc(collection(db, "bookings"), {
-        fullName,
-        phoneNumber: cleanPhone,
-        selectedDate,
-        selectedTime,
-        selectedService,
-        bookingCode,
-        createdAt: serverTimestamp(),
-      });
+await addDoc(collection(db, "bookings"), {
+  fullName,
+  phoneNumber: cleanPhone,
+  selectedDate,
+  selectedTime,
+  selectedService,
+  bookingCode,
+  timestamp,
+  reminderSent_60: false,
+  reminderSent_30: false,
+  fcmToken, // ✅ أضف هذا السطر
+  createdAt: serverTimestamp(),
+});
+
 
       // إعادة تهيئة الحقول بعد الحفظ
       setSubmitted(true);
@@ -371,6 +390,7 @@ const [progress, setProgress] = useState(0);
             <input
               type="date"
               min={new Date().toISOString().split("T")[0]}
+               placeholder={t("select_date") || "اختر التاريخ"}  // هذا السطر تضيفه هنا
               value={selectedDate}
               onChange={(e) => {
                 const dateStr = e.target.value;
