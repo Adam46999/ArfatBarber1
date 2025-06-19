@@ -387,6 +387,9 @@ await addDoc(collection(db, "bookings"), {
             {/* مثال التنسيق النهائي: "05X-XXXXXXX" (10 أرقام) */}
 
             {/* ---------- حقل اختيار التاريخ ---------- */}
+            <label htmlFor="booking-date" className="block mb-2 font-semibold text-gray-700">
+  اختر تاريخ الحجز
+</label>
             <input
               type="date"
               min={new Date().toISOString().split("T")[0]}
