@@ -61,5 +61,6 @@
   "enter_code": "Enter code",
   "hero_title": "A style that suits you, effortlessly"
 ,
-  "code_required": "Please enter the code to cancel the booking"
+  "code_required": "Please enter the code to cancel the booking",
+  "choose_date": "Please Enter The Date"
 }

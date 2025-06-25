@@ -1,4 +1,3 @@
-// ✅ BarberPanel.jsx - النسخة المعدلة لتسجيل خروج تلقائي بعد ساعتين من عدم النشاط
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -15,7 +14,6 @@ import {
   getDocs,
 } from "firebase/firestore";
 
-// ساعات العمل
 const workingHours = {
   Sunday: null,
   Monday: { from: "12:00", to: "21:00" },
@@ -61,10 +59,7 @@ function DateDropdown({ selectedDate, onChange }) {
       d.setDate(today.getDate() + i);
       const iso = d.toISOString().slice(0, 10);
 
-      const daysAr = [
-        "الأحد", "الإثنين", "الثلاثاء",
-        "الأربعاء", "الخميس", "الجمعة", "السبت",
-      ];
+      const daysAr = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
       let label = daysAr[d.getDay()];
       if (d.toDateString() === today.toDateString()) label += " (اليوم)";
       else if (d.toDateString() === tomorrow.toDateString()) label += " (بكرا)";
@@ -100,7 +95,6 @@ export default function BarberPanel() {
   const [bookings, setBookings] = useState([]);
   const [statusMessage, setStatusMessage] = useState("");
 
-  // ✅ ⏰ Auto-logout timer (ساعتين)
   useEffect(() => {
     let timer;
     const resetTimer = () => {
@@ -109,11 +103,10 @@ export default function BarberPanel() {
         localStorage.removeItem("barberUser");
         alert("⚠️ تم تسجيل الخروج بسبب عدم النشاط لمدة ساعتين.");
         navigate("/login");
-      }, 2 * 60 * 60 * 1000); // ساعتين
+      }, 2 * 60 * 60 * 1000);
     };
     resetTimer();
 
-    // أي تفاعل => إعادة ضبط المؤقت
     const handleActivity = () => resetTimer();
     window.addEventListener("click", handleActivity);
     window.addEventListener("keydown", handleActivity);
@@ -163,9 +156,7 @@ export default function BarberPanel() {
   }, [selectedDate]);
 
   const isTimeBooked = (time) =>
-    bookings.some(
-      (b) => b.selectedDate === selectedDate && b.selectedTime === time
-    );
+    bookings.some((b) => b.selectedDate === selectedDate && b.selectedTime === time);
 
   const handleToggleTime = async (time) => {
     if (isTimeBooked(time)) {
@@ -210,9 +201,7 @@ export default function BarberPanel() {
     try {
       const ref = doc(db, "blockedTimes", selectedDate);
       const snap = await getDoc(ref);
-      if (!snap.exists()) {
-        await setDoc(ref, { times: [] });
-      }
+      if (!snap.exists()) await setDoc(ref, { times: [] });
       for (const time of selectedTimes) {
         await updateDoc(ref, { times: arrayUnion(time) });
       }
@@ -270,22 +259,16 @@ export default function BarberPanel() {
             min={new Date().toISOString().split("T")[0]}
           />
           {!selectedDate && (
-            <p className="mt-2 text-sm text-gray-500">
-              يمكنك استخدام القائمة أو التقويم لاختيار أي تاريخ.
-            </p>
+            <p className="mt-2 text-sm text-gray-500">يمكنك استخدام القائمة أو التقويم لاختيار أي تاريخ.</p>
           )}
           {selectedDate && !times && (
-            <p className="mt-3 text-sm text-red-600 font-medium">
-              هذا اليوم مغلق
-            </p>
+            <p className="mt-3 text-sm text-red-600 font-medium">هذا اليوم مغلق</p>
           )}
         </div>
 
         {selectedDate && times && (
           <div className="p-8 pt-4 border-t bg-gray-50">
-            <h2 className="text-xl font-semibold text-gray-700 mb-4">
-              الأوقات المتاحة:
-            </h2>
+            <h2 className="text-xl font-semibold text-gray-700 mb-4">الأوقات المتاحة:</h2>
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-4 mb-6">
               {times.map((time) => {
                 const booked = isTimeBooked(time);
@@ -297,13 +280,11 @@ export default function BarberPanel() {
                     key={time}
                     onClick={() => handleToggleTime(time)}
                     disabled={booked}
-                    className={`
-                      py-2 rounded-xl text-sm font-medium text-center transition-all duration-200
+                    className={`py-2 rounded-xl text-sm font-medium text-center transition-all duration-200
                       ${booked ? "bg-red-700 text-white cursor-not-allowed"
                         : isBlocked ? "bg-red-200 text-red-800"
                         : isSelected ? "bg-yellow-300 text-gray-900 ring-2 ring-yellow-500"
-                        : "bg-green-100 text-green-800 hover:bg-green-200"}
-                    `}
+                        : "bg-green-100 text-green-800 hover:bg-green-200"}`}
                     title={booked ? "هذه الساعة محجوزة"
                       : isBlocked ? "هذه الساعة محظورة"
                       : "اضغط للحظر/الإلغاء"}
@@ -321,9 +302,7 @@ export default function BarberPanel() {
                 {t("remove_selected_times")}
               </button>
             ) : (
-              <p className="text-sm text-gray-500">
-                اختر ساعة أو أكثر ثم اضغط لحظرها.
-              </p>
+              <p className="text-sm text-gray-500">اختر ساعة أو أكثر ثم اضغط لحظرها.</p>
             )}
           </div>
         )}
