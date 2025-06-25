@@ -1,7 +1,7 @@
 // src/components/booking/BookingSection.jsx
  import { getMessaging, getToken } from "firebase/messaging";
 import { app } from "../../firebase"; // تأكد من أن المسار صحيح حسب مشروعك
-
+import DateSelector from "./DateSelector";
 import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { db } from "../../firebase"; // تأكد من المسار الصحيح
@@ -143,11 +143,13 @@ const [progress, setProgress] = useState(0);
           collection(db, "bookings"),
           where("selectedDate", "==", selectedDate)
         );
-        const snapshot = await getDocs(q);
-        const booked = snapshot.docs.map((doc) => doc.data().selectedTime);
-        const unavailable = [...new Set([...blocked, ...booked])];
-        const filtered = all.filter((time) => !unavailable.includes(time));
-        setAvailableTimes(filtered);
+       // بعد التعديل: نستثني الحجوزات الملغاة قبل جمع الأوقات المحجوزة
+const snapshot = await getDocs(q);
+const booked = snapshot.docs.map(d => d.data().selectedTime);
+const unavailable = [...new Set([...blocked, ...booked])];
+const filtered = all.filter((time) => !unavailable.includes(time));
+setAvailableTimes(filtered);
+
       } catch (error) {
         console.error("🔥 Error getting times from Firestore:", error);
         setAvailableTimes([]);
@@ -387,32 +389,20 @@ await addDoc(collection(db, "bookings"), {
             {/* مثال التنسيق النهائي: "05X-XXXXXXX" (10 أرقام) */}
 
             {/* ---------- حقل اختيار التاريخ ---------- */}
-            <label  htmlFor="booking-date" className="block mb-2 font-semibold text-gray-700">
-            {t("choose_date")}</label>
+           {/* ---------- حقل اختيار التاريخ (DateSelector) ---------- */}
+<label className="block mb-2 font-semibold text-gray-700">
+  {t("choose_date")}
+</label>
+<DateSelector
+  selectedDate={selectedDate ? new Date(selectedDate) : null}
+  onChange={(date) => {
+    // date هو كائن JS Date، ومنعه يوم الأحد تم في الـ DateSelector نفسه
+    setSelectedDate(date.toISOString().slice(0,10));
+    setSelectedTime("");
+  }}
+  placeholder={t("select_date") || "اختر التاريخ"}
+/>
 
-            <input
-              type="date"
-              min={new Date().toISOString().split("T")[0]}
-               placeholder={t("select_date") || "اختر التاريخ"}  // هذا السطر تضيفه هنا
-              value={selectedDate}
-              onChange={(e) => {
-                const dateStr = e.target.value;
-                const dayName = new Date(dateStr).toLocaleDateString("en-US", {
-                  weekday: "long",
-                });
-                const closedDays = ["Sunday"];
-                if (closedDays.includes(dayName)) {
-                  alert("⚠️ هذا اليوم مغلق ولا يمكن الحجز فيه.");
-                  setSelectedDate("");
-                  setSelectedTime("");
-                } else {
-                  setSelectedDate(dateStr);
-                  setSelectedTime("");
-                }
-              }}
-              className="w-full p-3 border border-gray-300 rounded-xl"
-              required
-            />
 
             {/* ---------- اختيارات الأوقات حسب التاريخ ---------- */}
             {selectedDate && availableTimes.length > 0 && (
