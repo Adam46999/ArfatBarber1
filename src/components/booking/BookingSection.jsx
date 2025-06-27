@@ -123,40 +123,56 @@ const [progress, setProgress] = useState(0);
     }
   };
   // ------------------------------------------------------------
+useEffect(() => {
+  if (!selectedDate) return;
 
-  useEffect(() => {
-    if (!selectedDate) return;
-    const fetchBlockedTimes = async () => {
-      const dateObj = new Date(selectedDate);
-      const weekday = dateObj.toLocaleDateString("en-US", { weekday: "long" });
-      const dayHours = workingHours[weekday];
-      if (!dayHours) {
-        setAvailableTimes([]);
-        return;
-      }
-      const all = generateTimeSlots(dayHours.from, dayHours.to);
-      try {
-        const docRef = doc(db, "blockedTimes", selectedDate);
-        const docSnap = await getDoc(docRef);
-        const blocked = docSnap.exists() ? docSnap.data().times || [] : [];
-        const q = query(
-          collection(db, "bookings"),
-          where("selectedDate", "==", selectedDate)
-        );
-       // بعد التعديل: نستثني الحجوزات الملغاة قبل جمع الأوقات المحجوزة
-const snapshot = await getDocs(q);
-const booked = snapshot.docs.map(d => d.data().selectedTime);
-const unavailable = [...new Set([...blocked, ...booked])];
-const filtered = all.filter((time) => !unavailable.includes(time));
-setAvailableTimes(filtered);
+  // 1. نحول السلسلة لتاريخ ونستخرج اسم اليوم بالإنجليزية
+  const dateObj = new Date(selectedDate);
+  const weekday = dateObj.toLocaleDateString("en-US", { weekday: "long" });
 
-      } catch (error) {
-        console.error("🔥 Error getting times from Firestore:", error);
-        setAvailableTimes([]);
-      }
-    };
-    fetchBlockedTimes();
-  }, [selectedDate]);
+  // 2. إذا اليوم هو الأحد → نعتبره مغلق ونفرّغ القائمة
+  if (weekday === "Sunday") {
+    setAvailableTimes([]);
+    return;
+  }
+
+  // 3. نحصل على ساعات العمل لذلك اليوم
+  const dayHours = workingHours[weekday];
+  if (!dayHours) {
+    console.warn("⚠️ لا توجد ساعات معرفة لهذا اليوم:", weekday);
+    setAvailableTimes([]);
+    return;
+  }
+
+  // 4. نولّد كل الفترات بنصف ساعة
+  const allSlots = generateTimeSlots(dayHours.from, dayHours.to);
+
+  // 5. نجيب الأوقات المحظورة والمحجوزة ثم ننقيها
+  (async () => {
+    try {
+      const docSnap = await getDoc(doc(db, "blockedTimes", selectedDate));
+      const blocked = docSnap.exists() ? docSnap.data().times || [] : [];
+
+      const q = query(
+        collection(db, "bookings"),
+        where("selectedDate", "==", selectedDate),
+        where("cancelledAt", "==", null)
+      );
+      const bookedSnap = await getDocs(q);
+      const booked = bookedSnap.docs.map(d => d.data().selectedTime);
+
+      const unavailable = Array.from(new Set([...blocked, ...booked]));
+      const available = allSlots.filter(t => !unavailable.includes(t));
+
+      setAvailableTimes(available);
+    } catch (err) {
+      console.error("🔥 خطأ بجلب الفترات:", err);
+      setAvailableTimes([]);
+    }
+  })();
+
+}, [selectedDate]);
+
 
   useEffect(() => {
     if (!phoneNumber) {
