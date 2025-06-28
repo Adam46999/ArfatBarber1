@@ -126,30 +126,34 @@ const [progress, setProgress] = useState(0);
 useEffect(() => {
   if (!selectedDate) return;
 
-  // 1. نحول السلسلة لتاريخ ونستخرج اسم اليوم بالإنجليزية
-  const dateObj = new Date(selectedDate);
-  const weekday = dateObj.toLocaleDateString("en-US", { weekday: "long" });
-
-  // 2. إذا اليوم هو الأحد → نعتبره مغلق ونفرّغ القائمة
-  if (weekday === "Sunday") {
-    setAvailableTimes([]);
-    return;
-  }
-
-  // 3. نحصل على ساعات العمل لذلك اليوم
-  const dayHours = workingHours[weekday];
-  if (!dayHours) {
-    console.warn("⚠️ لا توجد ساعات معرفة لهذا اليوم:", weekday);
-    setAvailableTimes([]);
-    return;
-  }
-
-  // 4. نولّد كل الفترات بنصف ساعة
-  const allSlots = generateTimeSlots(dayHours.from, dayHours.to);
-
-  // 5. نجيب الأوقات المحظورة والمحجوزة ثم ننقيها
-  (async () => {
+  const checkBlockedDay = async () => {
     try {
+      // 1. فحص إذا اليوم مغلق بالكامل
+      const blockedDayDoc = await getDoc(doc(db, "blockedDays", selectedDate));
+      if (blockedDayDoc.exists()) {
+        setAvailableTimes([]); // اليوم مغلق، ما في ساعات
+        return;
+      }
+
+      // 2. نكمل استخراج اسم اليوم
+      const dateObj = new Date(selectedDate);
+      const weekday = dateObj.toLocaleDateString("en-US", { weekday: "long" });
+
+      if (weekday === "Sunday") {
+        setAvailableTimes([]);
+        return;
+      }
+
+      const dayHours = workingHours[weekday];
+      if (!dayHours) {
+        console.warn("⚠️ لا توجد ساعات معرفة لهذا اليوم:", weekday);
+        setAvailableTimes([]);
+        return;
+      }
+
+      const allSlots = generateTimeSlots(dayHours.from, dayHours.to);
+
+      // 3. نحصل على الأوقات المحجوزة أو المحظورة
       const docSnap = await getDoc(doc(db, "blockedTimes", selectedDate));
       const blocked = docSnap.exists() ? docSnap.data().times || [] : [];
 
@@ -166,12 +170,14 @@ useEffect(() => {
 
       setAvailableTimes(available);
     } catch (err) {
-      console.error("🔥 خطأ بجلب الفترات:", err);
+      console.error("🔥 خطأ:", err);
       setAvailableTimes([]);
     }
-  })();
+  };
 
+  checkBlockedDay(); // نشغّل الفنكشن
 }, [selectedDate]);
+
 
 
   useEffect(() => {

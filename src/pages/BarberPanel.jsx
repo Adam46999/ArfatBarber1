@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { db } from "../firebase";
+
 import {
   doc,
   getDoc,
@@ -12,6 +13,7 @@ import {
   collection,
   query,
   getDocs,
+  deleteDoc
 } from "firebase/firestore";
 
 const workingHours = {
@@ -94,6 +96,42 @@ export default function BarberPanel() {
   const [selectedTimes, setSelectedTimes] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [statusMessage, setStatusMessage] = useState("");
+// حالة اليوم: مغلق (true) أو مفتوح (false)
+const [isDayBlocked, setIsDayBlocked] = useState(false);
+const [loadingBlock, setLoadingBlock] = useState(false);
+
+// جلب حالة اليوم من Firestore
+useEffect(() => {
+  if (!selectedDate) return;
+  (async () => {
+    try {
+      const ref = doc(db, "blockedDays", selectedDate);
+      const snap = await getDoc(ref);
+      setIsDayBlocked(snap.exists());
+    } catch {
+      setIsDayBlocked(false);
+    }
+  })();
+}, [selectedDate]);
+
+// دالة تبديل حالة اليوم
+const toggleDay = async () => {
+  if (!selectedDate) return;
+  setLoadingBlock(true);
+  const ref = doc(db, "blockedDays", selectedDate);
+  try {
+    if (isDayBlocked) {
+      await deleteDoc(ref);      // إذا مغلق → نحذفه لإعادة فتح اليوم
+      setIsDayBlocked(false);
+    } else {
+      await setDoc(ref, {});     // إذا مفتوح → ننشئه لتعطيل اليوم
+      setIsDayBlocked(true);
+    }
+  } catch (e) {
+    console.error(e);
+  }
+  setLoadingBlock(false);
+};
 
   useEffect(() => {
     let timer;
@@ -258,6 +296,28 @@ export default function BarberPanel() {
             className="w-full border border-gray-300 rounded-xl px-4 py-3 bg-gray-50 text-gray-800 focus:outline-none focus:ring-2 focus:ring-gold transition mb-4"
             min={new Date().toISOString().split("T")[0]}
           />
+          {/* زر تعطيل/تفعيل اليوم */}
+{selectedDate && (
+  <div className="flex items-center justify-between mb-4">
+    <span>حالة اليوم:</span>
+    <button
+      onClick={toggleDay}
+      disabled={loadingBlock}
+      className={`px-4 py-2 rounded text-white font-semibold transition ${
+        isDayBlocked
+          ? "bg-red-500 hover:bg-red-600"
+          : "bg-green-500 hover:bg-green-600"
+      }`}
+    >
+      {loadingBlock
+        ? "جاري..."
+        : isDayBlocked
+          ? "تفعيل اليوم"
+          : "تعطيل اليوم"}
+    </button>
+  </div>
+)}
+
           {!selectedDate && (
             <p className="mt-2 text-sm text-gray-500">يمكنك استخدام القائمة أو التقويم لاختيار أي تاريخ.</p>
           )}
@@ -266,7 +326,8 @@ export default function BarberPanel() {
           )}
         </div>
 
-        {selectedDate && times && (
+        {selectedDate && times && !isDayBlocked && (
+          
           <div className="p-8 pt-4 border-t bg-gray-50">
             <h2 className="text-xl font-semibold text-gray-700 mb-4">الأوقات المتاحة:</h2>
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-4 mb-6">
@@ -306,6 +367,11 @@ export default function BarberPanel() {
             )}
           </div>
         )}
+        {selectedDate && isDayBlocked && (
+  <div className="p-8 pt-4 border-t bg-yellow-50 text-center text-red-600 font-semibold text-lg">
+    تم تعطيل هذا اليوم بالكامل. لا يمكن تعديل أو حظر الساعات حتى يتم تفعيله من جديد.
+  </div>
+)}
         {statusMessage && (
           <div className="p-4 bg-green-100 border border-green-300 text-green-800 text-center font-medium">
             {statusMessage}
