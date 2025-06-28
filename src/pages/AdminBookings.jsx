@@ -143,6 +143,8 @@ export default function AdminBookings() {
 
     // إزالة علامة الإلغاء من قاعدة البيانات
     await updateDoc(doc(db, "bookings", b.id), { cancelledAt: deleteField() });
+    window.location.reload();
+
   };
 
   // حذف نهائي من recentPast

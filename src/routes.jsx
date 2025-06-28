@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import React, { useEffect, useState } from 'react';
+import Dashboard from "./pages/Dashboard";
 
 import Home from './pages/Home';
 import BookingIntro from './pages/BookingIntro';
@@ -36,7 +37,11 @@ export default function AppRoutes() {
       <Route path="/booking-form" element={<BookingForm />} />
       <Route path="/contact" element={<Contact />} />
       <Route path="/login" element={<Login />} />
-
+<Route path="/dashboard" element={
+  <PrivateRoute>
+    <Dashboard />
+  </PrivateRoute>
+} />
       {/* مسارات خاصة محمية */}
       <Route path="/barber" element={
         <PrivateRoute>

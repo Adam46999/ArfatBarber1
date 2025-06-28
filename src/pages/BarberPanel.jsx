@@ -12,6 +12,7 @@ import {
   arrayRemove,
   collection,
   query,
+  where,
   getDocs,
   deleteDoc
 } from "firebase/firestore";
@@ -121,12 +122,23 @@ const toggleDay = async () => {
   const ref = doc(db, "blockedDays", selectedDate);
   try {
     if (isDayBlocked) {
-      await deleteDoc(ref);      // إذا مغلق → نحذفه لإعادة فتح اليوم
-      setIsDayBlocked(false);
-    } else {
-      await setDoc(ref, {});     // إذا مفتوح → ننشئه لتعطيل اليوم
-      setIsDayBlocked(true);
-    }
+  await deleteDoc(ref);
+  setIsDayBlocked(false);
+} else {
+  // فحص الحجوزات قبل التعطيل
+  const bookingsSnap = await getDocs(
+    query(collection(db, "bookings"), where("selectedDate", "==", selectedDate))
+  );
+  const activeBookings = bookingsSnap.docs.filter(doc => !doc.data().cancelledAt);
+  if (activeBookings.length > 0) {
+    alert("⚠️ لا يمكن تعطيل هذا اليوم لأن هناك حجوزات لم يتم إلغاؤها.");
+    return;
+  }
+
+  await setDoc(ref, {});
+  setIsDayBlocked(true);
+}
+
   } catch (e) {
     console.error(e);
   }
@@ -283,6 +295,13 @@ const toggleDay = async () => {
             >
               تسجيل الخروج
             </button>
+            <button
+  onClick={() => navigate("/dashboard")}
+  className="text-green-700 hover:underline transition-colors"
+>
+  الإحصائيات
+</button>
+
           </div>
         </div>
 
