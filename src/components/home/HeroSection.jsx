@@ -27,13 +27,13 @@ function HeroSection() {
 
       {/* النص */}
       <div className="relative z-20 text-center px-4 max-w-2xl" data-aos="fade-up">
-        <h1 className="font-heading text-5xl md:text-6xl font-bold mb-4 leading-tight text-gold">
-          {t("hero_title") || "We Know Your Style Better"}
-        </h1>
-        <p className="text-lg md:text-xl mb-6 font-body text-white">
-          {t("hero_subtitle") ||
-            "There is a distinction between a beauty salon and a hair salon."}
-        </p>
+        <h1 className="font-notokufi text-5xl md:text-6xl font-extrabold mb-4 leading-tight tracking-tight text-gold">
+  {t("hero_title") || "أسلوب يليق بك، بكل بساطة"}
+</h1>
+<p className="text-lg md:text-xl mb-6 font-tajawal text-beige max-w-xl mx-auto">
+  {t("hero_subtitle") || "لمحة مُظهرك، يناسبك ويعبر عنك"}
+</p>
+
         <a
   href="#booking"
   className="bg-gold hover:bg-yellow-400 text-primary font-semibold px-6 py-3 rounded shadow-md transition"

@@ -4,10 +4,13 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        heading: ["Playfair Display", "serif"],
-        body: ["Inter", "sans-serif"],
-        ar: ["Cairo", "sans-serif"],
-      },
+  heading: ["Playfair Display", "serif"],
+  body: ["Inter", "sans-serif"],
+  ar: ["Cairo", "sans-serif"],
+  tajawal: ["Tajawal", "sans-serif"],
+  notokufi: ["Noto Kufi Arabic", "sans-serif"],
+},
+
       colors: {
         primary: "#1a1a1a",     // 🖤 أسود ناعم راقٍ (خلفيات)
         beige: "#f0e6d2",       // 🤍 بيج فخم (خلفيات فاتحة)

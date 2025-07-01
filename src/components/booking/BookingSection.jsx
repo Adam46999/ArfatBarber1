@@ -337,9 +337,10 @@ await addDoc(collection(db, "bookings"), {
   return (
     <section id="booking" className={`bg-[#f8f8f8] text-primary py-16 px-4 ${fontClass}`}>
       <div className="max-w-xl mx-auto">
-        <h2 className="text-4xl font-bold mb-8 text-center text-gold">
-          {t("book_now")}
-        </h2>
+        <h2 className="text-3xl md:text-4xl font-tajawal font-bold tracking-tight leading-snug text-center text-gold mb-10">
+  {t("book_now")}
+</h2>
+
 
         <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-md mb-6">
           <h3 className="text-lg font-bold text-gold mb-2 flex items-center gap-2">

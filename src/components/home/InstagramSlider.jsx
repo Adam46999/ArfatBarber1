@@ -23,9 +23,10 @@ function InstagramSlider() {
   return (
     <section className="bg-gray-50 py-20 px-4 md:px-16 text-center">
       <div className="max-w-5xl mx-auto bg-white rounded-2xl shadow-xl p-8 md:p-12">
-        <h2 className="text-3xl md:text-4xl font-heading font-bold text-gold mb-10">
-          {t("slider_title") || "Cuts from our hands"}
-        </h2>
+        <h2 className="text-2xl md:text-3xl font-tajawal font-bold text-gold tracking-tight leading-snug mb-10">
+  {t("slider_title") || "قصّات من لمساتنا"}
+</h2>
+
 
         <div className="rounded-xl overflow-hidden shadow-md">
           <Swiper
