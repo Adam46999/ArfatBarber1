@@ -106,7 +106,7 @@ export default function Dashboard() {
   };
 
   return (
-<section className="min-h-screen bg-gradient-to-br from-gray-100 to-gray-200 pt-36 px-4 font-ar" dir="rtl">
+<section className="min-h-screen bg-gradient-to-br from-gray-100 to-gray-200 pt-36 pb-24 px-4 font-ar" dir="rtl">
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-10">
           <h1 className="text-3xl font-bold text-yellow-700 tracking-tight">📊 لوحة الإحصائيات</h1>
