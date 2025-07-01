@@ -62,5 +62,11 @@
   "hero_title": "A style that suits you, effortlessly"
 ,
   "code_required": "Please enter the code to cancel the booking",
-  "choose_date": "Please Enter The Date"
+  "choose_date": "Please Enter The Date",
+  "time_already_booked": "⚠️ This time slot is already booked. Please choose another.",
+"blocked_time": "Blocked by the barber",
+"your_code": "Your Code",
+"wrong_code": "⚠️ The code is incorrect"
+
+
 }

@@ -18,11 +18,11 @@ import {
 
 const workingHours = {
   Sunday: null,
-  Monday: { from: "12:00", to: "21:00" },
-  Tuesday: { from: "12:00", to: "21:00" },
-  Wednesday: { from: "12:00", to: "21:00" },
+  Monday: { from: "12:00", to: "20:00" },
+  Tuesday: { from: "12:00", to: "20:00" },
+  Wednesday: { from: "12:00", to: "20:00" },
   Thursday: { from: "12:00", to: "22:00" },
-  Friday: { from: "13:00", to: "23:30" },
+  Friday: { from: "13:30", to: "22:00" },
   Saturday: { from: "11:00", to: "19:30" },
 };
 
@@ -85,11 +85,15 @@ function BookingSection() {
   const [fullName, setFullName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
+  const [isDayBlocked, setIsDayBlocked] = useState(false);
+
   const [selectedTime, setSelectedTime] = useState("");
   const [selectedService, setSelectedService] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [availableTimes, setAvailableTimes] = useState([]);
   const [code, setCode] = useState("");
+  const [copySuccess, setCopySuccess] = useState(false);
+
   const [bookings, setBookings] = useState([]);
   // ✅ progress bar
 const [step, setStep] = useState(1);
@@ -131,13 +135,19 @@ useEffect(() => {
       // 1. فحص إذا اليوم مغلق بالكامل
       const blockedDayDoc = await getDoc(doc(db, "blockedDays", selectedDate));
       if (blockedDayDoc.exists()) {
-        setAvailableTimes([]); // اليوم مغلق، ما في ساعات
-        return;
-      }
+  setAvailableTimes([]);
+setIsDayBlocked(true); // ✅ الاسم الصحيح
+  return;
+} else {
+setIsDayBlocked(false); // ✅ الاسم الصحيح
+}
+
 
       // 2. نكمل استخراج اسم اليوم
-      const dateObj = new Date(selectedDate);
-      const weekday = dateObj.toLocaleDateString("en-US", { weekday: "long" });
+     const [yyyy, mm, dd] = selectedDate.split("-");
+const dateObj = new Date(Number(yyyy), Number(mm) - 1, Number(dd));
+const weekday = dateObj.toLocaleDateString("en-US", { weekday: "long" });
+
 
       if (weekday === "Sunday") {
         setAvailableTimes([]);
@@ -158,15 +168,22 @@ useEffect(() => {
       const blocked = docSnap.exists() ? docSnap.data().times || [] : [];
 
       const q = query(
-        collection(db, "bookings"),
-        where("selectedDate", "==", selectedDate),
-        where("cancelledAt", "==", null)
-      );
-      const bookedSnap = await getDocs(q);
-      const booked = bookedSnap.docs.map(d => d.data().selectedTime);
+  collection(db, "bookings"),
+  where("selectedDate", "==", selectedDate)
+);
+const bookedSnap = await getDocs(q);
+const booked = bookedSnap.docs
+  .map((doc) => doc.data())
+  .filter((b) => !b.cancelledAt) // ✅ فلترة محلية
+  .map((b) => b.selectedTime);
+   console.log("✅ BOOKED TIMES:", booked);
 
       const unavailable = Array.from(new Set([...blocked, ...booked]));
       const available = allSlots.filter(t => !unavailable.includes(t));
+console.log("🔴 blocked:", blocked);
+console.log("🔵 booked:", booked);
+console.log("🟢 unavailable:", unavailable);
+console.log("🟩 available:", available);
 
       setAvailableTimes(available);
     } catch (err) {
@@ -181,28 +198,31 @@ useEffect(() => {
 
 
   useEffect(() => {
-    if (!phoneNumber) {
-      setBookings([]);
-      return;
-    }
-    // عند البحث، نشيل الشرطات "–" لأننا نخزن الأرقام رقميًا في Firestore
-    const cleanPhone = phoneNumber.replace(/\D/g, "");
+  if (!selectedDate) return;
 
-    const fetchBookingsByPhone = async () => {
-      try {
-        const q = query(
-          collection(db, "bookings"),
-          where("phoneNumber", "==", cleanPhone)
-        );
-        const snapshot = await getDocs(q);
-        const data = snapshot.docs.map((doc) => doc.data());
-        setBookings(data);
-      } catch (error) {
-        console.error("Error fetching bookings:", error);
-      }
-    };
-    fetchBookingsByPhone();
-  }, [phoneNumber]);
+  const fetchDayBookings = async () => {
+  try {
+    const q = query(
+      collection(db, "bookings"),
+      where("selectedDate", "==", selectedDate)
+    );
+    const snapshot = await getDocs(q);
+
+    // ✅ استبعاد الحجوزات الملغاة
+    const activeBookings = snapshot.docs
+      .map((doc) => doc.data())
+      .filter((d) => !d.cancelledAt);
+
+    setBookings(activeBookings); // فقط الحجوزات الفعالة
+  } catch (error) {
+    console.error("❌ Error fetching bookings:", error);
+  }
+};
+
+
+  fetchDayBookings();
+}, [selectedDate]);
+
 
   useEffect(() => {
     if (submitted && messageRef.current) {
@@ -268,10 +288,11 @@ setCode(bookingCode); // هذا السطر اختياري لعرض الكود ل
     // التأكد أن الوقت المختار غير محجوز مسبقًا
     try {
       const q = query(
-        collection(db, "bookings"),
-        where("selectedDate", "==", selectedDate),
-        where("selectedTime", "==", selectedTime)
-      );
+  collection(db, "bookings"),
+  where("selectedDate", "==", selectedDate),
+  where("selectedTime", "==", selectedTime),
+  where("cancelledAt", "==", null) // ✅ نأخذ فقط الحجوزات النشطة
+);
       const snapshot = await getDocs(q);
       if (!snapshot.empty) {
         alert(
@@ -367,14 +388,34 @@ await addDoc(collection(db, "bookings"), {
 
         <div className="bg-white shadow-xl rounded-2xl p-8 space-y-6 border border-gray-100">
           {submitted && (
-            <div
-              ref={messageRef}
-              className="fade-in bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg text-center text-lg"
-            >
-              ✅ {t("thank_you")}
-              <br />🔐 {t("your_code")}: <strong>{code}</strong>
-            </div>
-          )}
+  <div
+    ref={messageRef}
+    className="fade-in bg-green-100 border border-green-400 text-green-700 px-4 py-6 rounded-xl text-center text-lg flex flex-col items-center gap-3"
+   >
+    <div>✅ {t("thank_you")}</div>
+
+    <div className="bg-white border border-dashed border-green-500 px-4 py-2 rounded-lg text-base font-semibold text-gray-800 flex items-center gap-2">
+      🔐 {t("your_code")}: <span className="font-mono">{code}</span>
+
+      <button
+  onClick={() => {
+    navigator.clipboard.writeText(code);
+    setCopySuccess(true);
+    setTimeout(() => setCopySuccess(false), 2000); // بعد ثانيتين يرجع الزر لكلمة "نسخ"
+  }}
+  className="ml-2 px-2 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition"
+>
+  {copySuccess ? "✅ تم النسخ!" : "نسخ"}
+</button>
+
+    </div>
+
+    <p className="text-sm text-gray-600">
+      احتفظ بهذا الكود لتعديل أو إلغاء الحجز لاحقًا.
+    </p>
+  </div>
+)}
+
 {/* ✅ شريط التقدم قبل الـ form مباشرةً */}
 <div className="flex justify-between items-center mb-6">
   <div className="flex-1 h-1 bg-gray-300 rounded-full">
@@ -416,41 +457,86 @@ await addDoc(collection(db, "bookings"), {
   {t("choose_date")}
 </label>
 <DateSelector
-  selectedDate={selectedDate ? new Date(selectedDate) : null}
+selectedDate={
+  selectedDate
+    ? new Date(
+        Number(selectedDate.split("-")[0]),
+        Number(selectedDate.split("-")[1]) - 1,
+        Number(selectedDate.split("-")[2])
+      )
+    : null
+}
   onChange={(date) => {
     // date هو كائن JS Date، ومنعه يوم الأحد تم في الـ DateSelector نفسه
-    setSelectedDate(date.toISOString().slice(0,10));
+const yyyy = date.getFullYear();
+const mm = String(date.getMonth() + 1).padStart(2, "0");
+const dd = String(date.getDate()).padStart(2, "0");
+const localDateStr = `${yyyy}-${mm}-${dd}`;
+setSelectedDate(localDateStr);
     setSelectedTime("");
   }}
   placeholder={t("select_date") || "اختر التاريخ"}
 />
 
-
+{selectedDate && isDayBlocked && (
+  <p className="text-red-600 font-semibold text-center text-sm mb-4">
+    هذا اليوم مغلق بالكامل ولا يمكن الحجز فيه.
+  </p>
+)}
             {/* ---------- اختيارات الأوقات حسب التاريخ ---------- */}
-            {selectedDate && availableTimes.length > 0 && (
-              <div>
-                <label className="block mb-2 font-semibold text-gray-700">
-                  {t("choose_time")}
-                </label>
-                <div className="grid grid-cols-3 md:grid-cols-4 gap-3">
-                  {availableTimes.map((time) => (
-                    <button
-                      type="button"
-                      key={time}
-                      onClick={() => setSelectedTime(time)}
-                      className={`py-2 px-3 rounded-md text-sm font-medium border transition 
-                        ${
-                          selectedTime === time
-                            ? "bg-gold text-primary border-gold shadow"
-                            : "bg-gray-100 text-gray-800 border-gray-300 hover:bg-gold hover:text-primary"
-                        }`}
-                    >
-                      {time}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
+            {selectedDate && (
+  <div>
+    <label className="block mb-2 font-semibold text-gray-700">
+      {t("choose_time")}
+    </label>
+    <div className="grid grid-cols-3 md:grid-cols-4 gap-3">
+      {(() => {
+const [yyyy, mm, dd] = selectedDate.split("-");
+const dateObj = new Date(Number(yyyy), Number(mm) - 1, Number(dd));
+        const weekday = dateObj.toLocaleDateString("en-US", { weekday: "long" });
+        const hours = workingHours[weekday];
+
+        if (!hours) return <p className="text-red-500">{t("closed_day")}</p>;
+
+        const allSlots = generateTimeSlots(hours.from, hours.to);
+
+        return allSlots.map((time) => {
+  const isUnavailable = !availableTimes.includes(time);
+  const isSelected = selectedTime === time;
+
+  return (
+    <button
+  key={time}
+  type="button"
+  disabled={isUnavailable}
+  onClick={() => {
+    if (!isUnavailable) setSelectedTime(time);
+  }}
+  className={`py-2 px-3 rounded-md text-sm font-medium border transition relative group
+    ${isUnavailable
+      ? "bg-red-200 text-red-700 cursor-not-allowed"
+      : isSelected
+      ? "bg-gold text-primary border-gold shadow"
+      : "bg-gray-100 text-gray-800 border-gray-300 hover:bg-gold hover:text-primary"}
+  `}
+  title={isUnavailable ? t("blocked_time") : ""}
+>
+  {time}
+  {isUnavailable && (
+    <span className="absolute bottom-full mb-1 w-max bg-black text-white text-xs rounded px-2 py-1 opacity-0 group-hover:opacity-100 transition z-10">
+      {t("time_already_booked")}
+    </span>
+  )}
+</button>
+
+  );
+});
+
+          })()}
+          </div>
+          </div>
+          )}
+
 
             {selectedDate && availableTimes.length === 0 && (
               <p className="text-red-500 text-sm font-medium">
