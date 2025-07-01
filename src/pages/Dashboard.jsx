@@ -2,142 +2,162 @@ import { useEffect, useState } from "react";
 import { db } from "../firebase";
 import {
   collection,
-  query,
-  where,
   getDocs,
+  
 } from "firebase/firestore";
-import * as XLSX from "xlsx";
 import { useNavigate } from "react-router-dom";
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const [todayCount, setTodayCount] = useState(0);
-  const [weekCount, setWeekCount] = useState(0);
-  const [blockedCount, setBlockedCount] = useState(0);
+
+  const [closedDates, setClosedDates] = useState([]);         // الأيام المغلقة القادمة
+  const [blockedByDay, setBlockedByDay] = useState({});
+  const [todayStats, setTodayStats] = useState({
+  total: 0,
+  passed: 0,
+  upcoming: 0,
+  firstTime: null,
+  lastTime: null,
+});
+    // الأوقات المحظورة
 
   useEffect(() => {
-    const fetchStats = async () => {
+    const fetchData = async () => {
       const todayStr = new Date().toISOString().slice(0, 10);
-const qToday = query(
-  collection(db, "bookings"),
-  where("selectedDate", ">=", todayStr),
-  where("selectedDate", "<=", todayStr)
-);
-const snapToday = await getDocs(qToday);
-const activeToday = snapToday.docs.filter(d => !d.data().cancelledAt);
-setTodayCount(activeToday.length);
 
+      // ✅ جلب الأيام المغلقة القادمة
+      const closedSnap = await getDocs(collection(db, "blockedDays"));
+      const futureClosed = closedSnap.docs
+        .map(doc => doc.id)
+        .filter(date => date >= todayStr)
+        .sort();
+      setClosedDates(futureClosed);
 
-      const now = new Date();
-      const dayOfWeek = now.getDay();
-      const diffToSunday = dayOfWeek;
-      const start = new Date(now);
-      start.setDate(now.getDate() - diffToSunday);
-      const end = new Date(start);
-      end.setDate(start.getDate() + 6);
+      // ✅ جلب الأوقات المحظورة
+      const timesSnap = await getDocs(collection(db, "blockedTimes"));
+      const result = {};
+      timesSnap.docs.forEach(doc => {
+        const date = doc.id;
+        const data = doc.data();
+        if (data?.times?.length && date >= todayStr) {
+          result[date] = data.times.sort(); // ترتيب الأوقات
+        }
+      });
+      setBlockedByDay(result);
+      const bookingsSnap = await getDocs(collection(db, "bookings"));
+const today = new Date();
 
-      const startStr = start.toISOString().slice(0, 10);
-      const endStr = end.toISOString().slice(0, 10);
+const todayBookings = bookingsSnap.docs
+  .map(doc => doc.data())
+  .filter(b => b.selectedDate === todayStr && !b.cancelledAt);
+const passed = todayBookings.filter(b => {
+  const bookingTime = new Date(`${b.selectedDate}T${b.selectedTime}:00`);
+  return bookingTime <= today;
+});
 
-      const qWeek = query(
-        collection(db, "bookings"),
-        where("selectedDate", ">=", startStr),
-        where("selectedDate", "<=", endStr)
-      );
-      const snapWeek = await getDocs(qWeek);
-      const activeWeek = snapWeek.docs.filter(d => !d.data().cancelledAt);
-setWeekCount(activeWeek.length);
+const upcoming = todayBookings.filter(b => {
+  const bookingTime = new Date(`${b.selectedDate}T${b.selectedTime}:00`);
+  return bookingTime > today;
+});
 
+const sortedTimes = todayBookings
+  .map(b => b.selectedTime)
+  .sort((a, b) => a.localeCompare(b));
 
-      const blockedSnap = await getDocs(collection(db, "blockedDays"));
-      setBlockedCount(blockedSnap.docs.length);
+const firstTime = sortedTimes[0] || null;
+const lastTime = sortedTimes[sortedTimes.length - 1] || null;
+setTodayStats({
+  total: todayBookings.length,
+  passed: passed.length,
+  upcoming: upcoming.length,
+  firstTime,
+  lastTime,
+});
+
     };
 
-    fetchStats();
+    fetchData();
   }, []);
 
-  const exportAsExcel = async () => {
-  const snap = await getDocs(collection(db, "bookings"));
-
-  const rows = snap.docs.map((doc) => {
-    const data = doc.data();
-    return {
-      "👤 الاسم": data.fullName || "",
-      "📞 رقم الهاتف": data.phoneNumber || "",
-      "🗓️ التاريخ": data.selectedDate || "",
-      "🕒 الساعة": data.selectedTime || "",
-      "💈 الخدمة": 
-        data.selectedService === "haircut" ? "قص شعر" :
-        data.selectedService === "beard" ? "تعليم لحية" :
-        data.selectedService === "combo" ? "قص شعر + لحية" :
-        data.selectedService || "",
-      "📌 كود الحجز": data.bookingCode || "",
-      "📅 تم الإنشاء": data.createdAt
-        ? new Date(data.createdAt).toLocaleString("ar-EG")
-        : "",
-      "❌ ملغي؟": data.cancelledAt ? "نعم" : "لا",
-    };
-  });
-
-  const worksheet = XLSX.utils.json_to_sheet(rows);
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, "حجوزات");
-  XLSX.writeFile(workbook, "تقرير-الحجوزات.xlsx");
-};
-
-  
+  // ✅ تنسيق التاريخ
+  const formatDate = (dateStr) => {
+    const date = new Date(dateStr);
+    const weekday = date.toLocaleDateString("ar-EG", { weekday: "long" });
+    const formatted = date.toLocaleDateString("ar-EG");
+    return `${weekday} ${formatted}`;
+  };
 
   return (
     <section className="min-h-screen p-6 pt-24 bg-gray-100 font-ar" dir="rtl">
-      <div className="max-w-4xl mx-auto bg-white p-8 rounded-2xl shadow">
-        {/* زر الرجوع */}
+      <div className="max-w-4xl mx-auto bg-white p-6 rounded-2xl shadow space-y-6">
+
+        {/* 🔙 زر الرجوع */}
         <button
           onClick={() => navigate(-1)}
-          className="mb-4 text-sm text-blue-600 hover:underline"
+          className="text-sm text-blue-600 hover:underline"
         >
-          ← الرجوع للصفحة السابقة
+          ← الرجوع
         </button>
+َ
+        <h1 className="text-2xl font-bold text-gold mb-4">لوحة الإحصائيات</h1>
 
-        <h1 className="text-2xl font-bold mb-6 text-gold">لوحة التقارير</h1>
-
-        <div className="grid grid-cols-2 gap-6 text-center">
-          <div className="bg-green-100 p-4 rounded-xl">
-            <h2 className="text-xl font-semibold">حجوزات اليوم</h2>
-            <p className="text-3xl text-green-700 font-bold">{todayCount}</p>
-            <p className="text-sm mt-2 text-gray-600">
-              عدد الزبائن اللي حجزوا عندك بتاريخ اليوم.
-            </p>
-          </div>
-
-          <div className="bg-blue-100 p-4 rounded-xl">
-            <h2 className="text-xl font-semibold">حجوزات الأسبوع</h2>
-            <p className="text-3xl text-blue-700 font-bold">{weekCount}</p>
-            <p className="text-sm mt-2 text-gray-600">
-              مجموع الحجوزات من الأحد للسبت الحالي.
-            </p>
-          </div>
-
-          <div className="bg-yellow-100 p-4 rounded-xl">
-            <h2 className="text-xl font-semibold">أيام مغلقة</h2>
-            <p className="text-3xl text-yellow-700 font-bold">{blockedCount}</p>
-            <p className="text-sm mt-2 text-gray-600">
-              عدد الأيام اللي عملت فيها "تعطيل يوم كامل".
-            </p>
-          </div>
-
-          <div className="bg-gray-200 p-4 rounded-xl">
-            <h2 className="text-xl font-semibold">تصدير</h2>
-            <button
-              onClick={exportAsExcel}
-              className="mt-2 bg-gold text-white px-4 py-2 rounded hover:bg-yellow-600"
-            >
-              تصدير كـ Excel
-            </button>
-            <p className="text-sm mt-2 text-gray-600">
-              تصدير كل الحجوزات كملف Excel للنسخ أو الطباعة.
-            </p>
-          </div>
+        {/* ✅ الأيام المغلقة القادمة */}
+        <div className="bg-yellow-50 p-4 rounded-xl shadow border">
+          <h2 className="text-xl font-semibold text-black mb-2">📛 الأيام المغلقة القادمة</h2>
+          <p className="text-sm text-gray-600 mb-2">عدد الأيام: {closedDates.length}</p>
+          <ul className="space-y-1">
+            {closedDates.map(date => (
+              <li key={date} className="text-red-700 font-medium">
+                🔒 {formatDate(date)}
+              </li>
+            ))}
+            {closedDates.length === 0 && (
+              <li className="text-sm text-gray-500">لا توجد أيام مغلقة قادمة.</li>
+            )}
+          </ul>
         </div>
+{/* ✅ إحصائيات اليوم */}
+<div className="bg-green-50 p-4 rounded-xl shadow border">
+  <h2 className="text-xl font-semibold text-black mb-2">📅 إحصائيات اليوم</h2>
+  <ul className="space-y-1 text-sm text-gray-700">
+    <li>🔢 عدد الحجوزات: <span className="font-bold">{todayStats.total}</span></li>
+    <li>✅ عدد الأدوار التي مرّت: <span className="text-green-700 font-bold">{todayStats.passed}</span></li>
+    <li>⏳ عدد الأدوار القادمة: <span className="text-blue-700 font-bold">{todayStats.upcoming}</span></li>
+    {todayStats.firstTime && (
+      <li>🕒 أول حجز اليوم: <span className="text-black font-bold">{todayStats.firstTime}</span></li>
+    )}
+    {todayStats.lastTime && (
+      <li>🕔 آخر حجز اليوم: <span className="text-black font-bold">{todayStats.lastTime}</span></li>
+    )}
+  </ul>
+</div>
+
+        {/* ✅ الأوقات المحظورة القادمة */}
+        <div className="bg-red-50 p-4 rounded-xl shadow border">
+          <h2 className="text-xl font-semibold text-black mb-3">⛔ الأوقات المحظورة</h2>
+          {Object.keys(blockedByDay).length === 0 && (
+            <p className="text-sm text-gray-500">لا توجد أوقات محظورة.</p>
+          )}
+          {Object.entries(blockedByDay).map(([date, times]) => (
+            <div key={date} className="mb-3">
+              <p className="text-red-700 font-semibold mb-1">
+                📅 {formatDate(date)}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {times.map(time => (
+                  <span
+                    key={time}
+                    className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm"
+                  >
+                    {time}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+        
+
       </div>
     </section>
   );
