@@ -26,6 +26,7 @@ export default function Dashboard() {
     from: "",
     to: "",
   });
+const [totalBookings, setTotalBookings] = useState(0);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -52,6 +53,7 @@ export default function Dashboard() {
 
       const bookingsSnap = await getDocs(collection(db, "bookings"));
       const bookings = bookingsSnap.docs.map(doc => doc.data()).filter(b => !b.cancelledAt);
+setTotalBookings(bookings.length);
 
       const todayBookings = bookings.filter(b => b.selectedDate === todayStr);
       const passed = todayBookings.filter(b => new Date(`${b.selectedDate}T${b.selectedTime}:00`) <= now);
@@ -124,7 +126,9 @@ export default function Dashboard() {
           <CardBox color="blue" title="إحصائيات الأسبوع">
             <p className="text-sm text-gray-500 mb-3">من {formatDate(weekStats.from)} إلى {formatDate(weekStats.to)}</p>
             <ul className="space-y-2 text-sm text-gray-700">
-              <li>📊 عدد الحجوزات: <span className="font-semibold">{weekStats.total}</span></li>
+            <li>🧮 عدد الأدوار الكلي: <span className="text-purple-700 font-semibold">{totalBookings}</span></li>
+
+              <li>📊  عدد الحجوزات هذا الاسبوع: <span className="font-semibold">{weekStats.total}</span></li>
               <li>✅ الأدوار التي مرّت: <span className="text-green-700 font-semibold">{weekStats.passed}</span></li>
               <li>⏳ الأدوار القادمة: <span className="text-blue-700 font-semibold">{weekStats.upcoming}</span></li>
             </ul>
@@ -133,7 +137,7 @@ export default function Dashboard() {
           {/* Today Stats */}
           <CardBox color="green" title="إحصائيات اليوم">
             <ul className="space-y-2 text-sm text-gray-700">
-              <li>📋 عدد الحجوزات: <span className="font-semibold">{todayStats.total}</span></li>
+              <li>📋 عدد الحجوزات اليوم: <span className="font-semibold">{todayStats.total}</span></li>
               <li>✅ الأدوار التي مرّت: <span className="text-green-700 font-semibold">{todayStats.passed}</span></li>
               <li>⏳ الأدوار القادمة: <span className="text-blue-700 font-semibold">{todayStats.upcoming}</span></li>
               {todayStats.firstTime && <li>🕒 أول حجز: <span className="font-semibold text-gray-800">{todayStats.firstTime}</span></li>}

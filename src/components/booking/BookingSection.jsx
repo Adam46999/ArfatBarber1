@@ -85,10 +85,7 @@ function BookingSection() {
   const [fullName, setFullName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
-  const now = new Date();
-  const todayStr = now.toISOString().slice(0, 10);
-  const isToday = selectedDate === todayStr;
-  console.log("📌 isToday =", isToday);
+  
 
   const [isDayBlocked, setIsDayBlocked] = useState(false);
 
@@ -140,19 +137,17 @@ useEffect(() => {
       // 1. فحص إذا اليوم مغلق بالكامل
       const blockedDayDoc = await getDoc(doc(db, "blockedDays", selectedDate));
       if (blockedDayDoc.exists()) {
-  setAvailableTimes([]);
-setIsDayBlocked(true); // ✅ الاسم الصحيح
-  return;
-} else {
-setIsDayBlocked(false); // ✅ الاسم الصحيح
-}
+        setAvailableTimes([]);
+        setIsDayBlocked(true);
+        return;
+      } else {
+        setIsDayBlocked(false);
+      }
 
-
-      // 2. نكمل استخراج اسم اليوم
-     const [yyyy, mm, dd] = selectedDate.split("-");
-const dateObj = new Date(Number(yyyy), Number(mm) - 1, Number(dd));
-const weekday = dateObj.toLocaleDateString("en-US", { weekday: "long" });
-
+      // 2. استخراج اسم اليوم
+      const [yyyy, mm, dd] = selectedDate.split("-");
+      const dateObj = new Date(Number(yyyy), Number(mm) - 1, Number(dd));
+      const weekday = dateObj.toLocaleDateString("en-US", { weekday: "long" });
 
       if (weekday === "Sunday") {
         setAvailableTimes([]);
@@ -168,27 +163,36 @@ const weekday = dateObj.toLocaleDateString("en-US", { weekday: "long" });
 
       const allSlots = generateTimeSlots(dayHours.from, dayHours.to);
 
-      // 3. نحصل على الأوقات المحجوزة أو المحظورة
+      // 3. الحجوزات والمحظورات
       const docSnap = await getDoc(doc(db, "blockedTimes", selectedDate));
       const blocked = docSnap.exists() ? docSnap.data().times || [] : [];
 
       const q = query(
-  collection(db, "bookings"),
-  where("selectedDate", "==", selectedDate)
-);
-const bookedSnap = await getDocs(q);
-const booked = bookedSnap.docs
-  .map((doc) => doc.data())
-  .filter((b) => !b.cancelledAt) // ✅ فلترة محلية
-  .map((b) => b.selectedTime);
-   console.log("✅ BOOKED TIMES:", booked);
+        collection(db, "bookings"),
+        where("selectedDate", "==", selectedDate)
+      );
+      const bookedSnap = await getDocs(q);
+      const booked = bookedSnap.docs
+        .map((doc) => doc.data())
+        .filter((b) => !b.cancelledAt)
+        .map((b) => b.selectedTime);
 
       const unavailable = Array.from(new Set([...blocked, ...booked]));
-      const available = allSlots.filter(t => !unavailable.includes(t));
-console.log("🔴 blocked:", blocked);
-console.log("🔵 booked:", booked);
-console.log("🟢 unavailable:", unavailable);
-console.log("🟩 available:", available);
+      let available = allSlots.filter((t) => !unavailable.includes(t));
+
+      // ✅ تصفية الأوقات التي مرّ وقتها إذا كان اليوم هو التاريخ المختار
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const isToday = selectedDate === todayStr;
+      if (isToday) {
+        const now = new Date();
+        const nowHours = now.getHours();
+        const nowMinutes = now.getMinutes();
+
+        available = available.filter((time) => {
+          const [hour, minute] = time.split(":").map(Number);
+          return hour > nowHours || (hour === nowHours && minute > nowMinutes);
+        });
+      }
 
       setAvailableTimes(available);
     } catch (err) {
@@ -197,8 +201,9 @@ console.log("🟩 available:", available);
     }
   };
 
-  checkBlockedDay(); // نشغّل الفنكشن
+  checkBlockedDay();
 }, [selectedDate]);
+
 
 
 
@@ -496,49 +501,38 @@ setSelectedDate(localDateStr);
       {t("choose_time")}
     </label>
     <div className="grid grid-cols-3 md:grid-cols-4 gap-3">
-      {(() => {
-const [yyyy, mm, dd] = selectedDate.split("-");
-const dateObj = new Date(Number(yyyy), Number(mm) - 1, Number(dd));
-        const weekday = dateObj.toLocaleDateString("en-US", { weekday: "long" });
-        const hours = workingHours[weekday];
+     {(() => {
+  const [yyyy, mm, dd] = selectedDate.split("-");
+  const dateObj = new Date(Number(yyyy), Number(mm) - 1, Number(dd));
+  const weekday = dateObj.toLocaleDateString("en-US", { weekday: "long" });
+  const hours = workingHours[weekday];
 
-        if (!hours) return <p className="text-red-500">{t("closed_day")}</p>;
+  if (!hours) {
+    return <p className="text-red-500">{t("closed_day")}</p>;
+  }
 
-        const allSlots = generateTimeSlots(hours.from, hours.to);
+  return availableTimes.map((time) => {
+    const isSelected = selectedTime === time;
 
-        return allSlots.map((time) => {
-  const isUnavailable = !availableTimes.includes(time);
-  const isSelected = selectedTime === time;
+    return (
+      <button
+        key={time}
+        type="button"
+        onClick={() => setSelectedTime(time)}
+        className={`py-2 px-3 rounded-md text-sm font-medium border transition relative
+          ${isSelected
+            ? "bg-gold text-primary border-gold shadow"
+            : "bg-gray-100 text-gray-800 border-gray-300 hover:bg-gold hover:text-primary"}
+        `}
+      >
+        {time}
+      </button>
+    );
+  });
+})()}
 
-  return (
-    <button
-  key={time}
-  type="button"
-  disabled={isUnavailable}
-  onClick={() => {
-    if (!isUnavailable) setSelectedTime(time);
-  }}
-  className={`py-2 px-3 rounded-md text-sm font-medium border transition relative group
-    ${isUnavailable
-      ? "bg-red-200 text-red-700 cursor-not-allowed"
-      : isSelected
-      ? "bg-gold text-primary border-gold shadow"
-      : "bg-gray-100 text-gray-800 border-gray-300 hover:bg-gold hover:text-primary"}
-  `}
-  title={isUnavailable ? t("blocked_time") : ""}
->
-  {time}
-  {isUnavailable && (
-    <span className="absolute bottom-full mb-1 w-max bg-black text-white text-xs rounded px-2 py-1 opacity-0 group-hover:opacity-100 transition z-10">
-      {t("time_already_booked")}
-    </span>
-  )}
-</button>
 
-  );
-});
 
-          })()}
           </div>
           </div>
           )}
