@@ -1,0 +1,41 @@
+[33mec2e8ef[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m puting the fields in the form on the right way
+[33mfc54ee0[m hiding passed hours
+[33m820b153[m hiding passed hours
+[33m4e5f1c9[m hiding passed hours
+[33m508285a[m تزبيط الاحصائيات شكليا
+[33m8857b30[m تزبيط الاحصائيات شكليا
+[33mfe87ce6[m تزبيط الاحصائيات شكليا
+[33m6820b74[m تعديل لوحه الحجوزات لشكل ارتب
+[33m072d30a[m تعليم الاوقات المحجوزه بالاحمر ونسخ الكود
+[33mf632a8f[m ahsaiat
+[33m8f21a7f[m تعطيل ايام
+[33m3c1b5a7[m firbase problem solved
+[33m1e7e622[m sunday problem
+[33m8fb9650[m تعديل لوحه الحجوزات
+[33m8b09db8[m زياده جمله اختر تاريخ الحجز
+[33m859c016[m calendar
+[33m9890949[m steps in reservation
+[33m0d1ac1d[m finishng
+[33m72436fa[m detailhng
+[33m4c0a4bf[m valid numbers just accepted that started with 05
+[33m5f1040d[m up button adding
+[33m002ba00[m phone number detiction editing
+[33mb77bc3e[m cashe
+[33m24863eb[m  Update BookingSection to disable past and closed days
+[33mdca74aa[m  Fix: prevent FCM crash on mobile
+[33me3abcbc[m  Fix Firebase config (apiKey + storageBucket)
+[33mbcf7b7c[m  Update title and favicon for Arfat Barber
+[33mc8b3c60[m رفع آخر نسخة من الكود - تحديث نهائي
+[33m7c197b9[m hours editing
+[33m6ae05d5[m Fix FaScissors icon error and update BarberPanel component
+[33m6a0fdc3[m تحديثات لوحة الحلاق مع تسجيل الخروج
+[33m6d1995e[m Add Vercel rewrites for React routing
+[33m383bd27[m Add Vercel rewrites for React routing
+[33ma1c235e[m control pannel
+[33m0b0fce0[m add worcing hours
+[33mfa5608d[m deleting the third reservation button
+[33m08b3464[m Refactor Contact section, switch to Waze, remove About from Home, and full multi-language support
+[33m5a8e4ff[m  تحديثات: دعم لغات واختيار الخدمة بالحجز + إزالة زر من Contact
+[33mab4ba7f[m Update logo and styles
+[33m19ef96f[m  إضافة سلايدر Instagram احترافي
+[33mb55da8c[m first commit
