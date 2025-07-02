@@ -85,6 +85,11 @@ function BookingSection() {
   const [fullName, setFullName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
+  const now = new Date();
+  const todayStr = now.toISOString().slice(0, 10);
+  const isToday = selectedDate === todayStr;
+  console.log("📌 isToday =", isToday);
+
   const [isDayBlocked, setIsDayBlocked] = useState(false);
 
   const [selectedTime, setSelectedTime] = useState("");

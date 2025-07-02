@@ -14,9 +14,9 @@ function Footer() {
     <footer className="bg-primary text-light pt-16 pb-8 px-6 text-sm font-body relative">
       <div className="max-w-7xl mx-auto text-center space-y-6">
         {/* عنوان تواصل معنا */}
-        <h2 className="text-2xl md:text-3xl font-heading font-bold text-gold">
-          {t("contact") || "تواصل معنا"}
-        </h2>
+        <h2 className="text-2xl md:text-3xl font-notokufi font-extrabold text-gold tracking-tight leading-snug">
+  {t("contact") || "تواصل معنا"}
+</h2>
 
         {/* الموقع ورقم الهاتف */}
         <div className="space-y-2 text-gold text-lg font-semibold">

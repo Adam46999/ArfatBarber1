@@ -34,7 +34,12 @@ function CheckReservation() {
 
   return (
     <div className="bg-beige py-10 px-4 text-center font-body">
-      <h2 className="text-2xl font-heading mb-4">{t("check_your_booking") || "تحقق من الحجز"}</h2>
+<h2 className="text-3xl font-tajawal font-extrabold tracking-tight leading-snug text-gold mb-6 flex justify-center items-center gap-2">
+  <span>🔍</span>
+  {t("check_your_booking") || "تحقق من الحجز"}
+  <span>🔍</span>
+</h2>
+
 
       <input
         type="tel"

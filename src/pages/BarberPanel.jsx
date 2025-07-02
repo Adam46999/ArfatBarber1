@@ -270,6 +270,20 @@ const toggleDay = async () => {
     workingHours[dayName]?.from &&
     generateTimeSlots(workingHours[dayName].from, workingHours[dayName].to);
 
+const now = new Date();
+const todayStr = now.toLocaleDateString("sv-SE"); // "YYYY-MM-DD"
+const isToday = selectedDate === todayStr;
+
+let filteredTimes = times;
+if (isToday && times) {
+  filteredTimes = times.filter((time) => {
+    const slotTime = new Date(`${selectedDate}T${time}:00`);
+    return slotTime > now;
+  });
+}
+
+
+
   return (
     <div className={`min-h-screen bg-gray-100 p-6 ${fontClass}`} dir="rtl">
       <div className="h-16"></div>
@@ -350,7 +364,7 @@ const toggleDay = async () => {
           <div className="p-8 pt-4 border-t bg-gray-50">
             <h2 className="text-xl font-semibold text-gray-700 mb-4">الأوقات المتاحة:</h2>
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-4 mb-6">
-              {times.map((time) => {
+              {filteredTimes.map((time) => {
                 const booked = isTimeBooked(time);
                 const isBlocked = blockedTimes.includes(time);
                 const isSelected = selectedTimes.includes(time);
