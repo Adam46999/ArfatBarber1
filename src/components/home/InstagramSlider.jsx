@@ -13,7 +13,6 @@ const images = [
   "/cuts/p4.jpg",
   "/cuts/p5.jpg",
   "/cuts/p6.jpg",
-  "/cuts/p7.jpg",
 ];
 
 function InstagramSlider() {
