@@ -2,6 +2,7 @@ import { useState } from "react";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "../../firebase";
 import { useTranslation } from "react-i18next";
+import SectionTitle from "../common/SectionTitle";
 
 function CheckReservation() {
   const [phone, setPhone] = useState("");
@@ -15,16 +16,25 @@ function CheckReservation() {
     if (!phone) return;
 
     try {
-      const q = query(collection(db, "bookings"), where("phoneNumber", "==", phone));
+const q = query(
+  collection(db, "bookings"),
+  where("phoneNumber", "==", phone),
+  where("bookingCode", "!=", "") // يعرض فقط الحجوزات التي تحتوي على كود
+);
       const querySnapshot = await getDocs(q);
 
       if (querySnapshot.empty) {
         setNotFound(true);
       } else {
-        const data = querySnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
+        const data = querySnapshot.docs
+  .map((doc) => ({
+    id: doc.id,
+    ...doc.data(),
+  }))
+  .filter((doc) =>
+    doc.fullName && doc.selectedDate && doc.selectedTime && doc.bookingCode
+  );
+
         setResults(data);
       }
     } catch (error) {
@@ -34,12 +44,9 @@ function CheckReservation() {
 
   return (
     <div className="bg-beige py-10 px-4 text-center font-body">
-<h2 className="text-3xl font-tajawal font-extrabold tracking-tight leading-snug text-gold mb-6 flex justify-center items-center gap-2">
-  <span>🔍</span>
-  {t("check_your_booking") || "تحقق من الحجز"}
-  <span>🔍</span>
-</h2>
-
+      <SectionTitle icon="🔍">
+        {t("check_booking") || "تحقق من الحجز"}
+      </SectionTitle>
 
       <input
         type="tel"

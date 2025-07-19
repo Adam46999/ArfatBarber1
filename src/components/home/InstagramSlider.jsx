@@ -2,6 +2,8 @@ import { useTranslation } from "react-i18next";
 import { useState } from "react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay, Thumbs } from "swiper/modules";
+import SectionTitle from "../common/SectionTitle"; // إذا المكون في مجلد common
+
 import "swiper/css";
 import "swiper/css/thumbs";
 import "swiper/css/autoplay";
@@ -22,9 +24,9 @@ function InstagramSlider() {
   return (
     <section className="bg-gray-50 py-20 px-4 md:px-16 text-center">
       <div className="max-w-5xl mx-auto bg-white rounded-2xl shadow-xl p-8 md:p-12">
-        <h2 className="text-2xl md:text-3xl font-tajawal font-bold text-gold tracking-tight leading-snug mb-10">
-  {t("slider_title") || "قصّات من لمساتنا"}
-</h2>
+        <SectionTitle>{t("slider_title") || "قصّات من لمساتنا"}</SectionTitle>
+
+
 
 
         <div className="rounded-xl overflow-hidden shadow-md">

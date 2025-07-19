@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { db } from "../../firebase";
+import SectionTitle from "../common/SectionTitle";
+
 import {
   collection,
   query,
@@ -69,8 +71,9 @@ function BookingTracker() {
 
   return (
     <section className="bg-white py-16 px-4 text-center text-primary font-body">
-      <h2 className="text-2xl font-bold mb-4">🔍 {t("check_booking") || "تحقق من الحجز برقم الهاتف"}</h2>
-
+<SectionTitle icon="🔍">
+  {t("check_booking") || "تحقق من الحجز برقم الهاتف"}
+</SectionTitle>
       <div className="max-w-md mx-auto">
         <input
           type="tel"

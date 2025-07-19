@@ -4,6 +4,7 @@ import { app } from "../../firebase"; // تأكد من أن المسار صحي�
 import DateSelector from "./DateSelector";
 import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
+import SectionTitle from "../common/SectionTitle"; // في الأعلى
 
 import { db } from "../../firebase"; // تأكد من المسار الصحيح
 import {
@@ -365,9 +366,8 @@ setTimeout(() => setShowSuccessMessage(false), 16000);
   return (
     <section id="booking" className={`bg-[#f8f8f8] text-primary py-16 px-4 ${fontClass}`}>
       <div className="max-w-xl mx-auto">
-        <h2 className="text-3xl md:text-4xl font-tajawal font-bold tracking-tight leading-snug text-center text-gold mb-10">
-  {t("book_now")}
-</h2>
+        <SectionTitle>{t("book_now")}</SectionTitle>
+
 
 
         <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-md mb-6">
