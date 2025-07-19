@@ -1,4 +1,7 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+
+
 import {
   collection,
   getDocs,
@@ -9,6 +12,8 @@ import {
 import { db } from "../firebase";
 
 export default function BlockedPhones() { 
+    const navigate = useNavigate();
+
   const [blockedPhones, setBlockedPhones] = useState([]);
   const [newPhone, setNewPhone] = useState("");
 
@@ -44,6 +49,14 @@ export default function BlockedPhones() {
 
   return (
     <div className="max-w-xl mx-auto p-6 bg-white rounded shadow mt-24">
+    <button
+  onClick={() => navigate(-1)}
+  className="text-blue-600 hover:underline text-sm mb-4 flex items-center gap-1"
+>
+  <span className="text-lg">←</span>
+  <span>الرجوع</span>
+</button>
+
       <h2 className="text-xl font-bold text-gold mb-4">📵 الأرقام المحظورة</h2>
 
       <div className="flex gap-2 mb-4">
