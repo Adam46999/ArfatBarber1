@@ -345,7 +345,7 @@ await addDoc(collection(db, "bookings"), {
       // إعادة تهيئة الحقول بعد الحفظ
       setSubmitted(true);
       setShowSuccessMessage(true);
-setTimeout(() => setShowSuccessMessage(false), 8000);
+setTimeout(() => setShowSuccessMessage(false), 16000);
 
       setFullName("");
       setPhoneNumber("");
