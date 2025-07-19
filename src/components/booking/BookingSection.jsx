@@ -416,12 +416,29 @@ setTimeout(() => setShowSuccessMessage(false), 8000);
         </div>
 
         <div className="bg-white shadow-xl rounded-2xl p-8 space-y-6 border border-gray-100">
-          {submitted && showSuccessMessage && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-    <div className="bg-white border border-green-400 text-green-700 px-6 py-8 rounded-2xl text-center text-lg flex flex-col items-center gap-4 shadow-2xl max-w-sm w-full mx-4">
+         {submitted && showSuccessMessage && (
+  <div
+    className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+    onClick={() => setShowSuccessMessage(false)} // للإغلاق عند الضغط على الخلفية
+  >
+    <div
+      className="relative bg-white border border-green-400 text-green-700 px-6 py-8 rounded-2xl text-center text-lg flex flex-col items-center gap-4 shadow-2xl max-w-sm w-full mx-4"
+      onClick={(e) => e.stopPropagation()} // يمنع غلق الرسالة لما نضغط داخلها
+    >
+      {/* زر X للإغلاق */}
+      <button
+        onClick={() => setShowSuccessMessage(false)}
+        className="absolute top-3 right-3 text-gray-500 hover:text-red-600 text-xl font-bold"
+        aria-label="إغلاق"
+      >
+        ×
+      </button>
+
       <div className="text-xl font-bold">✅ {t("thank_you")}</div>
+
       <div className="bg-green-100 border border-dashed border-green-500 px-4 py-2 rounded-lg text-base font-semibold text-gray-800 flex items-center gap-2">
         🔐 {t("your_code")}: <span className="font-mono">{code}</span>
+
         <button
           onClick={() => {
             navigator.clipboard.writeText(code);
@@ -433,12 +450,14 @@ setTimeout(() => setShowSuccessMessage(false), 8000);
           {copySuccess ? "✅ تم النسخ!" : "نسخ"}
         </button>
       </div>
+
       <p className="text-sm text-gray-600">
         احتفظ بهذا الكود لتعديل أو إلغاء الحجز لاحقًا.
       </p>
     </div>
   </div>
 )}
+
 
  
 {/* ✅ شريط التقدم قبل الـ form مباشرةً */}
