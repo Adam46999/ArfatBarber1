@@ -279,6 +279,14 @@ try {
     // إزالة أي حرف غير رقم قبل الإرسال
     const cleanPhone = phoneNumber.replace(/\D/g, "");
 
+    // ✅ تحقق إن كان الرقم محظورًا
+const blockedRef = doc(db, "blockedPhones", cleanPhone);
+const blockedSnap = await getDoc(blockedRef);
+if (blockedSnap.exists()) {
+  alert("🚫 هذا الرقم محظور من الحجز. يرجى التواصل مع الحلاق.");
+  return;
+}
+
     // التحقق من الحجوزات السابقة لرقم الهاتف نفسه
     const existingBookingsQuery = query(
       collection(db, "bookings"),

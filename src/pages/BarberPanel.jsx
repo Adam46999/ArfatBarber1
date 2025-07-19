@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { db } from "../firebase";
+import { Link } from "react-router-dom";
 
 import {
   doc,
@@ -298,6 +299,14 @@ if (isToday && times) {
             >
               لوحة الحجوزات
             </button>
+            <Link
+  to="/blocked-phones"
+
+  className="text-yellow-700 hover:underline transition-colors"
+>
+  الأرقام المحظورة
+</Link>
+
             <button
               onClick={() => {
                 if (window.confirm("هل أنت متأكد أنك تريد تسجيل الخروج؟")) {

@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import React, { useEffect, useState } from 'react';
 import Dashboard from "./pages/Dashboard";
+import BlockedPhones from "./pages/BlockedPhones";
 
 import Home from './pages/Home';
 import BookingIntro from './pages/BookingIntro';
@@ -10,6 +11,8 @@ import BarberPanel from "./pages/BarberPanel";
 import BookingForm from "./pages/BookingForm";
 import AdminBookings from "./pages/AdminBookings";
 import Login from "./pages/Login";
+import AdminBookingsV2 from "./pages/AdminBookingsV2.jsx";
+
 
 // PrivateRoute يستخدم localStorage للتحقق من تسجيل الدخول اليدوي
 function PrivateRoute({ children }) {
@@ -32,6 +35,7 @@ function PrivateRoute({ children }) {
 export default function AppRoutes() {
   return (
     <Routes>
+
       <Route path="/" element={<Home />} />
       <Route path="/booking" element={<BookingIntro />} />
       <Route path="/booking-form" element={<BookingForm />} />
@@ -42,6 +46,20 @@ export default function AppRoutes() {
     <Dashboard />
   </PrivateRoute>
 } />
+<Route
+  path="/admin-bookings-v2"
+  element={
+    <PrivateRoute>
+      <AdminBookingsV2 />
+    </PrivateRoute>
+  }
+/>
+<Route path="/blocked-phones" element={
+  <PrivateRoute>
+    <BlockedPhones />
+  </PrivateRoute>
+} />
+
       {/* مسارات خاصة محمية */}
       <Route path="/barber" element={
         <PrivateRoute>
