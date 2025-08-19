@@ -10,6 +10,10 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+
+# Ignore local environment files
+.env*
+!*.example
 *.local
 
 # Editor directories and files
