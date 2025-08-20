@@ -1,36 +1,41 @@
-function ServiceSelector({ selectedService, onSelect, t }) {
-  const services = [
-    { id: "cut", name: t("haircut"), icon: "💇‍♂️" },
-    { id: "beard", name: t("beard_trim"), icon: "🧔" },
-  ];
+// src/components/booking/parts/ServiceSelector.jsx
+import ServiceOption from "./ServiceOption";
+
+const SERVICES = [
+  {
+    id: "haircut",
+    title: "قص شعر",
+    icon: "haircut",
+  },
+  {
+    id: "beard",
+    title: "تعليم لحية",
+    icon: "beard",
+  },
+];
+
+export default function ServiceSelector({ selectedService, onSelect, t, rtl }) {
+  const isRTL = rtl ?? t?.("dir") === "rtl";
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-      {services.map((service) => {
-        const isSelected = selectedService === service.id;
-
-        return (
-          <button
-            key={service.id}
-            type="button"
-            onClick={() => onSelect(service.id)}
-            className={`flex flex-col items-center justify-center p-4 rounded-xl border transition-all duration-200
-              ${
-                isSelected
-                  ? "bg-gold text-primary border-gold shadow-md scale-105"
-                  : "bg-white text-gray-800 border-gray-300 hover:border-gold hover:shadow"
-              }`}
-          >
-            {/* أيقونة */}
-            <span className="text-4xl mb-2">{service.icon}</span>
-
-            {/* اسم الخدمة */}
-            <span className="text-base font-medium">{service.name}</span>
-          </button>
-        );
-      })}
+    <div
+      className="grid gap-4"
+      style={{
+        gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+      }}
+    >
+      {SERVICES.map((s) => (
+        <ServiceOption
+          key={s.id}
+          id={s.id}
+          title={s.title}
+          desc={s.desc}
+          icon={s.icon}
+          selected={selectedService === s.id}
+          onSelect={onSelect}
+          rtl={isRTL}
+        />
+      ))}
     </div>
   );
 }
-
-export default ServiceSelector;

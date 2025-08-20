@@ -8,6 +8,7 @@ import workingHours from "./workingHours";
 import SectionTitle from "../common/SectionTitle";
 import ProgressBar from "./parts/ProgressBar";
 import UpcomingBookings from "./parts/UpcomingBookings";
+import Button from "../ui/Button";
 
 import PhoneInput from "./parts/PhoneInput";
 
@@ -57,7 +58,13 @@ function BookingSection() {
       <div className="max-w-xl mx-auto">
         <SectionTitle>{t("book_now")}</SectionTitle>
 
-        <OpeningStatusCard t={t} status={status} workingHours={workingHours} />
+        <div className="mb-8">
+          <OpeningStatusCard
+            t={t}
+            status={status}
+            workingHours={workingHours}
+          />
+        </div>
 
         <div className="bg-white shadow-xl rounded-2xl p-8 space-y-6 border border-gray-100">
           <SuccessModal
@@ -125,26 +132,41 @@ function BookingSection() {
             </div>
 
             {/* الساعات */}
-            <div>
-              <label className="block text-sm font-semibold text-gold mb-3">
-                {t("choose_time")}
-              </label>
-              <TimeSelector
-                selectedDate={form.selectedDate}
-                selectedTime={form.selectedTime}
-                onSelectTime={(time) =>
-                  setForm((s) => ({ ...s, selectedTime: time }))
-                }
-                availableTimes={availableTimes}
-                workingHours={workingHours}
-                t={t}
-              />
-              {form.selectedDate && availableTimes.length === 0 && (
-                <p className="text-red-500 text-sm font-medium mt-2">
-                  {t("no_hours")}
+            {/* الساعات */}
+            {form.selectedDate ? (
+              isDayBlocked ? (
+                <p className="text-red-600 font-semibold text-center text-sm mt-2">
+                  {t("day_blocked")}
                 </p>
-              )}
-            </div>
+              ) : (
+                <div>
+                  <label className="block text-sm font-semibold text-gold mb-3">
+                    {t("choose_time")}
+                  </label>
+                  {availableTimes.length > 0 ? (
+                    <TimeSelector
+                      selectedDate={form.selectedDate}
+                      selectedTime={form.selectedTime}
+                      onSelectTime={(time) =>
+                        setForm((s) => ({ ...s, selectedTime: time }))
+                      }
+                      availableTimes={availableTimes}
+                      workingHours={workingHours}
+                      t={t}
+                    />
+                  ) : (
+                    <p className="text-red-500 text-sm font-medium mt-2">
+                      {t("no_hours")}
+                    </p>
+                  )}
+                </div>
+              )
+            ) : (
+              <div className="rounded-xl border border-dashed border-gray-200 p-4 bg-gray-50 text-center text-sm text-gray-600">
+                {t("pick_date_first") ||
+                  "اختر التاريخ أولًا لعرض الساعات المتاحة."}
+              </div>
+            )}
 
             {/* اختيار الخدمة */}
             <div>

@@ -52,7 +52,7 @@
   "no_bookings": "אין הזמנות עדיין",
   "date_added": "נוסף בתאריך",
   "clear_filter": "נקה סינון",
-  "check_booking": "בדוק את ההזמנה 🔍",
+  "check_booking": "בדוק את ההזמנה ",
   "check": "בדוק",
   "loading": "בודק...",
   "cancel_booking": "ביטול הזמנה",
@@ -67,6 +67,17 @@
 "your_code": "הקוד שלך",
 
   "choose_date":"בחירת תאריך",
-  "wrong_code": "⚠️ הקוד שגוי"
+  "wrong_code": "⚠️ הקוד שגוי",
+  "shop_open_now": "החנות פתוחה כעת",
+  "shop_closed_now": "החנות סגורה כעת",
+  "open_until": "פתוח עד",
+  "opens_at": "נפתח",
+
+  "short_name": "שם",
+  "short_phone": "טלפון",
+  "short_date": "תאריך",
+  "short_time": "שעה",
+  "short_service": "שירות",
+  "short_confirm": "אישור"
 
 }

@@ -52,7 +52,7 @@
   "no_bookings": "No bookings found yet",
   "date_added": "Created At",
   "clear_filter": "Clear Filter",
-  "check_booking": "Check Booking 🔍",
+  "check_booking": "Check Booking ",
   "check": "Check",
   "loading": "Checking...",
   "cancel_booking": "Cancel Booking",
@@ -66,7 +66,22 @@
   "time_already_booked": "⚠️ This time slot is already booked. Please choose another.",
 "blocked_time": "Blocked by the barber",
 "your_code": "Your Code",
-"wrong_code": "⚠️ The code is incorrect"
+"wrong_code": "⚠️ The code is incorrect",
+  "pick_date_first": "Pick a date first to show available times.",
+
+  "shop_open_now": "Shop is open now",
+  "shop_closed_now": "Shop is closed now",
+  "open_until": "Open until",
+  "opens_at": "Opens",
+
+  "short_name": "Name",
+  "short_phone": "Phone",
+  "short_date": "Date",
+  "short_time": "Time",
+  "short_service": "Service",
+  "short_confirm": "Confirm"
+
+
 
 
 }
