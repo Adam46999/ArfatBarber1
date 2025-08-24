@@ -1,7 +1,6 @@
 {
   "home": "Home",
   "about": "About",
-  "services": "Services",
   "contact": "Contact",
   "language": "Language",
   "book_now": "Book Now",
@@ -79,9 +78,40 @@
   "short_date": "Date",
   "short_time": "Time",
   "short_service": "Service",
-  "short_confirm": "Confirm"
+  "short_confirm": "Confirm",
+  
+  
+  "closed_now": "Closed Now",
+  "main_navigation": "Main Navigation",
+  "close_menu": "Close menu",
+  "open_menu": "Open menu",
+  
+  "invalid_name": "Please enter a valid name (at least 2 letters).",
+  "invalid_phone": "Please enter a valid phone: starts with 05 and has 10 digits.",
+  "invalid_date": "Please select a valid date.",
+  "invalid_time": "Please select a valid time.",
+  "invalid_service": "Please choose a service.",
+  
+  "confirm": "Confirm",
+  "upcoming_bookings": "Your Upcoming Bookings","looks_good": "Looks good",
+  "fix_errors_first": "Please make sure all fields are filled in correctly",
+  
+  "weekdays": ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"],
+  
+  "closed_all_day": "Closed all day",
+  "services": {
+    "haircut": "Haircut",
+    "beard": "Beard trim"}
 
 
 
 
 }
+
+
+
+
+
+
+
+

@@ -1,7 +1,6 @@
 {
   "home": "בית",
   "about": "אודות",
-  "services": "שירותים",
   "contact": "צור קשר",
   "language": "שפה",
   "book_now": "הזמן עכשיו",
@@ -78,6 +77,41 @@
   "short_date": "תאריך",
   "short_time": "שעה",
   "short_service": "שירות",
-  "short_confirm": "אישור"
+  "short_confirm": "אישור",
 
+  
+  
+  "closed_now": "סגור עכשיו",
+  "main_navigation": "ניווט ראשי",
+  "close_menu": "סגור תפריט",
+  "open_menu": "פתח תפריט",
+
+  "invalid_name": "נא להזין שם תקין (לפחות שני תווים).",
+  "invalid_phone": "נא להזין מספר תקין: מתחיל ב-05 ובעל 10 ספרות.",
+  "invalid_date": "נא לבחור תאריך תקין.",
+  "invalid_time": "נא לבחור שעה תקינה.",
+  "invalid_service": "נא לבחור שירות.",
+  
+  "confirm": "אשר",
+  "upcoming_bookings": "ההזמנות הקרובות שלך",
+  "looks_good": "נראה טוב",
+  "fix_errors_first": "אנא ודא שכל השדות מולאו בצורה נכונה",
+  
+  "weekdays": ["ראשון","שני","שלישי","רביעי","חמישי","שישי","שבת"],
+  
+  "closed_all_day": "סגור כל היום"
+  ,
+   "services": {
+    "haircut": "תספורת",
+    "beard": "עיצוב זקן"
+  }
 }
+
+
+
+
+
+
+
+
+

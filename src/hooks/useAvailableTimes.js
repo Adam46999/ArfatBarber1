@@ -7,26 +7,24 @@ import {
   fetchActiveBookingsByDate,
 } from "../services/bookingService";
 
-/**
- * يحسب الساعات المتاحة لليوم المحدد + يجلب حجوزات ذلك اليوم
- * يُخرج: availableTimes, isDayBlocked, bookings, reload()
- */
 export default function useAvailableTimes(selectedDate, workingHours) {
   const [availableTimes, setAvailableTimes] = useState([]);
   const [isDayBlocked, setIsDayBlocked] = useState(false);
   const [bookings, setBookings] = useState([]);
+  const [loadingTimes, setLoadingTimes] = useState(false); // ✅ جديد
 
-  // احسب الساعات المتاحة
   useEffect(() => {
     if (!selectedDate) {
       setAvailableTimes([]);
       setIsDayBlocked(false);
+      setLoadingTimes(false);
       return;
     }
 
     const run = async () => {
       try {
-        // 1) يوم محجوب بالكامل؟
+        setLoadingTimes(true); // ✅ بدء التحميل
+
         const dayBlocked = await fetchBlockedDay(selectedDate);
         if (dayBlocked) {
           setIsDayBlocked(true);
@@ -36,14 +34,12 @@ export default function useAvailableTimes(selectedDate, workingHours) {
           setIsDayBlocked(false);
         }
 
-        // 2) تحديد اليوم والساعات
         const [yyyy, mm, dd] = selectedDate.split("-");
         const dateObj = new Date(Number(yyyy), Number(mm) - 1, Number(dd));
         const weekday = dateObj.toLocaleDateString("en-US", {
           weekday: "long",
         });
 
-        // إغلاق الأحد — أو أي يوم لا يملك ساعات معرفة
         const dayHours = workingHours?.[weekday] || null;
         if (weekday === "Sunday" || !dayHours) {
           setAvailableTimes([]);
@@ -52,7 +48,6 @@ export default function useAvailableTimes(selectedDate, workingHours) {
 
         const allSlots = generateTimeSlots(dayHours.from, dayHours.to);
 
-        // 3) محظورات + حجوزات فعّالة
         const [blocked, active] = await Promise.all([
           fetchBlockedTimes(selectedDate),
           fetchActiveBookingsByDate(selectedDate),
@@ -64,7 +59,6 @@ export default function useAvailableTimes(selectedDate, workingHours) {
 
         let available = allSlots.filter((t) => !unavailable.includes(t));
 
-        // 4) استثناء الأوقات الماضية إذا اليوم هو اليوم الحالي (محلي)
         const isToday = selectedDate === localYMD(new Date());
         if (isToday) {
           const now = new Date();
@@ -81,13 +75,14 @@ export default function useAvailableTimes(selectedDate, workingHours) {
         console.error("useAvailableTimes error:", e);
         setAvailableTimes([]);
         setIsDayBlocked(false);
+      } finally {
+        setLoadingTimes(false); // ✅ إنهاء التحميل (مهما صار)
       }
     };
 
     run();
   }, [selectedDate, workingHours]);
 
-  // جلب حجوزات نفس اليوم (لعرض "حجوزاتك الحالية")
   const reloadBookings = async () => {
     if (!selectedDate) {
       setBookings([]);
@@ -107,5 +102,11 @@ export default function useAvailableTimes(selectedDate, workingHours) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate]);
 
-  return { availableTimes, isDayBlocked, bookings, reloadBookings };
+  return {
+    availableTimes,
+    isDayBlocked,
+    bookings,
+    reloadBookings,
+    loadingTimes,
+  }; // ✅
 }

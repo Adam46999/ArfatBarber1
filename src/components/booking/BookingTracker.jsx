@@ -11,6 +11,28 @@ import {
 } from "firebase/firestore";
 import { useTranslation } from "react-i18next";
 import { CalendarCheck } from "lucide-react";
+// === حارس إلغاء ثابت: 50 دقيقة ===
+const CANCELLATION_WINDOW_MIN = 50;
+
+function diffMinutes(fromDate, toDate) {
+  const ms = toDate.getTime() - fromDate.getTime();
+  return Math.floor(ms / 60000);
+}
+
+function canCancelFixed(startAtDate) {
+  if (!(startAtDate instanceof Date) || isNaN(startAtDate)) {
+    return { ok: false, reason: "بيانات الموعد غير صالحة." };
+  }
+  const now = new Date();
+  const left = diffMinutes(now, startAtDate);
+  if (left < CANCELLATION_WINDOW_MIN) {
+    return {
+      ok: false,
+      reason: `لا يمكن الإلغاء: تبقّى أقل من ${CANCELLATION_WINDOW_MIN} دقيقة على موعدك.`,
+    };
+  }
+  return { ok: true };
+}
 
 function BookingTracker() {
   const { t } = useTranslation();
@@ -53,6 +75,7 @@ function BookingTracker() {
   };
 
   const handleCancel = async (booking) => {
+    // تحقق من الرمز
     const code = codeInputs[booking.docId] || "";
     if (!code || code !== booking.bookingCode) {
       setErrorMessages((prev) => ({
@@ -64,6 +87,43 @@ function BookingTracker() {
       return;
     }
 
+    // منع إلغاء حجز مُلغى أصلاً (اختياري)
+    if (booking.cancelledAt) {
+      setErrorMessages((prev) => ({
+        ...prev,
+        [booking.docId]: "هذا الحجز مُلغى بالفعل.",
+      }));
+      return;
+    }
+
+    // تحديد وقت الموعد:
+    // 1) إن وُجد startAt (Firestore Timestamp) نستخدمه
+    // 2) وإلا نبنيه محليًا من selectedDate + selectedTime (بدون UTC)
+    let startAtDate = null;
+    try {
+      if (booking?.startAt?.toDate) {
+        startAtDate = booking.startAt.toDate();
+      } else if (booking?.selectedDate && booking?.selectedTime) {
+        // يبني تاريخًا محليًا مثل "2025-08-24T13:30:00"
+        startAtDate = new Date(
+          `${booking.selectedDate}T${booking.selectedTime}:00`
+        );
+      }
+    } catch {
+      // يظل startAtDate = null -> سيعطي رسالة "بيانات الموعد غير صالحة."
+    }
+
+    // فحص حد الـ 50 دقيقة
+    const check = canCancelFixed(startAtDate);
+    if (!check.ok) {
+      setErrorMessages((prev) => ({
+        ...prev,
+        [booking.docId]: check.reason,
+      }));
+      return;
+    }
+
+    // تنفيذ الإلغاء (حذف الوثيقة كما كان بس)
     try {
       await deleteDoc(doc(db, "bookings", booking.docId));
       setResults((prev) => prev.filter((b) => b.docId !== booking.docId));

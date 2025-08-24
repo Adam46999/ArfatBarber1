@@ -1,17 +1,18 @@
+// src/components/booking/parts/OpeningStatusCard.jsx
 import React from "react";
 import { FaClock, FaDoorOpen, FaDoorClosed } from "react-icons/fa";
+import { useTranslation } from "react-i18next";
 
 /**
  * Props:
- * - t: دالة الترجمة (اختياري)
- * - status: كائن حالة جاهز من util (اختياري: { isOpen?: boolean })
- * - workingHours: كائن أيام الأسبوع:
- *    { Sunday: null | { from:"12:00", to:"20:00" }, Monday: {...}, ... }
+ * - status?: { isOpen?: boolean, nextOpen?: Date }  (اختياري)
+ * - workingHours: { Sunday:null|{from,to}, Monday:..., ... }
  */
-export default function OpeningStatusCard({ t, status, workingHours }) {
-  const dir = (typeof document !== "undefined" && document?.dir) || "rtl";
+export default function OpeningStatusCard({ status, workingHours }) {
+  const { t, i18n } = useTranslation();
+  const dir = i18n.dir();
 
-  // ترتيب الأيام (يبدأ الأحد مثل ما هو عندك في المشروع)
+  // ترتيب الأيام (مفاتيح كائن ساعات العمل)
   const dayKeys = [
     "Sunday",
     "Monday",
@@ -21,22 +22,15 @@ export default function OpeningStatusCard({ t, status, workingHours }) {
     "Friday",
     "Saturday",
   ];
-  const dayLabelsAR = [
-    "الأحد",
-    "الإثنين",
-    "الثلاثاء",
-    "الأربعاء",
-    "الخميس",
-    "الجمعة",
-    "السبت",
-  ];
+
+  // أسماء الأيام من الترجمة (مصفوفة)
+  const dayLabels = t("weekdays", { returnObjects: true });
 
   const now = new Date();
   const todayIdx = now.getDay(); // 0=Sunday
   const todayKey = dayKeys[todayIdx];
   const todayHours = workingHours?.[todayKey] || null;
 
-  // محوّل "HH:MM" -> Date اليوم بهذه الساعة
   const toTodayTime = (hhmm) => {
     const [h, m] = String(hhmm || "00:00")
       .split(":")
@@ -57,48 +51,37 @@ export default function OpeningStatusCard({ t, status, workingHours }) {
           return now >= from && now <= to;
         })();
 
-  // متى يُغلق اليوم (إن كان مفتوحًا)
-  const closesAtText = (() => {
-    if (!isOpenNow || !todayHours) return null;
-    return todayHours.to;
-  })();
+  // إغلاق اليوم (إن كان مفتوحًا)
+  const closesAtText = isOpenNow && todayHours ? todayHours.to : null;
 
-  // ما هو موعد الفتح القادم (لو مغلق الآن)
+  // موعد الفتح القادم (لو مغلق الآن)
   const nextOpen = (() => {
     // لو اليوم فيه ساعات لكن قبل الفتح
     if (todayHours) {
       const from = toTodayTime(todayHours.from);
-      if (now < from) {
-        return { dayIdx: todayIdx, from: todayHours.from };
-      }
+      if (now < from) return { dayIdx: todayIdx, from: todayHours.from };
     }
-    // دوّر على أول يوم فيه ساعات بدءًا من الغد
+    // أول يوم قادم فيه ساعات
     for (let offset = 1; offset <= 7; offset++) {
       const idx = (todayIdx + offset) % 7;
       const key = dayKeys[idx];
       const hours = workingHours?.[key];
-      if (hours && hours.from) {
-        return { dayIdx: idx, from: hours.from };
-      }
+      if (hours && hours.from) return { dayIdx: idx, from: hours.from };
     }
     return null;
   })();
 
-  // نص الحالة أعلى البطاقة
   const statusLine = isOpenNow
     ? {
-        text: (t && t("shop_open_now")) || "المحل مفتوح الآن",
-        sub: closesAtText
-          ? ((t && t("open_until")) || "مفتوح حتى") + ` ${closesAtText}`
-          : null,
+        text: t("shop_open_now"),
+        sub: closesAtText ? `${t("open_until")} ${closesAtText}` : null,
         color: "text-emerald-600",
         icon: <FaDoorOpen className="text-emerald-600" />,
       }
     : {
-        text: (t && t("shop_closed_now")) || "المحل مغلق الآن",
+        text: t("shop_closed_now"),
         sub: nextOpen
-          ? ((t && t("opens_at")) || "يفتح") +
-            ` ${dayLabelsAR[nextOpen.dayIdx]} ${nextOpen.from}`
+          ? `${t("opens_at")} ${dayLabels?.[nextOpen.dayIdx]} ${nextOpen.from}`
           : null,
         color: "text-rose-600",
         icon: <FaDoorClosed className="text-rose-600" />,
@@ -108,12 +91,13 @@ export default function OpeningStatusCard({ t, status, workingHours }) {
     <div
       className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
       dir={dir}
+      lang={i18n.language}
     >
       {/* الرأس */}
       <div className="flex items-center gap-2 px-5 pt-4">
         <FaClock className="text-[#3B82F6]" />
         <h3 className="text-lg font-bold text-[#1F2937]">
-          {(t && t("working_hours")) || "ساعات العمل"}
+          {t("working_hours")}
         </h3>
       </div>
 
@@ -141,21 +125,21 @@ export default function OpeningStatusCard({ t, status, workingHours }) {
             return (
               <li
                 key={k}
-                className={`flex items-center justify-between px-4 py-3
-                  ${isToday ? "bg-slate-50" : "bg-white"}
-                `}
+                className={`flex items-center justify-between px-4 py-3 ${
+                  isToday ? "bg-slate-50" : "bg-white"
+                }`}
               >
                 <span
                   className={`text-sm ${
                     isToday ? "font-semibold text-[#1F2937]" : "text-gray-600"
                   }`}
                 >
-                  {dayLabelsAR[i]}
+                  {dayLabels?.[i]}
                 </span>
 
                 {closed ? (
                   <span className="text-sm font-semibold text-rose-600">
-                    {(t && t("closed")) || "مغلق"}
+                    {t("closed_all_day")}
                   </span>
                 ) : (
                   <span

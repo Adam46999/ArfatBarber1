@@ -1,27 +1,41 @@
-// src/components/booking/PhoneInput.jsx
-import { formatPhoneInput } from "../../../utils/phone";
+// src/components/booking/parts/PhoneInput.jsx
+import React, { forwardRef } from "react";
 
-/**
- * حقل هاتف قياسي بإخراج مقنّع (05X-XXXXXXX)
- */
-export default function PhoneInput({
-  value,
-  onChange,
-  placeholder,
-  required = true,
-}) {
-  const handle = (e) => onChange(formatPhoneInput(e.target.value));
+const PhoneInput = forwardRef(function PhoneInput(
+  {
+    value,
+    onChange,
+    onBlur,
+    placeholder,
+    inputMode = "tel",
+    className = "",
+    isInvalid = false,
+    isValid = false,
+    ...rest
+  },
+  ref
+) {
+  const base =
+    "w-full p-3 rounded-xl border transition focus:ring-2 outline-none";
+  const state = isInvalid
+    ? "border-red-500 focus:ring-red-300"
+    : isValid
+    ? "border-emerald-500 focus:ring-emerald-300"
+    : "border-gray-300 focus:border-gold focus:ring-gold/40";
 
   return (
     <input
+      ref={ref}
       type="tel"
-      inputMode="tel"
-      placeholder={placeholder}
-      className="w-full p-3 border border-gray-300 rounded-xl"
       value={value}
-      onChange={handle}
-      required={required}
-      aria-label={placeholder}
+      onChange={(e) => onChange?.(e.target.value)}
+      onBlur={onBlur}
+      placeholder={placeholder}
+      inputMode={inputMode}
+      className={`${base} ${state} ${className}`}
+      {...rest}
     />
   );
-}
+});
+
+export default PhoneInput;
