@@ -101,7 +101,30 @@
   "closed_all_day": "Closed all day",
   "services": {
     "haircut": "Haircut",
-    "beard": "Beard trim"}
+    "beard": "Beard trim"},
+    
+
+  "booking_confirmed": "Your booking has been confirmed",
+  "copy_code": "Copy Code",
+  "copy_all": "Copy All Details",
+  "copy_and_close": "Copy Details",
+  "share": "Share",
+  "keep_code_hint": "Keep this code to modify or cancel your booking later.",
+  "got_it": "Got it",
+  "close": "Close",
+
+  "service": "Service",
+  "appointment_time": "Appointment Time",
+  "duration": "Duration",
+  "price": "Price",
+  "barber": "Barber",
+  "location": "Location",
+  "notes": "Notes",
+
+  "opening_hours": "Opening Hours",
+  "today_status": "Today's Status"
+
+
 
 
 

@@ -104,7 +104,30 @@
    "services": {
     "haircut": "תספורת",
     "beard": "עיצוב זקן"
-  }
+  },
+  
+  
+  "booking_confirmed": "הזמנתך אושרה בהצלחה",
+  "copy_code": "העתק קוד",
+  "copy_all": "העתק את כל הפרטים",
+  "copy_and_close": "העתק פרטים",
+  "share": "שתף",
+  "keep_code_hint": "שמור קוד זה לשינוי או ביטול ההזמנה מאוחר יותר.",
+  "got_it": "הבנתי",
+  "close": "סגור",
+
+  "service": "שירות",
+  "appointment_time": "זמן הפגישה",
+  "duration": "משך",
+  "price": "מחיר",
+  "barber": "ספר",
+  "location": "מיקום",
+  "notes": "הערות",
+
+  "opening_hours": "שעות פתיחה",
+  "today_status": "סטטוס היום"
+
+
 }
 
 

@@ -101,7 +101,30 @@
  "services": {
     "haircut": "قص شعر",
     "beard": "تعليم لحية"
-  }
+  },
+
+
+  "booking_confirmed": "تم تأكيد الحجز بنجاح",
+  "copy_code": "نسخ الكود",
+  "copy_all": "نسخ كل التفاصيل",
+  "copy_and_close": "نسخ التفاصيل",
+  "share": "مشاركة",
+  "keep_code_hint": "احتفظ بهذا الكود لتعديل أو إلغاء الحجز لاحقًا.",
+  "got_it": "تمام",
+  "close": "إغلاق",
+
+  "service": "الخدمة",
+  "appointment_time": "موعدك",
+  "duration": "المدة",
+  "price": "السعر",
+  "barber": "الحلاق",
+  "location": "الموقع",
+  "notes": "ملاحظات",
+
+  "opening_hours": "ساعات الدوام",
+  "today_status": "حالة اليوم"
+
+
 }
 
 
