@@ -28,7 +28,6 @@ const isNameValid = (v) => {
   return /^[\p{L}\s'-]{2,}$/u.test(s);
 };
 
-// هاتف: بالضبط 10 أرقام ويبدأ بـ 05
 // تحويل الأرقام الشرقية (٠١٢… / ۰۱۲…) إلى ASCII
 const easternToAscii = (s = "") =>
   s
@@ -39,8 +38,14 @@ const easternToAscii = (s = "") =>
 const normalizePhone = (v) =>
   easternToAscii(v || "").replace(/[^\p{Nd}]/gu, "");
 
-// يبدأ بـ 05 ومكوّن من 10 أرقام
-const isPhoneValid = (v) => /^05\d{8}$/.test(normalizePhone(v));
+// يبدأ بـ 05 ومكوّن من 10 أرقام + دعم صيغ شائعة (972/بدون صفر)
+const isPhoneValid = (v) => {
+  const raw = normalizePhone(v);
+  if (/^05\d{8}$/.test(raw)) return true; // محلي قياسي
+  if (/^5\d{8}$/.test(raw)) return true; // بدون صفر البداية
+  if (/^9725\d{8}$/.test(raw)) return true; // دولي بدون +
+  return false;
+};
 
 const isDateValid = (v) => typeof v === "string" && v.trim().length > 0;
 const isTimeValid = (v) => typeof v === "string" && v.trim().length > 0;
@@ -106,6 +111,11 @@ function BookingSection() {
     return () => clearTimeout(id);
   }, [form]);
 
+  // حساب فوري للأخطاء للاعتماد عليه في تعطيل الزر/الألوان
+  const hasErrors = useMemo(() => {
+    return Object.keys(validateForm(form)).length > 0;
+  }, [form]);
+
   // مساعد لتلوين الحقول حسب الحالة
   const fieldState = (key) => {
     const invalid = Boolean(errors[key]);
@@ -137,7 +147,7 @@ function BookingSection() {
   }, [submitted]);
 
   // سكرول لأول خطأ عند محاولة الإرسال
-  const scrollToFirstError = () => {
+  const scrollToFirstError = (errs) => {
     const keys = [
       "fullName",
       "phoneNumber",
@@ -146,7 +156,7 @@ function BookingSection() {
       "selectedService",
     ];
     for (const k of keys) {
-      if (errors[k]) {
+      if (errs[k]) {
         const el = document.getElementById(`field-${k}`);
         if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
         break;
@@ -178,7 +188,7 @@ function BookingSection() {
             t={t}
           />
 
-          {/* ✅ مؤشر بسيط: أيقونات + ✓ مستقلة لكل خطوة (بدون أرقام/بار) */}
+          {/* ✅ مؤشر بسيط: أيقونات + ✓ مستقلة لكل خطوة */}
           <ProgressBar
             step={activeStep}
             completed={completed}
@@ -231,7 +241,6 @@ function BookingSection() {
             </div>
 
             {/* الهاتف */}
-
             <div id="field-phoneNumber">
               <label className="block text-sm font-semibold text-gold mb-2">
                 {t("phone")}
@@ -243,13 +252,18 @@ function BookingSection() {
                   onChange={(val) =>
                     setForm((s) => ({ ...s, phoneNumber: val }))
                   }
-                  // نعتبر الحقل "مَلموس" بعد الخروج منه (لإظهار الأحمر فقط وقتها)
                   onBlur={() =>
                     setTouched((s) => ({ ...s, phoneNumber: true }))
                   }
                   placeholder={t("phone")}
                   inputMode="numeric"
-                  pattern="^05\\d{8}$"
+                  autoComplete="tel"
+                  enterKeyHint="done"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !isPhoneValid(form.phoneNumber)) {
+                      e.preventDefault();
+                    }
+                  }}
                   // ✅ أخضر مباشرة إذا الرقم صحيح (بعد تحويل الشرقية)
                   isValid={isPhoneValid(form.phoneNumber)}
                   // ❌ أحمر فقط بعد اللمس + عدم الصحة
@@ -274,8 +288,6 @@ function BookingSection() {
                     {t("invalid_phone")}
                   </p>
                 )}
-
-                {/* (اختياري) رسالة نجاح */}
               </div>
             </div>
 
@@ -323,7 +335,6 @@ function BookingSection() {
             </div>
 
             {/* الساعات */}
-            {/* الساعات */}
             {form.selectedDate ? (
               isDayBlocked ? (
                 <p className="text-red-600 font-semibold text-center text-sm mt-2">
@@ -335,7 +346,6 @@ function BookingSection() {
                     {t("choose_time")}
                   </label>
 
-                  {/* ✅ هون ييجي الكود اللي شفته بالصورة */}
                   {loadingTimes ? (
                     <div className="flex items-center justify-center py-6">
                       <div className="animate-spin rounded-full h-6 w-6 border-2 border-gold border-t-transparent" />
@@ -409,12 +419,12 @@ function BookingSection() {
                 setErrors(currentErrors);
                 if (Object.keys(currentErrors).length > 0) {
                   e.preventDefault();
-                  scrollToFirstError();
+                  scrollToFirstError(currentErrors);
                 }
               }}
-              disabled={Object.keys(errors).length > 0}
+              disabled={hasErrors}
               className={`w-full font-bold py-3 rounded-xl shadow transition ${
-                Object.keys(errors).length > 0
+                hasErrors
                   ? "bg-gray-300 text-gray-600 cursor-not-allowed"
                   : "bg-gradient-to-r from-gold to-yellow-400 text-primary hover:scale-[1.02] hover:shadow-lg"
               }`}
