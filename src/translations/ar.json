@@ -122,7 +122,18 @@
   "notes": "ملاحظات",
 
   "opening_hours": "ساعات الدوام",
-  "today_status": "حالة اليوم"
+  "today_status": "حالة اليوم",
+
+ 
+  
+  
+
+  "add_to_calendar": "أضف للتقويم",
+  "copied_code": "تم نسخ الكود",
+  "copied_details": "تم نسخ التفاصيل",
+  "customer_name": "الاسم"
+
+
 
 
 }

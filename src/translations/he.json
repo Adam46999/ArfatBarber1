@@ -125,7 +125,11 @@
   "notes": "הערות",
 
   "opening_hours": "שעות פתיחה",
-  "today_status": "סטטוס היום"
+  "today_status": "סטטוס היום",
+"add_to_calendar": "הוסף ליומן",
+  "copied_code": "הקוד הועתק",
+  "copied_details": "הפרטים הועתקו",
+  "customer_name": "שם"
 
 
 }

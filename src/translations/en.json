@@ -122,7 +122,15 @@
   "notes": "Notes",
 
   "opening_hours": "Opening Hours",
-  "today_status": "Today's Status"
+  "today_status": "Today's Status",
+
+
+
+
+  "add_to_calendar": "Add to Calendar",
+  "copied_code": "Code copied",
+  "copied_details": "Details copied",
+  "customer_name": "Name"
 
 
 
