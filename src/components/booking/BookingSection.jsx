@@ -62,6 +62,25 @@ const validateForm = (form) => {
   return errors;
 };
 
+/* ===========================
+   ثوابت خارج الكمبوننت (مراجع ثابتة)
+   =========================== */
+const initialForm = Object.freeze({
+  fullName: "",
+  phoneNumber: "",
+  selectedDate: "",
+  selectedTime: "",
+  selectedService: "",
+});
+
+const initialTouched = Object.freeze({
+  fullName: false,
+  phoneNumber: false,
+  selectedDate: false,
+  selectedTime: false,
+  selectedService: false,
+});
+
 function BookingSection() {
   const status = getOpeningStatus(workingHours);
   const { t, i18n } = useTranslation();
@@ -69,26 +88,14 @@ function BookingSection() {
   const fontClass = isArabic ? "font-ar" : "font-body";
 
   // حالة النموذج كلها في كائن واحد
-  const [form, setForm] = useState({
-    fullName: "",
-    phoneNumber: "",
-    selectedDate: "",
-    selectedTime: "",
-    selectedService: "",
-  });
+  const [form, setForm] = useState(initialForm);
 
   // آخر خطوة لمسها المستخدم (لإبراز الأيقونة النشطة)
   const [activeStep, setActiveStep] = useState(1);
 
   // أخطاء وحقول تم لمسها (UX احترافي)
   const [errors, setErrors] = useState({});
-  const [touched, setTouched] = useState({
-    fullName: false,
-    phoneNumber: false,
-    selectedDate: false,
-    selectedTime: false,
-    selectedService: false,
-  });
+  const [touched, setTouched] = useState(initialTouched);
 
   const { availableTimes, isDayBlocked, loadingTimes } = useAvailableTimes(
     form.selectedDate,
@@ -105,11 +112,28 @@ function BookingSection() {
     messageRef,
   } = useBookingSubmit(form, setForm, t);
 
+  // دالة ترجع الـ UI كأنه أول مرة
+  const resetFormUI = () => {
+    setForm(initialForm);
+    setErrors({});
+    setTouched(initialTouched);
+    setActiveStep(1);
+  };
+
   // تحقق حيّ (debounce خفيف)
   useEffect(() => {
     const id = setTimeout(() => setErrors(validateForm(form)), 150);
     return () => clearTimeout(id);
   }, [form]);
+
+  // عند ظهور رسالة النجاح: نظّف الأخطاء/اللمس واضبط الخطوة
+  useEffect(() => {
+    if (showSuccessMessage) {
+      setErrors({});
+      setTouched(initialTouched);
+      setActiveStep(6); // أو 1 إذا بدك يرجع لأول خطوة
+    }
+  }, [showSuccessMessage]);
 
   // حساب فوري للأخطاء للاعتماد عليه في تعطيل الزر/الألوان
   const hasErrors = useMemo(() => {
@@ -140,11 +164,6 @@ function BookingSection() {
     }),
     [form, submitted]
   );
-
-  // بعد الإرسال الناجح نعرض الخطوة النشطة كـ 6 (اختياري)
-  useEffect(() => {
-    if (submitted) setActiveStep(6);
-  }, [submitted]);
 
   // سكرول لأول خطأ عند محاولة الإرسال
   const scrollToFirstError = (errs) => {
@@ -183,7 +202,10 @@ function BookingSection() {
         <div className="bg-white shadow-xl rounded-2xl p-8 space-y-6 border border-gray-100">
           <SuccessModal
             visible={submitted && showSuccessMessage}
-            onClose={() => setShowSuccessMessage(false)}
+            onClose={() => {
+              setShowSuccessMessage(false);
+              resetFormUI(); // ✨ رجّع كل شيء نظيف
+            }}
             code={code}
             t={t}
           />
@@ -214,6 +236,7 @@ function BookingSection() {
                   <input
                     type="text"
                     placeholder={t("name")}
+                    autoComplete="name"
                     className={`w-full p-3 rounded-xl border transition ${
                       isInvalid
                         ? "border-red-500 focus:ring-red-300"
