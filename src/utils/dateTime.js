@@ -20,7 +20,7 @@ export function generateTimeSlots(from, to) {
   cur.setHours(fh, fm, 0, 0);
   const end = new Date();
   end.setHours(th, tm, 0, 0);
-  while (cur < end) {
+  while (cur <= end) {
     slots.push(cur.toTimeString().slice(0, 5));
     cur.setMinutes(cur.getMinutes() + 30);
   }
