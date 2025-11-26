@@ -129,9 +129,9 @@
 "add_to_calendar": "הוסף ליומן",
   "copied_code": "הקוד הועתק",
   "copied_details": "הפרטים הועתקו",
-  "customer_name": "שם"
+  "customer_name": "שם",
 
-
+"phone_already_booked_today":"יש כבר תור על מספר זה !"
 }
 
 

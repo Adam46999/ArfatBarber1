@@ -16,6 +16,13 @@ import { useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { getOpeningStatus } from "../../utils/dateTime";
 
+// ✅ أدوات الهاتف الموحّدة
+import {
+  toILPhoneE164,
+  isILPhoneE164,
+  normalizeDigits,
+} from "../../utils/phone";
+
 /* ===========================
    تحقق احترافي (Inline)
    =========================== */
@@ -28,23 +35,10 @@ const isNameValid = (v) => {
   return /^[\p{L}\s'-]{2,}$/u.test(s);
 };
 
-// تحويل الأرقام الشرقية (٠١٢… / ۰۱۲…) إلى ASCII
-const easternToAscii = (s = "") =>
-  s
-    .replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x0660)) // عربية هندية
-    .replace(/[\u06F0-\u06F9]/g, (d) => String(d.charCodeAt(0) - 0x06f0)); // فارسية
-
-// تنظيف الإدخال إلى أرقام فقط (من أي نظام أرقام)
-const normalizePhone = (v) =>
-  easternToAscii(v || "").replace(/[^\p{Nd}]/gu, "");
-
-// يبدأ بـ 05 ومكوّن من 10 أرقام + دعم صيغ شائعة (972/بدون صفر)
+// ✅ فحص الهاتف عبر util الموحّد (يقبل كل الصيغ، ويشترط E.164 بعد التطبيع)
 const isPhoneValid = (v) => {
-  const raw = normalizePhone(v);
-  if (/^05\d{8}$/.test(raw)) return true; // محلي قياسي
-  if (/^5\d{8}$/.test(raw)) return true; // بدون صفر البداية
-  if (/^9725\d{8}$/.test(raw)) return true; // دولي بدون +
-  return false;
+  const p = toILPhoneE164(v);
+  return isILPhoneE164(p);
 };
 
 const isDateValid = (v) => typeof v === "string" && v.trim().length > 0;
@@ -63,7 +57,7 @@ const validateForm = (form) => {
 };
 
 /* ===========================
-   ثوابت خارج الكمبوننت (مراجع ثابتة)
+   ثوابت خارج الكمبوننت
    =========================== */
 const initialForm = Object.freeze({
   fullName: "",
@@ -90,10 +84,10 @@ function BookingSection() {
   // حالة النموذج كلها في كائن واحد
   const [form, setForm] = useState(initialForm);
 
-  // آخر خطوة لمسها المستخدم (لإبراز الأيقونة النشطة)
+  // آخر خطوة لمسها المستخدم
   const [activeStep, setActiveStep] = useState(1);
 
-  // أخطاء وحقول تم لمسها (UX احترافي)
+  // أخطاء وحقول تم لمسها
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState(initialTouched);
 
@@ -102,7 +96,6 @@ function BookingSection() {
     workingHours
   );
 
-  // لا نفكّك step/progress من الهوك لتفادي unused
   const {
     handleSubmit,
     submitted,
@@ -112,7 +105,6 @@ function BookingSection() {
     messageRef,
   } = useBookingSubmit(form, setForm, t);
 
-  // دالة ترجع الـ UI كأنه أول مرة
   const resetFormUI = () => {
     setForm(initialForm);
     setErrors({});
@@ -120,27 +112,25 @@ function BookingSection() {
     setActiveStep(1);
   };
 
-  // تحقق حيّ (debounce خفيف)
+  // تحقق حيّ (debounce)
   useEffect(() => {
     const id = setTimeout(() => setErrors(validateForm(form)), 150);
     return () => clearTimeout(id);
   }, [form]);
 
-  // عند ظهور رسالة النجاح: نظّف الأخطاء/اللمس واضبط الخطوة
+  // عند ظهور رسالة النجاح
   useEffect(() => {
     if (showSuccessMessage) {
       setErrors({});
       setTouched(initialTouched);
-      setActiveStep(6); // أو 1 إذا بدك يرجع لأول خطوة
+      setActiveStep(6);
     }
   }, [showSuccessMessage]);
 
-  // حساب فوري للأخطاء للاعتماد عليه في تعطيل الزر/الألوان
   const hasErrors = useMemo(() => {
     return Object.keys(validateForm(form)).length > 0;
   }, [form]);
 
-  // مساعد لتلوين الحقول حسب الحالة
   const fieldState = (key) => {
     const invalid = Boolean(errors[key]);
     const wasTouched = touched[key];
@@ -151,7 +141,6 @@ function BookingSection() {
     };
   };
 
-  // ✓ مستقلّة لكل خطوة حسب التحقق
   const completed = useMemo(
     () => ({
       name: isNameValid(form.fullName),
@@ -159,13 +148,11 @@ function BookingSection() {
       date: isDateValid(form.selectedDate),
       time: isTimeValid(form.selectedTime),
       service: isServiceValid(form.selectedService),
-      // تظهر ✓ على "تأكيد" بعد الإرسال الناجح + كل شيء صحيح
       confirm: submitted && Object.keys(validateForm(form)).length === 0,
     }),
     [form, submitted]
   );
 
-  // سكرول لأول خطأ عند محاولة الإرسال
   const scrollToFirstError = (errs) => {
     const keys = [
       "fullName",
@@ -204,13 +191,12 @@ function BookingSection() {
             visible={submitted && showSuccessMessage}
             onClose={() => {
               setShowSuccessMessage(false);
-              resetFormUI(); // ✨ رجّع كل شيء نظيف
+              resetFormUI();
             }}
             code={code}
             t={t}
           />
 
-          {/* ✅ مؤشر بسيط: أيقونات + ✓ مستقلة لكل خطوة */}
           <ProgressBar
             step={activeStep}
             completed={completed}
@@ -273,7 +259,11 @@ function BookingSection() {
                 <PhoneInput
                   value={form.phoneNumber}
                   onChange={(val) =>
-                    setForm((s) => ({ ...s, phoneNumber: val }))
+                    // نطبع فقط الأرقام الشرقية أثناء الكتابة – باقي التطبيع يتم عند التحقق/الإرسال
+                    setForm((s) => ({
+                      ...s,
+                      phoneNumber: normalizeDigits(val),
+                    }))
                   }
                   onBlur={() =>
                     setTouched((s) => ({ ...s, phoneNumber: true }))
@@ -287,9 +277,7 @@ function BookingSection() {
                       e.preventDefault();
                     }
                   }}
-                  // ✅ أخضر مباشرة إذا الرقم صحيح (بعد تحويل الشرقية)
                   isValid={isPhoneValid(form.phoneNumber)}
-                  // ❌ أحمر فقط بعد اللمس + عدم الصحة
                   isInvalid={
                     touched.phoneNumber && !isPhoneValid(form.phoneNumber)
                   }
@@ -305,7 +293,6 @@ function BookingSection() {
                   }
                 />
 
-                {/* رسالة الخطأ بعد اللمس فقط */}
                 {touched.phoneNumber && !isPhoneValid(form.phoneNumber) && (
                   <p id="err-phone" className="text-red-500 text-xs mt-1">
                     {t("invalid_phone")}
@@ -429,7 +416,6 @@ function BookingSection() {
             <button
               type="submit"
               onClick={(e) => {
-                // علّم كل الحقول كـ touched لإظهار الأخطاء لو فيه
                 const allTouched = {
                   fullName: true,
                   phoneNumber: true,
@@ -455,8 +441,6 @@ function BookingSection() {
               {t("confirm_booking")}
             </button>
           </form>
-
-          {/* حجوزاتك القادمة فقط */}
         </div>
       </div>
     </section>

@@ -131,8 +131,8 @@
   "add_to_calendar": "أضف للتقويم",
   "copied_code": "تم نسخ الكود",
   "copied_details": "تم نسخ التفاصيل",
-  "customer_name": "الاسم"
-
+  "customer_name": "الاسم",
+"phone_already_booked_today":" الهاتف يملك حجز حاليا لا يمكنك حجز دور اخر حاليا برقم الهاتف هذا !"
 
 
 

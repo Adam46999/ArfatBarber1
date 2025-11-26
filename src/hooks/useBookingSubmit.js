@@ -1,25 +1,25 @@
 // src/hooks/useBookingSubmit.js
 import { useState, useEffect, useRef } from "react";
 import { getMessaging, getToken } from "firebase/messaging";
-import { app } from "../firebase";
+import { app, db } from "../firebase"; // 👈 أضفنا db هنا
+import { doc, getDoc } from "firebase/firestore"; // 👈 نقرأ إعداد من Firestore مباشرة
+
 import {
   isPhoneBlocked,
   hasExistingBookings,
   hasActiveConflict,
   createBooking,
+  fetchActiveBookingsByDate, // 👈 نستخدم فانكشن موجودة أصلاً
 } from "../services/bookingService";
 
-/**
- * مسؤول عن التحقق والإرسال وإنشاء كود الحجز + معالجة رسائل النجاح
- * المتطلبات: تمرير قيم النموذج ودالة الترجمة t
- */
+import { toILPhoneE164, isILPhoneE164 } from "../utils/phone";
+
 export default function useBookingSubmit(form, setForm, t) {
   const [submitted, setSubmitted] = useState(false);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [code, setCode] = useState("");
   const messageRef = useRef(null);
 
-  // شريط التقدم (5 خطوات)
   const { fullName, phoneNumber, selectedDate, selectedTime, selectedService } =
     form;
   const [step, setStep] = useState(0);
@@ -45,7 +45,6 @@ export default function useBookingSubmit(form, setForm, t) {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // تحقق الحقول المطلوبة
     if (
       !fullName ||
       !phoneNumber ||
@@ -57,7 +56,14 @@ export default function useBookingSubmit(form, setForm, t) {
       return;
     }
 
-    // حاول أخذ FCM
+    // تطبيع الهاتف لصيغة E.164
+    const phoneE164 = toILPhoneE164(phoneNumber);
+    if (!isILPhoneE164(phoneE164)) {
+      alert(t("invalid_phone") || "رقم الهاتف غير صالح");
+      return;
+    }
+
+    // FCM (اختياري)
     let fcmToken = "";
     try {
       const messaging = getMessaging(app);
@@ -69,24 +75,56 @@ export default function useBookingSubmit(form, setForm, t) {
       console.warn("FCM token error", err);
     }
 
-    // تنظيف رقم الهاتف للأرقام فقط
-    const cleanPhone = phoneNumber.replace(/\D/g, "");
-
-    // رقم محظور؟
-    if (await isPhoneBlocked(cleanPhone)) {
+    // محظور؟
+    if (await isPhoneBlocked(phoneE164)) {
       alert("🚫 هذا الرقم محظور من الحجز. يرجى التواصل مع الحلاق.");
       return;
     }
 
-    // لديه حجوزات سابقة؟
-    if (await hasExistingBookings(cleanPhone)) {
+    // ⚙️ قراءة إعداد "حجز واحد لكل رقم في اليوم" مباشرة من Firestore
+    let limitOnePerDay = false;
+    try {
+      const settingsRef = doc(db, "barberSettings", "global");
+      const settingsSnap = await getDoc(settingsRef);
+      if (settingsSnap.exists()) {
+        const data = settingsSnap.data();
+        limitOnePerDay =
+          typeof data.limitOneBookingPerDayPerPhone === "boolean"
+            ? data.limitOneBookingPerDayPerPhone
+            : !!data.limitOneBookingPerDay;
+      }
+    } catch (err) {
+      console.warn("limitOnePerDay settings read error:", err);
+      // لو في خطأ ما نمنع الحجز عشان ما نخرب التجربة
+    }
+
+    if (limitOnePerDay) {
+      // نجيب كل حجوزات هذا اليوم، ثم نتحقق إذا هذا الرقم عنده حجز فعّال
+      try {
+        const dayBookings = await fetchActiveBookingsByDate(selectedDate);
+        const hasSameDay = dayBookings.some((b) => b.phoneNumber === phoneE164);
+        if (hasSameDay) {
+          alert(
+            t("phone_already_booked_today") ||
+              "لديك حجز مسبق لهذا اليوم بهذا الرقم. إذا أردت تعديل الحجز، يرجى التواصل مع الحلاق."
+          );
+          return;
+        }
+      } catch (err) {
+        console.warn("same-day booking check error:", err);
+        // لو صار خطأ في التحقق، ما نمنع الحجز
+      }
+    }
+
+    // لديه حجوزات سابقة؟ (أي يوم) – نفس السلوك القديم
+    if (await hasExistingBookings(phoneE164)) {
       const confirmNew = window.confirm(
         "⚠️ يوجد لديك حجوزات سابقة برقم الهاتف هذا. هل تريد إضافة حجز جديد؟"
       );
       if (!confirmNew) return;
     }
 
-    // تعارض على نفس الساعة؟
+    // تعارض نفس الوقت؟
     if (await hasActiveConflict(selectedDate, selectedTime)) {
       alert(
         t("time_already_booked") ||
@@ -96,7 +134,6 @@ export default function useBookingSubmit(form, setForm, t) {
     }
 
     try {
-      // إنشاء كود وتايمستامب
       const bookingCode = Math.random().toString(36).substring(2, 8);
       setCode(bookingCode);
       const bookingDateTime = new Date(`${selectedDate}T${selectedTime}:00`);
@@ -104,7 +141,7 @@ export default function useBookingSubmit(form, setForm, t) {
 
       await createBooking({
         fullName,
-        phoneNumber: cleanPhone,
+        phoneNumber: phoneE164, // نخزّن دائمًا E.164
         selectedDate,
         selectedTime,
         selectedService,
@@ -115,12 +152,10 @@ export default function useBookingSubmit(form, setForm, t) {
         fcmToken,
       });
 
-      // نجاح
       setSubmitted(true);
       setShowSuccessMessage(true);
       setTimeout(() => setShowSuccessMessage(false), 16000);
 
-      // إعادة ضبط النموذج
       setForm({
         fullName: "",
         phoneNumber: "",
