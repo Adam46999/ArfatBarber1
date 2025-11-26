@@ -337,6 +337,8 @@ function BookingTracker() {
                     </label>
                     <input
                       type="text"
+                      inputMode="text"
+                      autoComplete="one-time-code"
                       value={codeInputs[booking.docId] || ""}
                       onChange={(e) =>
                         setCodeInputs((prev) => ({
@@ -349,6 +351,7 @@ function BookingTracker() {
                         defaultValue: "أدخل الكود",
                       })}
                     />
+
                     {errorMessages[booking.docId] && (
                       <p className="text-red-600 text-sm mt-1">
                         {errorMessages[booking.docId]}
