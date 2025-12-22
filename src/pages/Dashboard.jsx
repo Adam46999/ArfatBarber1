@@ -1,11 +1,48 @@
 // ✅ src/pages/Dashboard.jsx
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { db } from "../firebase";
-import {
-  collection,
-  getDocs,
-} from "firebase/firestore";
+import { collection, getDocs } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
+
+function ymd(d) {
+  return d.toISOString().slice(0, 10);
+}
+
+function startOfMonth(date) {
+  const d = new Date(date);
+  d.setDate(1);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function endOfMonth(date) {
+  const d = new Date(date);
+  d.setMonth(d.getMonth() + 1);
+  d.setDate(0); // آخر يوم بالشهر
+  d.setHours(23, 59, 59, 999);
+  return d;
+}
+
+function addMonths(date, delta) {
+  const d = new Date(date);
+  d.setMonth(d.getMonth() + delta);
+  return d;
+}
+
+function safeDateFromBooking(b) {
+  // وقت الحجز نفسه (selectedDate + selectedTime) هو المرجع لليوم/الأسبوع/الشهر
+  try {
+    if (!b?.selectedDate || !b?.selectedTime) return null;
+    return new Date(`${b.selectedDate}T${b.selectedTime}:00`);
+  } catch {
+    return null;
+  }
+}
+
+function fmtMonthTitle(date) {
+  // عنوان بسيط للحلاق (عربي)
+  return date.toLocaleDateString("ar-EG", { year: "numeric", month: "long" });
+}
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -26,63 +63,101 @@ export default function Dashboard() {
     from: "",
     to: "",
   });
-const [totalBookings, setTotalBookings] = useState(0);
+  const [totalBookings, setTotalBookings] = useState(0);
+
+  // ✅ تقرير شهري + مقارنة
+  const [monthStats, setMonthStats] = useState({
+    title: "",
+    from: "",
+    to: "",
+    total: 0,
+    passed: 0,
+    upcoming: 0,
+  });
+
+  const [prevMonthStats, setPrevMonthStats] = useState({
+    title: "",
+    from: "",
+    to: "",
+    total: 0,
+    passed: 0,
+    upcoming: 0,
+  });
 
   useEffect(() => {
     const fetchData = async () => {
       const now = new Date();
-      const todayStr = now.toISOString().slice(0, 10);
+      const todayStr = ymd(now);
 
+      // ===== blocked days (المستقبل فقط) =====
       const closedSnap = await getDocs(collection(db, "blockedDays"));
       const futureClosed = closedSnap.docs
-        .map(doc => doc.id)
-        .filter(date => date >= todayStr)
+        .map((doc) => doc.id)
+        .filter((date) => date >= todayStr)
         .sort();
       setClosedDates(futureClosed);
 
+      // ===== blocked times (المستقبل فقط) =====
       const timesSnap = await getDocs(collection(db, "blockedTimes"));
       const result = {};
-      timesSnap.docs.forEach(doc => {
-        const date = doc.id;
-        const data = doc.data();
+      timesSnap.docs.forEach((docu) => {
+        const date = docu.id;
+        const data = docu.data();
         if (data?.times?.length && date >= todayStr) {
           result[date] = data.times.sort();
         }
       });
       setBlockedByDay(result);
 
+      // ===== bookings (active فقط) =====
       const bookingsSnap = await getDocs(collection(db, "bookings"));
-      const bookings = bookingsSnap.docs.map(doc => doc.data()).filter(b => !b.cancelledAt);
-setTotalBookings(bookings.length);
+      const bookings = bookingsSnap.docs
+        .map((docu) => docu.data())
+        .filter((b) => !b.cancelledAt);
 
-      const todayBookings = bookings.filter(b => b.selectedDate === todayStr);
-      const passed = todayBookings.filter(b => new Date(`${b.selectedDate}T${b.selectedTime}:00`) <= now);
-      const upcoming = todayBookings.filter(b => new Date(`${b.selectedDate}T${b.selectedTime}:00`) > now);
-      const sortedTimes = todayBookings.map(b => b.selectedTime).sort((a, b) => a.localeCompare(b));
-      const firstTime = sortedTimes[0] || null;
-      const lastTime = sortedTimes[sortedTimes.length - 1] || null;
+      setTotalBookings(bookings.length);
+
+      // ===== اليوم =====
+      const todayBookings = bookings.filter((b) => b.selectedDate === todayStr);
+      const passedToday = todayBookings.filter(
+        (b) => new Date(`${b.selectedDate}T${b.selectedTime}:00`) <= now
+      );
+      const upcomingToday = todayBookings.filter(
+        (b) => new Date(`${b.selectedDate}T${b.selectedTime}:00`) > now
+      );
+      const sortedTimes = todayBookings
+        .map((b) => b.selectedTime)
+        .sort((a, b) => a.localeCompare(b));
 
       setTodayStats({
         total: todayBookings.length,
-        passed: passed.length,
-        upcoming: upcoming.length,
-        firstTime,
-        lastTime,
+        passed: passedToday.length,
+        upcoming: upcomingToday.length,
+        firstTime: sortedTimes[0] || null,
+        lastTime: sortedTimes[sortedTimes.length - 1] || null,
       });
 
-      const day = now.getDay();
+      // ===== الأسبوع (من الأحد للسبت) =====
+      const day = now.getDay(); // 0 Sunday
       const diffToSunday = day === 0 ? 0 : day;
       const start = new Date(now);
       start.setDate(now.getDate() - diffToSunday);
+      start.setHours(0, 0, 0, 0);
+
       const end = new Date(start);
       end.setDate(start.getDate() + 6);
+      end.setHours(23, 59, 59, 999);
 
-      const fromStr = start.toISOString().slice(0, 10);
-      const toStr = end.toISOString().slice(0, 10);
+      const fromStr = ymd(start);
+      const toStr = ymd(end);
 
-      const weekBookings = bookings.filter(b => b.selectedDate >= fromStr && b.selectedDate <= toStr);
-      let weekPassed = 0, weekUpcoming = 0;
-      weekBookings.forEach(b => {
+      const weekBookings = bookings.filter(
+        (b) => b.selectedDate >= fromStr && b.selectedDate <= toStr
+      );
+
+      let weekPassed = 0,
+        weekUpcoming = 0;
+      weekBookings.forEach((b) => {
         const bookingTime = new Date(`${b.selectedDate}T${b.selectedTime}:00`);
         if (bookingTime < now) weekPassed++;
         else weekUpcoming++;
@@ -94,6 +169,52 @@ setTotalBookings(bookings.length);
         upcoming: weekUpcoming,
         from: fromStr,
         to: toStr,
+      });
+
+      // ===== ✅ الشهر الحالي + الشهر الماضي =====
+      const curStart = startOfMonth(now);
+      const curEnd = endOfMonth(now);
+      const prevDate = addMonths(now, -1);
+      const prevStart = startOfMonth(prevDate);
+      const prevEnd = endOfMonth(prevDate);
+
+      const curFrom = ymd(curStart);
+      const curTo = ymd(curEnd);
+      const prevFrom = ymd(prevStart);
+      const prevTo = ymd(prevEnd);
+
+      const classifyRange = (from, to) => {
+        const inRange = bookings.filter(
+          (b) => b.selectedDate >= from && b.selectedDate <= to
+        );
+
+        let passed = 0,
+          upcoming = 0;
+        inRange.forEach((b) => {
+          const dt = safeDateFromBooking(b);
+          if (!dt) return;
+          if (dt < now) passed++;
+          else upcoming++;
+        });
+
+        return { total: inRange.length, passed, upcoming };
+      };
+
+      const cur = classifyRange(curFrom, curTo);
+      const prev = classifyRange(prevFrom, prevTo);
+
+      setMonthStats({
+        title: fmtMonthTitle(now),
+        from: curFrom,
+        to: curTo,
+        ...cur,
+      });
+
+      setPrevMonthStats({
+        title: fmtMonthTitle(prevDate),
+        from: prevFrom,
+        to: prevTo,
+        ...prev,
       });
     };
 
@@ -107,11 +228,27 @@ setTotalBookings(bookings.length);
     return `${weekday} ${formatted}`;
   };
 
+  const monthDelta = useMemo(() => {
+    // مقارنة واضحة: فرق العدد الكلي + نسبة
+    const a = monthStats.total;
+    const b = prevMonthStats.total;
+
+    const diff = a - b;
+    const pct = b === 0 ? (a === 0 ? 0 : 100) : Math.round((diff / b) * 100);
+
+    return { diff, pct };
+  }, [monthStats.total, prevMonthStats.total]);
+
   return (
-<section className="min-h-screen bg-gradient-to-br from-gray-100 to-gray-200 pt-36 pb-24 px-4 font-ar" dir="rtl">
+    <section
+      className="min-h-screen bg-gradient-to-br from-gray-100 to-gray-200 pt-36 pb-24 px-4 font-ar"
+      dir="rtl"
+    >
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-10">
-          <h1 className="text-3xl font-bold text-yellow-700 tracking-tight">📊 لوحة الإحصائيات</h1>
+          <h1 className="text-3xl font-bold text-yellow-700 tracking-tight">
+            📊 لوحة الإحصائيات
+          </h1>
           <button
             onClick={() => navigate(-1)}
             className="text-sm text-blue-600 hover:underline"
@@ -120,28 +257,172 @@ setTotalBookings(bookings.length);
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        {/* ✅ كرت التقرير الشهري (واضح ومقارنة) */}
+        <div className="mb-8">
+          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-md">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-extrabold text-slate-900">
+                  📅 التقرير الشهري
+                </h2>
+                <p className="text-xs text-slate-500 mt-1">
+                  مقارنة الشهر الحالي مع الشهر الماضي بشكل مباشر وواضح.
+                </p>
+              </div>
 
+              <div className="text-sm bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
+                <div className="font-bold text-slate-800">
+                  الفرق:{" "}
+                  <span
+                    className={
+                      monthDelta.diff >= 0 ? "text-emerald-700" : "text-red-700"
+                    }
+                  >
+                    {monthDelta.diff >= 0
+                      ? `+${monthDelta.diff}`
+                      : monthDelta.diff}
+                  </span>{" "}
+                  (
+                  {monthDelta.pct >= 0
+                    ? `+${monthDelta.pct}%`
+                    : `${monthDelta.pct}%`}
+                  )
+                </div>
+                <div className="text-xs text-slate-500 mt-1">
+                  *النسبة تعتمد على عدد الحجوزات الكلي في الشهر الماضي.
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <CardBox color="blue" title={`هذا الشهر: ${monthStats.title}`}>
+                <p className="text-xs text-gray-500 mb-3">
+                  من {formatDate(monthStats.from)} إلى{" "}
+                  {formatDate(monthStats.to)}
+                </p>
+                <ul className="space-y-2 text-sm text-gray-700">
+                  <li>
+                    📊 العدد الكلي:{" "}
+                    <span className="font-semibold text-slate-900">
+                      {monthStats.total}
+                    </span>
+                  </li>
+                  <li>
+                    ✅ مرّت:{" "}
+                    <span className="font-semibold text-green-700">
+                      {monthStats.passed}
+                    </span>
+                  </li>
+                  <li>
+                    ⏳ قادمة:{" "}
+                    <span className="font-semibold text-blue-700">
+                      {monthStats.upcoming}
+                    </span>
+                  </li>
+                </ul>
+              </CardBox>
+
+              <CardBox
+                color="yellow"
+                title={`الشهر الماضي: ${prevMonthStats.title}`}
+              >
+                <p className="text-xs text-gray-500 mb-3">
+                  من {formatDate(prevMonthStats.from)} إلى{" "}
+                  {formatDate(prevMonthStats.to)}
+                </p>
+                <ul className="space-y-2 text-sm text-gray-700">
+                  <li>
+                    📊 العدد الكلي:{" "}
+                    <span className="font-semibold text-slate-900">
+                      {prevMonthStats.total}
+                    </span>
+                  </li>
+                  <li>
+                    ✅ مرّت:{" "}
+                    <span className="font-semibold text-green-700">
+                      {prevMonthStats.passed}
+                    </span>
+                  </li>
+                  <li>
+                    ⏳ قادمة:{" "}
+                    <span className="font-semibold text-blue-700">
+                      {prevMonthStats.upcoming}
+                    </span>
+                  </li>
+                </ul>
+              </CardBox>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* Weekly Stats */}
           <CardBox color="blue" title="إحصائيات الأسبوع">
-            <p className="text-sm text-gray-500 mb-3">من {formatDate(weekStats.from)} إلى {formatDate(weekStats.to)}</p>
+            <p className="text-sm text-gray-500 mb-3">
+              من {formatDate(weekStats.from)} إلى {formatDate(weekStats.to)}
+            </p>
             <ul className="space-y-2 text-sm text-gray-700">
-            <li>🧮 عدد الأدوار الكلي: <span className="text-purple-700 font-semibold">{totalBookings}</span></li>
+              <li>
+                🧮 عدد الأدوار الكلي:{" "}
+                <span className="text-purple-700 font-semibold">
+                  {totalBookings}
+                </span>
+              </li>
 
-              <li>📊  عدد الحجوزات هذا الاسبوع: <span className="font-semibold">{weekStats.total}</span></li>
-              <li>✅ الأدوار التي مرّت: <span className="text-green-700 font-semibold">{weekStats.passed}</span></li>
-              <li>⏳ الأدوار القادمة: <span className="text-blue-700 font-semibold">{weekStats.upcoming}</span></li>
+              <li>
+                📊 عدد الحجوزات هذا الأسبوع:{" "}
+                <span className="font-semibold">{weekStats.total}</span>
+              </li>
+              <li>
+                ✅ الأدوار التي مرّت:{" "}
+                <span className="text-green-700 font-semibold">
+                  {weekStats.passed}
+                </span>
+              </li>
+              <li>
+                ⏳ الأدوار القادمة:{" "}
+                <span className="text-blue-700 font-semibold">
+                  {weekStats.upcoming}
+                </span>
+              </li>
             </ul>
           </CardBox>
 
           {/* Today Stats */}
           <CardBox color="green" title="إحصائيات اليوم">
             <ul className="space-y-2 text-sm text-gray-700">
-              <li>📋 عدد الحجوزات اليوم: <span className="font-semibold">{todayStats.total}</span></li>
-              <li>✅ الأدوار التي مرّت: <span className="text-green-700 font-semibold">{todayStats.passed}</span></li>
-              <li>⏳ الأدوار القادمة: <span className="text-blue-700 font-semibold">{todayStats.upcoming}</span></li>
-              {todayStats.firstTime && <li>🕒 أول حجز: <span className="font-semibold text-gray-800">{todayStats.firstTime}</span></li>}
-              {todayStats.lastTime && <li>🕔 آخر حجز: <span className="font-semibold text-gray-800">{todayStats.lastTime}</span></li>}
+              <li>
+                📋 عدد الحجوزات اليوم:{" "}
+                <span className="font-semibold">{todayStats.total}</span>
+              </li>
+              <li>
+                ✅ الأدوار التي مرّت:{" "}
+                <span className="text-green-700 font-semibold">
+                  {todayStats.passed}
+                </span>
+              </li>
+              <li>
+                ⏳ الأدوار القادمة:{" "}
+                <span className="text-blue-700 font-semibold">
+                  {todayStats.upcoming}
+                </span>
+              </li>
+              {todayStats.firstTime && (
+                <li>
+                  🕒 أول حجز:{" "}
+                  <span className="font-semibold text-gray-800">
+                    {todayStats.firstTime}
+                  </span>
+                </li>
+              )}
+              {todayStats.lastTime && (
+                <li>
+                  🕔 آخر حجز:{" "}
+                  <span className="font-semibold text-gray-800">
+                    {todayStats.lastTime}
+                  </span>
+                </li>
+              )}
             </ul>
           </CardBox>
 
@@ -152,9 +433,11 @@ setTotalBookings(bookings.length);
             )}
             {Object.entries(blockedByDay).map(([date, times]) => (
               <div key={date} className="mb-3">
-                <p className="text-red-700 font-semibold mb-1">📅 {formatDate(date)}</p>
+                <p className="text-red-700 font-semibold mb-1">
+                  📅 {formatDate(date)}
+                </p>
                 <div className="flex flex-wrap gap-2">
-                  {times.map(time => (
+                  {times.map((time) => (
                     <span
                       key={time}
                       className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs"
@@ -169,19 +452,22 @@ setTotalBookings(bookings.length);
 
           {/* Closed Days */}
           <CardBox color="yellow" title="الأيام المغلقة القادمة">
-            <p className="text-sm text-gray-500 mb-2">عدد الأيام: {closedDates.length}</p>
+            <p className="text-sm text-gray-500 mb-2">
+              عدد الأيام: {closedDates.length}
+            </p>
             <ul className="space-y-1">
-              {closedDates.map(date => (
+              {closedDates.map((date) => (
                 <li key={date} className="text-red-700 text-sm">
                   🔒 {formatDate(date)}
                 </li>
               ))}
               {closedDates.length === 0 && (
-                <li className="text-sm text-gray-500">لا توجد أيام مغلقة قادمة.</li>
+                <li className="text-sm text-gray-500">
+                  لا توجد أيام مغلقة قادمة.
+                </li>
               )}
             </ul>
           </CardBox>
-
         </div>
       </div>
     </section>
@@ -206,7 +492,9 @@ function CardBox({ color = "gray", title, children }) {
   }[color];
 
   return (
-    <div className={`bg-white p-6 rounded-2xl border ${border} shadow-md transition-all hover:shadow-lg`}>
+    <div
+      className={`bg-white p-6 rounded-2xl border ${border} shadow-md transition-all hover:shadow-lg`}
+    >
       <h2 className={`text-lg font-bold mb-3 ${titleColor}`}>{title}</h2>
       {children}
     </div>

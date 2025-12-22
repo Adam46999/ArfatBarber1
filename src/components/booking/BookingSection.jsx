@@ -12,11 +12,10 @@ import PhoneInput from "./parts/PhoneInput";
 import useAvailableTimes from "../../hooks/useAvailableTimes";
 import useBookingSubmit from "../../hooks/useBookingSubmit";
 
-import { useState, useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { getOpeningStatus } from "../../utils/dateTime";
 
-// ✅ أدوات الهاتف الموحّدة
 import {
   toILPhoneE164,
   isILPhoneE164,
@@ -91,6 +90,13 @@ function BookingSection() {
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState(initialTouched);
 
+  // ✅ نضمن أنّ الهاتف يُخزَّن دائمًا موحّد E.164 داخل الإرسال (بدون تغيير تجربة الكتابة)
+  const submitForm = useMemo(() => {
+    const e164 = toILPhoneE164(form.phoneNumber);
+    const normalizedPhone = isILPhoneE164(e164) ? e164 : form.phoneNumber;
+    return { ...form, phoneNumber: normalizedPhone };
+  }, [form]);
+
   const { availableTimes, isDayBlocked, loadingTimes } = useAvailableTimes(
     form.selectedDate,
     workingHours
@@ -103,7 +109,7 @@ function BookingSection() {
     setShowSuccessMessage,
     code,
     messageRef,
-  } = useBookingSubmit(form, setForm, t);
+  } = useBookingSubmit(submitForm, setForm, t);
 
   const resetFormUI = () => {
     setForm(initialForm);
@@ -179,11 +185,7 @@ function BookingSection() {
         <SectionTitle>{t("book_now")}</SectionTitle>
 
         <div className="mb-8">
-          <OpeningStatusCard
-            t={t}
-            status={status}
-            workingHours={workingHours}
-          />
+          <OpeningStatusCard status={status} workingHours={workingHours} />
         </div>
 
         <div className="bg-white shadow-xl rounded-2xl p-8 space-y-6 border border-gray-100">
@@ -259,7 +261,6 @@ function BookingSection() {
                 <PhoneInput
                   value={form.phoneNumber}
                   onChange={(val) =>
-                    // نطبع فقط الأرقام الشرقية أثناء الكتابة – باقي التطبيع يتم عند التحقق/الإرسال
                     setForm((s) => ({
                       ...s,
                       phoneNumber: normalizeDigits(val),
@@ -317,19 +318,6 @@ function BookingSection() {
                     }))
                   }
                   t={t}
-                  onBlur={() =>
-                    setTouched((s) => ({ ...s, selectedDate: true }))
-                  }
-                  aria-invalid={
-                    touched.selectedDate && errors.selectedDate
-                      ? "true"
-                      : "false"
-                  }
-                  aria-describedby={
-                    touched.selectedDate && errors.selectedDate
-                      ? "err-date"
-                      : undefined
-                  }
                 />
               </div>
               {touched.selectedDate && errors.selectedDate && (
@@ -364,16 +352,18 @@ function BookingSection() {
                       </span>
                     </div>
                   ) : availableTimes.length > 0 ? (
-                    <TimeSelector
-                      selectedDate={form.selectedDate}
-                      selectedTime={form.selectedTime}
-                      onSelectTime={(time) =>
-                        setForm((s) => ({ ...s, selectedTime: time }))
-                      }
-                      availableTimes={availableTimes}
-                      workingHours={workingHours}
-                      t={t}
-                    />
+                    <div onFocusCapture={() => setActiveStep(4)}>
+                      <TimeSelector
+                        selectedDate={form.selectedDate}
+                        selectedTime={form.selectedTime}
+                        onSelectTime={(time) =>
+                          setForm((s) => ({ ...s, selectedTime: time }))
+                        }
+                        availableTimes={availableTimes}
+                        workingHours={workingHours}
+                        t={t}
+                      />
+                    </div>
                   ) : (
                     <p className="text-red-500 text-sm font-medium mt-2">
                       {t("no_hours")}
@@ -399,10 +389,7 @@ function BookingSection() {
                     setForm((s) => ({ ...s, selectedService: id }));
                     setActiveStep(5);
                   }}
-                  t={t}
-                  onBlur={() =>
-                    setTouched((s) => ({ ...s, selectedService: true }))
-                  }
+                  rtl={i18n.dir() === "rtl"}
                 />
               </div>
               {touched.selectedService && errors.selectedService && (
