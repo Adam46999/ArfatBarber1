@@ -19,15 +19,8 @@ import {
 } from "firebase/firestore";
 import { e164ToLocalPretty } from "../utils/phone";
 
-const workingHours = {
-  Sunday: null,
-  Monday: { from: "12:00", to: "21:00" },
-  Tuesday: { from: "12:00", to: "21:00" },
-  Wednesday: { from: "12:00", to: "21:00" },
-  Thursday: { from: "12:00", to: "22:00" },
-  Friday: { from: "13:00", to: "23:30" },
-  Saturday: { from: "11:00", to: "19:30" },
-};
+// ✅ حسب مشروعك (زي ما بالصورة): الملف هون
+import workingHours from "../components/booking/workingHours";
 
 // ========= helpers =========
 function safeInt(v, fallback = 0) {
@@ -58,17 +51,23 @@ function addMinutesToHHMM(hhmm, minsToAdd) {
   return `${HH}:${MM}`;
 }
 
+/**
+ * ✅ أدوار 30 دقيقة (النهاية غير شاملة)
+ * مثال: 12:00 -> 20:00 => آخر دور 19:30
+ */
 function generateSlots30Min(from, to) {
   if (!from || !to) return [];
   const [fh, fm] = from.split(":").map(Number);
   const [th, tm] = to.split(":").map(Number);
+
   const cur = new Date();
   cur.setHours(fh, fm, 0, 0);
+
   const end = new Date();
   end.setHours(th, tm, 0, 0);
 
   const out = [];
-  while (cur <= end) {
+  while (cur < end) {
     out.push(cur.toTimeString().slice(0, 5));
     cur.setMinutes(cur.getMinutes() + 30);
   }
@@ -90,7 +89,7 @@ function applyExtraSlots(baseSlots, extraSlots) {
   return baseSlots.slice(0, Math.max(0, baseSlots.length - cut));
 }
 
-// ========= DateDropdown (كما هو) =========
+// ========= DateDropdown =========
 function DateDropdown({ selectedDate, onChange }) {
   const [options, setOptions] = useState([]);
 
@@ -100,7 +99,8 @@ function DateDropdown({ selectedDate, onChange }) {
     const tomorrow = new Date(today);
     tomorrow.setDate(today.getDate() + 1);
 
-    for (let i = 0; i < 7; i++) {
+    // ✅ خليها 14 يوم عشان الحلاق يقدر يختار "الأسبوع الجاي" بسهولة
+    for (let i = 0; i < 14; i++) {
       const d = new Date(today);
       d.setDate(today.getDate() + i);
       const iso = d.toISOString().slice(0, 10);
@@ -120,6 +120,7 @@ function DateDropdown({ selectedDate, onChange }) {
 
       temp.push({ value: iso, label });
     }
+
     setOptions(temp);
   }, []);
 
@@ -160,16 +161,16 @@ export default function BarberPanel() {
   const [loadingSettings, setLoadingSettings] = useState(true);
   const [savingSettings, setSavingSettings] = useState(false);
 
-  // ✅ extra slots (زيادة/نقص الأدوار)
+  // ✅ extra slots (slotExtras)
   const [extraSlots, setExtraSlots] = useState(0);
   const [loadingExtras, setLoadingExtras] = useState(false);
   const [savingExtras, setSavingExtras] = useState(false);
 
   // نطاق تطبيق التعديل
-  const [applyMode, setApplyMode] = useState("THIS_DATE"); // THIS_DATE | SAME_WEEKDAY_UNTIL | EVERY_DAY_UNTIL(متقدم)
-  const [applyUntil, setApplyUntil] = useState(""); // yyyy-mm-dd
+  const [applyMode, setApplyMode] = useState("THIS_DATE"); // THIS_DATE | SAME_WEEKDAY_UNTIL | EVERY_DAY_UNTIL
+  const [applyUntil, setApplyUntil] = useState("");
 
-  // ====== حالة اليوم (مغلق/مفتوح) ======
+  // ====== حالة اليوم (blockedDays) ======
   useEffect(() => {
     if (!selectedDate) return;
     (async () => {
@@ -241,10 +242,7 @@ export default function BarberPanel() {
     const q = query(collection(db, "bookings"));
     const unsub = onSnapshot(
       q,
-      (snap) => {
-        const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-        setBookings(data);
-      },
+      (snap) => setBookings(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
       (err) => console.error("خطأ بجلب الحجوزات (onSnapshot):", err)
     );
     return () => unsub();
@@ -293,7 +291,7 @@ export default function BarberPanel() {
     }
   };
 
-  // ====== الأوقات المحظورة ======
+  // ====== الأوقات المحظورة (blockedTimes) ======
   useEffect(() => {
     if (!selectedDate) {
       setBlockedTimes([]);
@@ -316,18 +314,15 @@ export default function BarberPanel() {
     })();
   }, [selectedDate]);
 
-  const activeBookings = useMemo(
-    () => bookings.filter((b) => !b.cancelledAt),
-    [bookings]
-  );
-
-  const isTimeBooked = (time) =>
-    activeBookings.some(
-      (b) => b.selectedDate === selectedDate && b.selectedTime === time
+  const handleToggleTime = async (time) => {
+    const isTimeBooked = bookings.some(
+      (b) =>
+        b.selectedDate === selectedDate &&
+        b.selectedTime === time &&
+        !b.cancelledAt
     );
 
-  const handleToggleTime = async (time) => {
-    if (isTimeBooked(time)) {
+    if (isTimeBooked) {
       setStatusMessage("هذه الساعة محجوزة ولا يمكن تعديلها.");
       return;
     }
@@ -360,7 +355,13 @@ export default function BarberPanel() {
     }
 
     for (const time of selectedTimes) {
-      if (isTimeBooked(time)) {
+      const booked = bookings.some(
+        (b) =>
+          b.selectedDate === selectedDate &&
+          b.selectedTime === time &&
+          !b.cancelledAt
+      );
+      if (booked) {
         setStatusMessage(`الساعة ${time} محجوزة.`);
         return;
       }
@@ -397,9 +398,10 @@ export default function BarberPanel() {
       try {
         const snap = await getDoc(doc(db, "slotExtras", selectedDate));
         if (!alive) return;
-        if (snap.exists()) setExtraSlots(safeInt(snap.data()?.extraSlots, 0));
-        else setExtraSlots(0);
 
+        setExtraSlots(snap.exists() ? safeInt(snap.data()?.extraSlots, 0) : 0);
+
+        // افتراضي واضح وبسيط
         setApplyMode("THIS_DATE");
         setApplyUntil("");
       } catch (e) {
@@ -415,32 +417,39 @@ export default function BarberPanel() {
     };
   }, [selectedDate]);
 
-  // ====== ✅ أوقات اليوم + تطبيق extraSlots ======
-  const timesForDay = useMemo(() => {
-    if (!selectedDate) return null;
-
+  // =====================================================================
+  // ✅✅ المهم: شبكة ساعات الحلاق = workingHours + extraSlots فقط
+  // ممنوع نعمل union مع bookings/blockedTimes لأنه يخلق ساعات "برا الدوام"
+  // =====================================================================
+  const timesForBarberGrid = useMemo(() => {
+    if (!selectedDate) return [];
     const weekday = getWeekdayNameEN(selectedDate);
     const hours = workingHours?.[weekday] || null;
-    if (!hours?.from || !hours?.to) return null;
+    if (!hours?.from || !hours?.to) return [];
 
     const base = generateSlots30Min(hours.from, hours.to);
     return applyExtraSlots(base, extraSlots);
   }, [selectedDate, extraSlots]);
 
-  // فلترة أوقات اليوم الحالي من الماضي
+  // فلترة الماضي لليوم الحالي فقط (نفس منطق الزبون)
   const todayStr = useMemo(() => new Date().toLocaleDateString("sv-SE"), []);
   const isToday = selectedDate && selectedDate === todayStr;
 
-  const filteredTimes = useMemo(() => {
-    if (!timesForDay) return null;
-    if (!isToday) return timesForDay;
+  const gridTimesFiltered = useMemo(() => {
+    if (!timesForBarberGrid.length) return [];
+    if (!isToday) return timesForBarberGrid;
     const now = new Date();
-    return timesForDay.filter(
+    return timesForBarberGrid.filter(
       (time) => new Date(`${selectedDate}T${time}:00`) > now
     );
-  }, [timesForDay, isToday, selectedDate]);
+  }, [timesForBarberGrid, isToday, selectedDate]);
 
   // ====== أحدث الحجوزات ======
+  const activeBookings = useMemo(
+    () => bookings.filter((b) => !b.cancelledAt),
+    [bookings]
+  );
+
   const recentBookings = useMemo(() => {
     const getBookingCreationDate = (b) => {
       if (b.createdAt && typeof b.createdAt.toDate === "function")
@@ -450,7 +459,7 @@ export default function BarberPanel() {
         if (b.selectedDate && b.selectedTime)
           return new Date(`${b.selectedDate}T${b.selectedTime}:00`);
       } catch {
-        /* empty */
+        // ignore
       }
       return new Date(0);
     };
@@ -461,12 +470,13 @@ export default function BarberPanel() {
       .reverse();
   }, [activeBookings]);
 
-  // ====== ✅ تطبيق تعديل extraSlots ======
+  // ====== ✅ تطبيق تعديل extraSlots (اليوم/نفس يوم الأسبوع/كل الأيام) ======
   const applyExtraSlotsChange = async (nextValue) => {
     if (!selectedDate) return;
 
     const value = safeInt(nextValue, 0);
 
+    // حماية بسيطة
     if (value < -10 || value > 10) {
       alert("⚠️ مسموح من -10 إلى +10 فقط (كل رقم = 30 دقيقة).");
       return;
@@ -503,7 +513,7 @@ export default function BarberPanel() {
       return;
     }
 
-    // منع التقليل إذا سيحذف دور عليه حجز
+    // منع تقليل أدوار إذا رح ينحذف دور عليه حجز
     if (value < 0) {
       for (const ymd of targets) {
         const weekday = getWeekdayNameEN(ymd);
@@ -557,13 +567,20 @@ export default function BarberPanel() {
           : `✅ تم تطبيق التعديل على كل الأيام حتى ${applyUntil}`
       );
     } catch (e) {
-      console.error(e);
+      console.error("save slotExtras error:", e);
       alert("حدث خطأ أثناء حفظ التعديل. حاول مرة أخرى.");
     } finally {
       setSavingExtras(false);
       setTimeout(() => setStatusMessage(""), 2500);
     }
   };
+
+  const dayIsClosedByHours = useMemo(() => {
+    if (!selectedDate) return false;
+    const weekday = getWeekdayNameEN(selectedDate);
+    const hours = workingHours?.[weekday] || null;
+    return !hours?.from || !hours?.to;
+  }, [selectedDate]);
 
   return (
     <div className={`min-h-screen bg-gray-100 p-6 ${fontClass}`} dir="rtl">
@@ -574,6 +591,7 @@ export default function BarberPanel() {
           <h1 className="text-3xl font-semibold text-gray-800">
             إدارة الساعات
           </h1>
+
           <div className="mt-4 md:mt-0 flex flex-wrap items-center gap-3 text-sm">
             <button
               onClick={() => navigate("/admin-bookings")}
@@ -581,12 +599,14 @@ export default function BarberPanel() {
             >
               لوحة الحجوزات
             </button>
+
             <Link
               to="/blocked-phones"
               className="text-yellow-700 hover:underline transition-colors"
             >
               الأرقام المحظورة
             </Link>
+
             <button
               onClick={() => {
                 if (window.confirm("هل أنت متأكد أنك تريد تسجيل الخروج؟")) {
@@ -598,6 +618,7 @@ export default function BarberPanel() {
             >
               تسجيل الخروج
             </button>
+
             <button
               onClick={() => navigate("/dashboard")}
               className="text-green-700 hover:underline transition-colors"
@@ -612,10 +633,12 @@ export default function BarberPanel() {
           <label className="block mb-3 text-lg font-medium text-gray-700">
             اختر التاريخ
           </label>
+
           <DateDropdown
             selectedDate={selectedDate}
             onChange={setSelectedDate}
           />
+
           <input
             type="date"
             value={selectedDate}
@@ -650,188 +673,28 @@ export default function BarberPanel() {
               يمكنك استخدام القائمة أو التقويم لاختيار أي تاريخ.
             </p>
           )}
-          {selectedDate && !timesForDay && (
+
+          {selectedDate && dayIsClosedByHours && (
             <p className="mt-3 text-sm text-red-600 font-medium">
               هذا اليوم مغلق
             </p>
           )}
         </div>
 
-        {/* ✅ كرت تعديل الأدوار — تحت الساعات */}
-        {selectedDate && timesForDay && !isDayBlocked && (
-          <div className="px-8 pb-10">
-            <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-              {/* Header */}
-              <div className="px-5 py-4 border-b border-slate-100 flex items-start justify-between gap-3">
-                <div>
-                  <h3 className="text-sm font-extrabold text-slate-900">
-                    تعديل عدد الأدوار لآخر اليوم
-                  </h3>
-                  <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
-                    كل دور = 30 دقيقة. هذا لا يغيّر ساعات العمل الأساسية، فقط
-                    يزيد/ينقص أدوار بنهاية اليوم.
-                  </p>
-                </div>
-
-                <div className="text-right">
-                  <div className="text-[11px] text-slate-500">
-                    القيمة الحالية
-                  </div>
-                  <div className="text-lg font-extrabold text-slate-900">
-                    {loadingExtras
-                      ? "…"
-                      : extraSlots >= 0
-                      ? `+${extraSlots}`
-                      : `${extraSlots}`}
-                  </div>
-                </div>
-              </div>
-
-              {/* Body */}
-              <div className="p-5 space-y-4">
-                {/* Quick buttons */}
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-xs font-bold text-slate-700 ml-2">
-                    سريع:
-                  </span>
-
-                  {/* + */}
-                  <button
-                    type="button"
-                    disabled={loadingExtras || savingExtras}
-                    onClick={() => applyExtraSlotsChange(extraSlots + 1)}
-                    className="px-3 py-2 rounded-xl bg-gold text-primary font-extrabold hover:opacity-90 disabled:opacity-60"
-                  >
-                    +1
-                  </button>
-                  <button
-                    type="button"
-                    disabled={loadingExtras || savingExtras}
-                    onClick={() => applyExtraSlotsChange(extraSlots + 2)}
-                    className="px-3 py-2 rounded-xl border border-gold text-gold font-extrabold hover:bg-gold hover:text-primary disabled:opacity-60"
-                  >
-                    +2
-                  </button>
-                  <button
-                    type="button"
-                    disabled={loadingExtras || savingExtras}
-                    onClick={() => applyExtraSlotsChange(extraSlots + 3)}
-                    className="px-3 py-2 rounded-xl border border-gold text-gold font-extrabold hover:bg-gold hover:text-primary disabled:opacity-60"
-                  >
-                    +3
-                  </button>
-
-                  <span className="mx-1 w-px h-8 bg-slate-200" />
-
-                  {/* - */}
-                  <button
-                    type="button"
-                    disabled={loadingExtras || savingExtras}
-                    onClick={() => applyExtraSlotsChange(extraSlots - 1)}
-                    className="px-3 py-2 rounded-xl bg-slate-100 text-slate-900 font-extrabold hover:bg-slate-200 disabled:opacity-60"
-                    title="ينقص آخر دور"
-                  >
-                    -1
-                  </button>
-                  <button
-                    type="button"
-                    disabled={loadingExtras || savingExtras}
-                    onClick={() => applyExtraSlotsChange(extraSlots - 2)}
-                    className="px-3 py-2 rounded-xl bg-slate-100 text-slate-900 font-extrabold hover:bg-slate-200 disabled:opacity-60"
-                    title="ينقص آخر دورين"
-                  >
-                    -2
-                  </button>
-
-                  <div className="flex-1" />
-
-                  <button
-                    type="button"
-                    disabled={loadingExtras || savingExtras}
-                    onClick={() => applyExtraSlotsChange(0)}
-                    className="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-900 text-xs font-bold disabled:opacity-60"
-                    title="يرجع للوضع الطبيعي"
-                  >
-                    رجّع طبيعي (0)
-                  </button>
-                </div>
-
-                {/* Apply range */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                    <label className="block text-xs font-extrabold text-slate-700 mb-2">
-                      نطاق التطبيق
-                    </label>
-                    <select
-                      value={applyMode}
-                      onChange={(e) => setApplyMode(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-gold"
-                    >
-                      <option value="THIS_DATE">هذا اليوم فقط</option>
-                      <option value="SAME_WEEKDAY_UNTIL">
-                        نفس يوم الأسبوع لحد تاريخ
-                      </option>
-                      <option value="EVERY_DAY_UNTIL">
-                        كل الأيام لحد تاريخ
-                      </option>
-                    </select>
-
-                    <div className="mt-2 text-[11px] text-slate-600 leading-relaxed">
-                      {applyMode === "THIS_DATE" && (
-                        <span>
-                          ينطبق فقط على: <b>{selectedDate}</b>
-                        </span>
-                      )}
-                      {applyMode === "SAME_WEEKDAY_UNTIL" && (
-                        <span>
-                          ينطبق على <b>نفس يوم الأسبوع</b> من{" "}
-                          <b>{selectedDate}</b> حتى تاريخ النهاية.
-                        </span>
-                      )}
-                      {applyMode === "EVERY_DAY_UNTIL" && (
-                        <span>
-                          ينطبق على <b>كل الأيام</b> من <b>{selectedDate}</b>{" "}
-                          حتى تاريخ النهاية.
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                    <label className="block text-xs font-extrabold text-slate-700 mb-2">
-                      تاريخ النهاية
-                    </label>
-                    <input
-                      type="date"
-                      value={applyUntil}
-                      onChange={(e) => setApplyUntil(e.target.value)}
-                      disabled={applyMode === "THIS_DATE"}
-                      min={selectedDate || undefined}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-gold disabled:opacity-60"
-                    />
-
-                    <p className="mt-2 text-[11px] text-slate-600">
-                      ملاحظة: إذا في حجز على دور رح ينحذف، النظام بمنع التقليل
-                      عشان ما ينكسر شيء.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* لوحة الساعات */}
-        {selectedDate && filteredTimes && !isDayBlocked && (
+        {/* لوحة الساعات (مطابقة للزبون) */}
+        {selectedDate && !dayIsClosedByHours && !isDayBlocked && (
           <div className="p-8 pt-4 border-t bg-gray-50">
             <h2 className="text-xl font-semibold text-gray-700 mb-4">
-              الأوقات المتاحة:
+              الأوقات (مطابقة للزبون):
             </h2>
+
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-4 mb-6">
-              {filteredTimes.map((time) => {
-                const booked = activeBookings.some(
+              {gridTimesFiltered.map((time) => {
+                const booked = bookings.some(
                   (b) =>
-                    b.selectedDate === selectedDate && b.selectedTime === time
+                    b.selectedDate === selectedDate &&
+                    b.selectedTime === time &&
+                    !b.cancelledAt
                 );
                 const isBlocked = blockedTimes.includes(time);
                 const isSelected = selectedTimes.includes(time);
@@ -887,6 +750,133 @@ export default function BarberPanel() {
           </div>
         )}
 
+        {/* ✅ كرت زيادة/نقص الأدوار — تحت الساعات */}
+        {selectedDate && !dayIsClosedByHours && !isDayBlocked && (
+          <div className="px-8 pb-8">
+            <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-5 mt-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                  <h2 className="text-base font-bold text-slate-900">
+                    ➕➖ زيادة/نقص عدد الأدوار (كل دور = 30 دقيقة)
+                  </h2>
+                  <p className="text-xs text-slate-500 mt-1">
+                    هذا لا يغيّر ساعات العمل الأساسية. فقط يضيف/ينقص أدوار
+                    إضافية في نهاية اليوم.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={loadingExtras || savingExtras}
+                    onClick={() => applyExtraSlotsChange(extraSlots - 1)}
+                    className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-900 font-bold disabled:opacity-60"
+                    title="(-1) ينقص آخر دور"
+                  >
+                    -1
+                  </button>
+
+                  <div className="min-w-[90px] text-center">
+                    <div className="text-xs text-slate-500">القيمة الحالية</div>
+                    <div className="text-xl font-extrabold text-slate-900">
+                      {loadingExtras
+                        ? "…"
+                        : extraSlots >= 0
+                        ? `+${extraSlots}`
+                        : `${extraSlots}`}
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={loadingExtras || savingExtras}
+                    onClick={() => applyExtraSlotsChange(extraSlots + 1)}
+                    className="px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-500 text-slate-900 font-extrabold disabled:opacity-60"
+                    title="(+1) يزيد دور واحد بعد آخر دور"
+                  >
+                    +1
+                  </button>
+                </div>
+              </div>
+
+              <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
+                  <label className="block text-xs font-bold text-slate-700 mb-2">
+                    نطاق التطبيق
+                  </label>
+                  <select
+                    value={applyMode}
+                    onChange={(e) => setApplyMode(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-gold"
+                  >
+                    <option value="THIS_DATE">هذا اليوم فقط</option>
+                    <option value="SAME_WEEKDAY_UNTIL">
+                      نفس يوم الأسبوع لحد تاريخ
+                    </option>
+                    <option value="EVERY_DAY_UNTIL">كل الأيام لحد تاريخ</option>
+                  </select>
+
+                  <div className="mt-2 text-[11px] text-slate-600 leading-relaxed">
+                    {applyMode === "THIS_DATE" && (
+                      <span>
+                        ✅ التعديل يُطبَّق فقط على هذا التاريخ:{" "}
+                        <b>{selectedDate}</b>
+                      </span>
+                    )}
+                    {applyMode === "SAME_WEEKDAY_UNTIL" && (
+                      <span>
+                        ✅ يطبَّق على <b>نفس يوم الأسبوع</b> من{" "}
+                        <b>{selectedDate}</b> حتى تاريخ النهاية.
+                      </span>
+                    )}
+                    {applyMode === "EVERY_DAY_UNTIL" && (
+                      <span>
+                        ✅ يطبَّق على <b>كل الأيام</b> من <b>{selectedDate}</b>{" "}
+                        حتى تاريخ النهاية.
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
+                  <label className="block text-xs font-bold text-slate-700 mb-2">
+                    تاريخ النهاية (إذا اخترت “لحد تاريخ”)
+                  </label>
+                  <input
+                    type="date"
+                    value={applyUntil}
+                    onChange={(e) => setApplyUntil(e.target.value)}
+                    disabled={applyMode === "THIS_DATE"}
+                    min={selectedDate || undefined}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-gold disabled:opacity-60"
+                  />
+
+                  <button
+                    type="button"
+                    disabled={loadingExtras || savingExtras}
+                    onClick={() => applyExtraSlotsChange(0)}
+                    className="mt-3 w-full px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-sm font-bold disabled:opacity-60"
+                    title="يرجع للوضع الطبيعي"
+                  >
+                    رجّع للوضع الطبيعي (0)
+                  </button>
+                </div>
+              </div>
+
+              <div className="mt-3 text-xs text-slate-600 bg-amber-50 border border-amber-200 rounded-xl p-3">
+                <b>معلومة مهمة:</b>
+                <br />
+                (+1) = يزيد <b>دور واحد</b> بعد آخر دور.
+                <br />
+                (-1) = ينقص <b>آخر دور</b>.
+                <br />
+                إذا كان هناك <b>حجز</b> على دور سيتم حذفه، النظام يمنع التقليل
+                حتى لا ينكسر شيء.
+              </div>
+            </div>
+          </div>
+        )}
+
         {statusMessage && (
           <div className="p-4 bg-green-100 border border-green-300 text-green-800 text-center font-medium">
             {statusMessage}
@@ -894,7 +884,7 @@ export default function BarberPanel() {
         )}
       </div>
 
-      {/* عرض سريع للحجوزات الأخيرة */}
+      {/* أحدث الحجوزات */}
       {recentBookings.length > 0 && (
         <div className="max-w-3xl mx-auto mt-6 text-xs sm:text-sm">
           <div className="bg-white rounded-2xl shadow-md border border-slate-200 p-4 sm:p-5 text-slate-900">
@@ -952,12 +942,13 @@ export default function BarberPanel() {
         </div>
       )}
 
-      {/* كرت إعداد حجز واحد لكل رقم/يوم */}
+      {/* إعداد حجز واحد لكل رقم/يوم */}
       <div className="max-w-3xl mx-auto mt-6">
         <div className="bg-white rounded-2xl shadow p-4 border border-gray-200 text-center">
           <h2 className="text-sm font-semibold text-gray-800 mb-2">
             وضع حجز واحد لكل رقم / يوم
           </h2>
+
           <div className="flex items-center justify-center gap-4 mb-2">
             <span className="text-xs font-semibold text-gray-700">
               {limitOnePerDay ? "مُفَعَّل" : "مُعَطَّل"}

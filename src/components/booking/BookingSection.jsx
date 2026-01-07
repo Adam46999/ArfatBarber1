@@ -4,7 +4,6 @@ import SuccessModal from "./parts/SuccessModal";
 import ServiceSelector from "./parts/ServiceSelector";
 import TimeSelector from "./parts/TimeSelector";
 import DateField from "./parts/DateField";
-import workingHours from "./workingHours";
 import SectionTitle from "../common/SectionTitle";
 import ProgressBar from "./parts/ProgressBar";
 import PhoneInput from "./parts/PhoneInput";
@@ -12,10 +11,14 @@ import PhoneInput from "./parts/PhoneInput";
 import useAvailableTimes from "../../hooks/useAvailableTimes";
 import useBookingSubmit from "../../hooks/useBookingSubmit";
 
-import { useEffect, useMemo, useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { getOpeningStatus } from "../../utils/dateTime";
 
+// ✅ workingHours موحّد (نفس الزبون + الحلاق)
+import workingHours from "./workingHours";
+
+// ✅ أدوات الهاتف الموحّدة
 import {
   toILPhoneE164,
   isILPhoneE164,
@@ -90,13 +93,6 @@ function BookingSection() {
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState(initialTouched);
 
-  // ✅ نضمن أنّ الهاتف يُخزَّن دائمًا موحّد E.164 داخل الإرسال (بدون تغيير تجربة الكتابة)
-  const submitForm = useMemo(() => {
-    const e164 = toILPhoneE164(form.phoneNumber);
-    const normalizedPhone = isILPhoneE164(e164) ? e164 : form.phoneNumber;
-    return { ...form, phoneNumber: normalizedPhone };
-  }, [form]);
-
   const { availableTimes, isDayBlocked, loadingTimes } = useAvailableTimes(
     form.selectedDate,
     workingHours
@@ -109,7 +105,7 @@ function BookingSection() {
     setShowSuccessMessage,
     code,
     messageRef,
-  } = useBookingSubmit(submitForm, setForm, t);
+  } = useBookingSubmit(form, setForm, t);
 
   const resetFormUI = () => {
     setForm(initialForm);
@@ -185,7 +181,11 @@ function BookingSection() {
         <SectionTitle>{t("book_now")}</SectionTitle>
 
         <div className="mb-8">
-          <OpeningStatusCard status={status} workingHours={workingHours} />
+          <OpeningStatusCard
+            t={t}
+            status={status}
+            workingHours={workingHours}
+          />
         </div>
 
         <div className="bg-white shadow-xl rounded-2xl p-8 space-y-6 border border-gray-100">
@@ -318,6 +318,19 @@ function BookingSection() {
                     }))
                   }
                   t={t}
+                  onBlur={() =>
+                    setTouched((s) => ({ ...s, selectedDate: true }))
+                  }
+                  aria-invalid={
+                    touched.selectedDate && errors.selectedDate
+                      ? "true"
+                      : "false"
+                  }
+                  aria-describedby={
+                    touched.selectedDate && errors.selectedDate
+                      ? "err-date"
+                      : undefined
+                  }
                 />
               </div>
               {touched.selectedDate && errors.selectedDate && (
@@ -352,18 +365,16 @@ function BookingSection() {
                       </span>
                     </div>
                   ) : availableTimes.length > 0 ? (
-                    <div onFocusCapture={() => setActiveStep(4)}>
-                      <TimeSelector
-                        selectedDate={form.selectedDate}
-                        selectedTime={form.selectedTime}
-                        onSelectTime={(time) =>
-                          setForm((s) => ({ ...s, selectedTime: time }))
-                        }
-                        availableTimes={availableTimes}
-                        workingHours={workingHours}
-                        t={t}
-                      />
-                    </div>
+                    <TimeSelector
+                      selectedDate={form.selectedDate}
+                      selectedTime={form.selectedTime}
+                      onSelectTime={(time) =>
+                        setForm((s) => ({ ...s, selectedTime: time }))
+                      }
+                      availableTimes={availableTimes}
+                      workingHours={workingHours}
+                      t={t}
+                    />
                   ) : (
                     <p className="text-red-500 text-sm font-medium mt-2">
                       {t("no_hours")}
@@ -389,7 +400,10 @@ function BookingSection() {
                     setForm((s) => ({ ...s, selectedService: id }));
                     setActiveStep(5);
                   }}
-                  rtl={i18n.dir() === "rtl"}
+                  t={t}
+                  onBlur={() =>
+                    setTouched((s) => ({ ...s, selectedService: true }))
+                  }
                 />
               </div>
               {touched.selectedService && errors.selectedService && (

@@ -1,42 +1,21 @@
 // ✅ src/pages/Dashboard.jsx
 import { useEffect, useMemo, useState } from "react";
 import { db } from "../firebase";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 
 function ymd(d) {
-  return d.toISOString().slice(0, 10);
-}
-
-function startOfMonth(date) {
-  const d = new Date(date);
-  d.setDate(1);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-
-function endOfMonth(date) {
-  const d = new Date(date);
-  d.setMonth(d.getMonth() + 1);
-  d.setDate(0); // آخر يوم بالشهر
-  d.setHours(23, 59, 59, 999);
-  return d;
+  const x = new Date(d);
+  const y = x.getFullYear();
+  const m = String(x.getMonth() + 1).padStart(2, "0");
+  const day = String(x.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 function addMonths(date, delta) {
   const d = new Date(date);
   d.setMonth(d.getMonth() + delta);
   return d;
-}
-
-function safeDateFromBooking(b) {
-  // وقت الحجز نفسه (selectedDate + selectedTime) هو المرجع لليوم/الأسبوع/الشهر
-  try {
-    if (!b?.selectedDate || !b?.selectedTime) return null;
-    return new Date(`${b.selectedDate}T${b.selectedTime}:00`);
-  } catch {
-    return null;
-  }
 }
 
 function fmtMonthTitle(date) {
@@ -66,23 +45,8 @@ export default function Dashboard() {
   const [totalBookings, setTotalBookings] = useState(0);
 
   // ✅ تقرير شهري + مقارنة
-  const [monthStats, setMonthStats] = useState({
-    title: "",
-    from: "",
-    to: "",
-    total: 0,
-    passed: 0,
-    upcoming: 0,
-  });
-
-  const [prevMonthStats, setPrevMonthStats] = useState({
-    title: "",
-    from: "",
-    to: "",
-    total: 0,
-    passed: 0,
-    upcoming: 0,
-  });
+  const [monthStats, setMonthStats] = useState({ title: "", total: 0 });
+  const [prevMonthStats, setPrevMonthStats] = useState({ title: "", total: 0 });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -172,49 +136,24 @@ export default function Dashboard() {
       });
 
       // ===== ✅ الشهر الحالي + الشهر الماضي =====
-      const curStart = startOfMonth(now);
-      const curEnd = endOfMonth(now);
-      const prevDate = addMonths(now, -1);
-      const prevStart = startOfMonth(prevDate);
-      const prevEnd = endOfMonth(prevDate);
+      // ===== ✅ الشهر الحالي + الشهر الماضي (COUNTERS ثابتة) =====
+      const curKey = ymd(now).slice(0, 7); // "YYYY-MM"
+      const prevKey = ymd(addMonths(now, -1)).slice(0, 7);
 
-      const curFrom = ymd(curStart);
-      const curTo = ymd(curEnd);
-      const prevFrom = ymd(prevStart);
-      const prevTo = ymd(prevEnd);
+      const curSnap = await getDoc(doc(db, "statsMonthly", curKey));
+      const prevSnap = await getDoc(doc(db, "statsMonthly", prevKey));
 
-      const classifyRange = (from, to) => {
-        const inRange = bookings.filter(
-          (b) => b.selectedDate >= from && b.selectedDate <= to
-        );
+      const curTotal = curSnap.exists()
+        ? Number(curSnap.data()?.activeTotal || 0)
+        : 0;
+      const prevTotal = prevSnap.exists()
+        ? Number(prevSnap.data()?.total || 0)
+        : 0;
 
-        let passed = 0,
-          upcoming = 0;
-        inRange.forEach((b) => {
-          const dt = safeDateFromBooking(b);
-          if (!dt) return;
-          if (dt < now) passed++;
-          else upcoming++;
-        });
-
-        return { total: inRange.length, passed, upcoming };
-      };
-
-      const cur = classifyRange(curFrom, curTo);
-      const prev = classifyRange(prevFrom, prevTo);
-
-      setMonthStats({
-        title: fmtMonthTitle(now),
-        from: curFrom,
-        to: curTo,
-        ...cur,
-      });
-
+      setMonthStats({ title: fmtMonthTitle(now), total: curTotal });
       setPrevMonthStats({
-        title: fmtMonthTitle(prevDate),
-        from: prevFrom,
-        to: prevTo,
-        ...prev,
+        title: fmtMonthTitle(addMonths(now, -1)),
+        total: prevTotal,
       });
     };
 
@@ -296,27 +235,11 @@ export default function Dashboard() {
 
             <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
               <CardBox color="blue" title={`هذا الشهر: ${monthStats.title}`}>
-                <p className="text-xs text-gray-500 mb-3">
-                  من {formatDate(monthStats.from)} إلى{" "}
-                  {formatDate(monthStats.to)}
-                </p>
                 <ul className="space-y-2 text-sm text-gray-700">
                   <li>
                     📊 العدد الكلي:{" "}
                     <span className="font-semibold text-slate-900">
                       {monthStats.total}
-                    </span>
-                  </li>
-                  <li>
-                    ✅ مرّت:{" "}
-                    <span className="font-semibold text-green-700">
-                      {monthStats.passed}
-                    </span>
-                  </li>
-                  <li>
-                    ⏳ قادمة:{" "}
-                    <span className="font-semibold text-blue-700">
-                      {monthStats.upcoming}
                     </span>
                   </li>
                 </ul>
@@ -326,27 +249,11 @@ export default function Dashboard() {
                 color="yellow"
                 title={`الشهر الماضي: ${prevMonthStats.title}`}
               >
-                <p className="text-xs text-gray-500 mb-3">
-                  من {formatDate(prevMonthStats.from)} إلى{" "}
-                  {formatDate(prevMonthStats.to)}
-                </p>
                 <ul className="space-y-2 text-sm text-gray-700">
                   <li>
                     📊 العدد الكلي:{" "}
                     <span className="font-semibold text-slate-900">
                       {prevMonthStats.total}
-                    </span>
-                  </li>
-                  <li>
-                    ✅ مرّت:{" "}
-                    <span className="font-semibold text-green-700">
-                      {prevMonthStats.passed}
-                    </span>
-                  </li>
-                  <li>
-                    ⏳ قادمة:{" "}
-                    <span className="font-semibold text-blue-700">
-                      {prevMonthStats.upcoming}
                     </span>
                   </li>
                 </ul>

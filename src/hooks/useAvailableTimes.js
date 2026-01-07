@@ -34,7 +34,8 @@ function addMinutesToHHMM(hhmm, minsToAdd) {
 }
 
 /**
- * يولّد أدوار 30 دقيقة “شاملة النهاية” زي الموجود عند الحلاق
+ * يولّد أدوار 30 دقيقة (النهاية غير شاملة)
+ * مثال: from 12:00 to 20:00 => آخر دور 19:30
  */
 function generateSlots30Min(from, to) {
   if (!from || !to) return [];
@@ -83,13 +84,12 @@ export default function useAvailableTimes(selectedDate, workingHours) {
         return;
       }
 
-      if (alive) setLoadingTimes(true);
+      setLoadingTimes(true);
 
       try {
         // 1) blocked day؟
         const dayBlockRef = doc(db, "blockedDays", selectedDate);
         const dayBlockSnap = await getDoc(dayBlockRef);
-
         const blocked = dayBlockSnap.exists();
         if (!alive) return;
 
@@ -117,7 +117,7 @@ export default function useAvailableTimes(selectedDate, workingHours) {
           if (extrasSnap.exists()) {
             const data = extrasSnap.data() || {};
             const n = Number(data.extraSlots);
-            extraSlots = Number.isFinite(n) ? n : 0;
+            extraSlots = Number.isFinite(n) ? Math.trunc(n) : 0;
           }
         } catch {
           extraSlots = 0;
@@ -193,7 +193,6 @@ export default function useAvailableTimes(selectedDate, workingHours) {
         setIsDayBlocked(false);
         setAvailableTimes([]);
       } finally {
-        // ✅ أهم نقطة: ممنوع أي return هون
         if (alive) setLoadingTimes(false);
       }
     }
