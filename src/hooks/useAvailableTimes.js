@@ -1,18 +1,10 @@
 // src/hooks/useAvailableTimes.js
 import { useEffect, useMemo, useState } from "react";
 import { db } from "../firebase";
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  query,
-  where,
-} from "firebase/firestore";
+import { collection, doc, onSnapshot, query, where } from "firebase/firestore";
 
-/**
- * Helpers (خارج الهوك عشان ما يعمل missing-deps)
- */
+import { generateSlots30Min, applyExtraSlots, safeInt } from "../utils/slots";
+
 function toDateAt(ymd, hhmm) {
   try {
     return new Date(`${ymd}T${hhmm}:00`);
@@ -21,156 +13,51 @@ function toDateAt(ymd, hhmm) {
   }
 }
 
-function addMinutesToHHMM(hhmm, minsToAdd) {
-  const [h, m] = String(hhmm || "00:00")
-    .split(":")
-    .map(Number);
-  const base = new Date();
-  base.setHours(h || 0, m || 0, 0, 0);
-  base.setMinutes(base.getMinutes() + (Number(minsToAdd) || 0));
-  const hh = String(base.getHours()).padStart(2, "0");
-  const mm = String(base.getMinutes()).padStart(2, "0");
-  return `${hh}:${mm}`;
-}
-
-/**
- * يولّد أدوار 30 دقيقة (النهاية غير شاملة)
- * مثال: from 12:00 to 20:00 => آخر دور 19:30
- */
-function generateSlots30Min(from, to) {
-  if (!from || !to) return [];
-  const [fh, fm] = from.split(":").map(Number);
-  const [th, tm] = to.split(":").map(Number);
-
-  const cur = new Date();
-  cur.setHours(fh, fm, 0, 0);
-
-  const end = new Date();
-  end.setHours(th, tm, 0, 0);
-
-  const out = [];
-  while (cur <= end) {
-    out.push(cur.toTimeString().slice(0, 5));
-    cur.setMinutes(cur.getMinutes() + 30);
-  }
-  return out;
-}
-
-/**
- * Hook:
- * - يجيب availableTimes لزبون حسب:
- *   workingHours + blockedDays + blockedTimes + bookings + slotExtras
- *
- * slotExtras schema:
- *   collection: slotExtras
- *   doc id: YYYY-MM-DD
- *   fields:
- *     - extraSlots: number (مثلاً +2 يزيد دورين بعد آخر دور، -1 ينقص آخر دور)
- */
 export default function useAvailableTimes(selectedDate, workingHours) {
   const [availableTimes, setAvailableTimes] = useState([]);
   const [isDayBlocked, setIsDayBlocked] = useState(false);
   const [loadingTimes, setLoadingTimes] = useState(false);
 
   useEffect(() => {
-    let alive = true;
+    if (!selectedDate) {
+      setAvailableTimes([]);
+      setIsDayBlocked(false);
+      setLoadingTimes(false);
+      return;
+    }
 
-    async function run() {
-      if (!selectedDate) {
-        if (!alive) return;
-        setAvailableTimes([]);
-        setIsDayBlocked(false);
-        setLoadingTimes(false);
-        return;
-      }
+    setLoadingTimes(true);
 
-      setLoadingTimes(true);
+    // 1) listeners state
+    let dayBlocked = false;
+    let blockedTimesArr = [];
+    let extraSlots = 0;
+    let bookedSet = new Set();
 
+    const recompute = () => {
       try {
-        // 1) blocked day؟
-        const dayBlockRef = doc(db, "blockedDays", selectedDate);
-        const dayBlockSnap = await getDoc(dayBlockRef);
-        const blocked = dayBlockSnap.exists();
-        if (!alive) return;
-
-        setIsDayBlocked(blocked);
-
-        if (blocked) {
-          setAvailableTimes([]);
-          return;
-        }
-
-        // 2) ساعات العمل الأساسية حسب اليوم
+        // ساعات الدوام حسب اليوم
         const d = new Date(`${selectedDate}T00:00:00`);
         const weekday = d.toLocaleDateString("en-US", { weekday: "long" });
         const hours = workingHours?.[weekday] || null;
 
-        if (!hours?.from || !hours?.to) {
+        if (dayBlocked || !hours?.from || !hours?.to) {
+          setIsDayBlocked(dayBlocked || !hours?.from || !hours?.to);
           setAvailableTimes([]);
+          setLoadingTimes(false);
           return;
         }
 
-        // 3) slotExtras (زيادة/نقصان عدد الأدوار)
-        let extraSlots = 0;
-        try {
-          const extrasSnap = await getDoc(doc(db, "slotExtras", selectedDate));
-          if (extrasSnap.exists()) {
-            const data = extrasSnap.data() || {};
-            const n = Number(data.extraSlots);
-            extraSlots = Number.isFinite(n) ? Math.trunc(n) : 0;
-          }
-        } catch {
-          extraSlots = 0;
-        }
+        setIsDayBlocked(false);
 
         const baseSlots = generateSlots30Min(hours.from, hours.to);
+        const slots = applyExtraSlots(baseSlots, extraSlots);
 
-        let slots = baseSlots;
-        if (extraSlots !== 0) {
-          if (extraSlots > 0) {
-            const extraCount = Math.floor(extraSlots);
-            const last = baseSlots[baseSlots.length - 1];
-            const extras = [];
-            for (let i = 1; i <= extraCount; i++) {
-              extras.push(addMinutesToHHMM(last, i * 30));
-            }
-            slots = [...baseSlots, ...extras];
-          } else {
-            const cut = Math.abs(Math.floor(extraSlots));
-            slots = baseSlots.slice(0, Math.max(0, baseSlots.length - cut));
-          }
-        }
-
-        // 4) blockedTimes لهذا اليوم
-        const blockedTimesSnap = await getDoc(
-          doc(db, "blockedTimes", selectedDate)
-        );
-        const blockedTimes =
-          blockedTimesSnap.exists() &&
-          Array.isArray(blockedTimesSnap.data()?.times)
-            ? blockedTimesSnap.data().times
-            : [];
-
-        // 5) الحجوزات لنفس التاريخ (ونعتبر cancelledAt غير فعّال)
-        const qBookings = query(
-          collection(db, "bookings"),
-          where("selectedDate", "==", selectedDate)
-        );
-        const bookingsSnap = await getDocs(qBookings);
-        const bookedSet = new Set();
-        bookingsSnap.docs.forEach((docu) => {
-          const b = docu.data();
-          if (!b?.cancelledAt && b?.selectedTime) {
-            bookedSet.add(b.selectedTime);
-          }
-        });
-
-        // 6) فلترة: احذف المحجوز + المحظور + الماضي لليوم الحالي
         const now = new Date();
-        const todayStr = now.toLocaleDateString("sv-SE"); // YYYY-MM-DD
+        const todayStr = now.toLocaleDateString("sv-SE");
         const isToday = selectedDate === todayStr;
 
-        const blockedSet = new Set(blockedTimes);
+        const blockedSet = new Set(blockedTimesArr);
 
         const finalSlots = slots.filter((t) => {
           if (blockedSet.has(t)) return false;
@@ -181,26 +68,96 @@ export default function useAvailableTimes(selectedDate, workingHours) {
             if (!dt) return false;
             return dt > now;
           }
-
           return true;
         });
 
-        if (!alive) return;
         setAvailableTimes(finalSlots);
+        setLoadingTimes(false);
       } catch (e) {
-        console.error("useAvailableTimes error:", e);
-        if (!alive) return;
+        console.error("recompute error:", e);
         setIsDayBlocked(false);
         setAvailableTimes([]);
-      } finally {
-        if (alive) setLoadingTimes(false);
+        setLoadingTimes(false);
       }
-    }
+    };
 
-    run();
+    // 2) blockedDays realtime
+    const unsubDay = onSnapshot(
+      doc(db, "blockedDays", selectedDate),
+      (snap) => {
+        dayBlocked = snap.exists();
+        recompute();
+      },
+      (err) => {
+        console.error("blockedDays snapshot error:", err);
+        dayBlocked = false;
+        recompute();
+      }
+    );
+
+    // 3) blockedTimes realtime
+    const unsubTimes = onSnapshot(
+      doc(db, "blockedTimes", selectedDate),
+      (snap) => {
+        const times =
+          snap.exists() && Array.isArray(snap.data()?.times)
+            ? snap.data().times
+            : [];
+        blockedTimesArr = times;
+        recompute();
+      },
+      (err) => {
+        console.error("blockedTimes snapshot error:", err);
+        blockedTimesArr = [];
+        recompute();
+      }
+    );
+
+    // 4) slotExtras realtime
+    const unsubExtras = onSnapshot(
+      doc(db, "slotExtras", selectedDate),
+      (snap) => {
+        extraSlots = snap.exists() ? safeInt(snap.data()?.extraSlots, 0) : 0;
+        recompute();
+      },
+      (err) => {
+        console.error("slotExtras snapshot error:", err);
+        extraSlots = 0;
+        recompute();
+      }
+    );
+
+    // 5) bookings realtime (لنفس التاريخ)
+    const qBookings = query(
+      collection(db, "bookings"),
+      where("selectedDate", "==", selectedDate)
+    );
+    const unsubBookings = onSnapshot(
+      qBookings,
+      (snap) => {
+        const s = new Set();
+        snap.docs.forEach((d) => {
+          const b = d.data();
+          if (!b?.cancelledAt && b?.selectedTime) s.add(b.selectedTime);
+        });
+        bookedSet = s;
+        recompute();
+      },
+      (err) => {
+        console.error("bookings snapshot error:", err);
+        bookedSet = new Set();
+        recompute();
+      }
+    );
+
+    // initial compute (لو snapshots تأخرت لحظة)
+    recompute();
 
     return () => {
-      alive = false;
+      unsubDay();
+      unsubTimes();
+      unsubExtras();
+      unsubBookings();
     };
   }, [selectedDate, workingHours]);
 

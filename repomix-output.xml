@@ -106,6 +106,13 @@ src/i18n.js
 src/index.css
 src/main.jsx
 src/pages/AdminBookings.jsx
+src/pages/adminBookings/AdminBookingsPage.jsx
+src/pages/adminBookings/BookingCard.jsx
+src/pages/adminBookings/DayGroup.jsx
+src/pages/adminBookings/helpers.js
+src/pages/adminBookings/PastSection.jsx
+src/pages/adminBookings/Toolbar.jsx
+src/pages/adminBookings/useAdminBookingsData.js
 src/pages/AdminBookingsV2.jsx
 src/pages/BarberPanel.jsx
 src/pages/BlockedPhones.jsx
@@ -984,6 +991,1213 @@ export default function Card({
       {children}
     </div>
   );
+}
+</file>
+
+<file path="src/pages/adminBookings/AdminBookingsPage.jsx">
+// src/pages/adminBookings/AdminBookingsPage.jsx
+import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { FaSyncAlt } from "react-icons/fa";
+import { e164ToLocalPretty } from "../../utils/phone";
+
+import Toolbar from "./Toolbar";
+import DayGroup from "./DayGroup";
+import PastSection from "./PastSection";
+import { safeLower } from "./helpers";
+import { useAdminBookingsData } from "./useAdminBookingsData";
+
+export default function AdminBookingsPage() {
+  const navigate = useNavigate();
+
+  const { upcoming, recentPast, loading, lastUpdated, actions } =
+    useAdminBookingsData();
+
+  // UI state
+  const [searchTerm, setSearchTerm] = useState("");
+  const [serviceFilter, setServiceFilter] = useState("all");
+  const [sortMode, setSortMode] = useState("soonest");
+  const [showPast, setShowPast] = useState(true);
+
+  // ✅ Compact + expanded
+  const [compactMode, setCompactMode] = useState(true);
+  const [expandedIds, setExpandedIds] = useState({});
+  const toggleExpanded = (id) => {
+    setExpandedIds((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  // ✅ Toolbar collapsible
+  const [toolsOpen, setToolsOpen] = useState(false);
+
+  // Filter upcoming
+  const filteredUpcoming = useMemo(() => {
+    const term = safeLower(searchTerm).trim();
+    let list = [...upcoming];
+
+    if (serviceFilter !== "all") {
+      list = list.filter((b) => b.selectedService === serviceFilter);
+    }
+
+    if (term) {
+      list = list.filter((b) => {
+        const name = safeLower(b.fullName);
+        const phonePretty = safeLower(e164ToLocalPretty(b.phoneNumber));
+        const phoneRaw = safeLower(b.phoneNumber);
+        return (
+          name.includes(term) ||
+          phonePretty.includes(term) ||
+          phoneRaw.includes(term)
+        );
+      });
+    }
+
+    if (sortMode === "newest") {
+      list.sort((a, b) => {
+        const da =
+          typeof a.createdAt === "string"
+            ? new Date(a.createdAt)
+            : a.createdAt?.toDate?.() ?? new Date(0);
+        const dbb =
+          typeof b.createdAt === "string"
+            ? new Date(b.createdAt)
+            : b.createdAt?.toDate?.() ?? new Date(0);
+        return dbb - da;
+      });
+    } else {
+      list.sort((a, b) => {
+        const da = new Date(`${a.selectedDate}T${a.selectedTime}:00`);
+        const dbb = new Date(`${b.selectedDate}T${b.selectedTime}:00`);
+        return da - dbb;
+      });
+    }
+
+    return list;
+  }, [upcoming, searchTerm, serviceFilter, sortMode]);
+
+  // Filter past
+  const filteredPast = useMemo(() => {
+    const term = safeLower(searchTerm).trim();
+    let list = [...recentPast];
+
+    if (serviceFilter !== "all") {
+      list = list.filter(
+        (b) => (b.selectedService ?? "both") === serviceFilter
+      );
+    }
+
+    if (term) {
+      list = list.filter((b) => {
+        const name = safeLower(b.fullName);
+        const phonePretty = safeLower(e164ToLocalPretty(b.phoneNumber));
+        const phoneRaw = safeLower(b.phoneNumber);
+        return (
+          name.includes(term) ||
+          phonePretty.includes(term) ||
+          phoneRaw.includes(term)
+        );
+      });
+    }
+
+    list.sort((a, b) => {
+      const da = b.cancelledAt
+        ? new Date(b.cancelledAt)
+        : new Date(`${b.selectedDate}T${b.selectedTime}:00`);
+      const dbb = a.cancelledAt
+        ? new Date(a.cancelledAt)
+        : new Date(`${a.selectedDate}T${a.selectedTime}:00`);
+      return da - dbb;
+    });
+
+    return list;
+  }, [recentPast, searchTerm, serviceFilter]);
+
+  const upcomingByDate = useMemo(() => {
+    return Object.entries(
+      filteredUpcoming.reduce((acc, b) => {
+        (acc[b.selectedDate] = acc[b.selectedDate] || []).push(b);
+        return acc;
+      }, {})
+    ).sort(([a], [b]) => a.localeCompare(b));
+  }, [filteredUpcoming]);
+
+  const nextId = filteredUpcoming[0]?.id ?? null;
+
+  return (
+    <section className="min-h-screen bg-gray-100 pt-24 p-4 font-body" dir="rtl">
+      <div className="max-w-5xl mx-auto bg-white rounded-2xl shadow-xl p-4 sm:p-6 space-y-4">
+        {/* Top Bar */}
+        <div className="flex items-center justify-between gap-3">
+          <button
+            onClick={() => navigate(-1)}
+            className="text-blue-700 hover:text-blue-900 text-sm font-semibold"
+          >
+            ← الرجوع
+          </button>
+
+          <div className="flex-1">
+            <div className="flex items-center justify-center gap-2 flex-wrap">
+              <h1 className="text-lg sm:text-xl font-extrabold text-gold">
+                لوحة الحجوزات
+              </h1>
+
+              <span className="text-[11px] font-bold px-3 py-1 rounded-full border bg-emerald-50 text-emerald-800 border-emerald-200">
+                القادمة: {filteredUpcoming.length}
+              </span>
+
+              <span className="text-[11px] font-bold px-3 py-1 rounded-full border bg-yellow-50 text-yellow-900 border-yellow-200">
+                السجل: {filteredPast.length}
+              </span>
+            </div>
+          </div>
+
+          <div className="hidden sm:flex items-center gap-2 text-[11px] text-gray-400">
+            <FaSyncAlt className="opacity-70" />
+            <span>
+              {lastUpdated
+                ? `آخر تحديث: ${String(lastUpdated.getHours()).padStart(
+                    2,
+                    "0"
+                  )}:${String(lastUpdated.getMinutes()).padStart(2, "0")}`
+                : "آخر تحديث: —"}
+            </span>
+          </div>
+        </div>
+
+        {/* ✅ Toolbar (collapsible + نفس ارتفاع المضغوط) */}
+        <Toolbar
+          toolsOpen={toolsOpen}
+          setToolsOpen={setToolsOpen}
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
+          serviceFilter={serviceFilter}
+          setServiceFilter={setServiceFilter}
+          sortMode={sortMode}
+          setSortMode={setSortMode}
+          compactMode={compactMode}
+          setCompactMode={setCompactMode}
+        />
+
+        {loading ? (
+          <div className="space-y-3">
+            <div className="h-20 rounded-2xl bg-gray-100 border border-gray-200 animate-pulse" />
+            <div className="h-28 rounded-2xl bg-gray-100 border border-gray-200 animate-pulse" />
+            <div className="h-28 rounded-2xl bg-gray-100 border border-gray-200 animate-pulse" />
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {/* Upcoming */}
+            <div className="rounded-2xl border border-gray-200 bg-white p-3 sm:p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-base sm:text-lg font-extrabold text-gray-900">
+                  📆 الحجوزات القادمة
+                </h2>
+                <span className="text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full px-3 py-1">
+                  {filteredUpcoming.length} موعد
+                </span>
+              </div>
+
+              {filteredUpcoming.length === 0 ? (
+                <div className="rounded-xl bg-gray-50 border border-gray-200 p-6 text-center">
+                  <p className="text-gray-900 font-extrabold">
+                    لا توجد حجوزات.
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    أي حجز جديد سيظهر هنا تلقائيًا.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {upcomingByDate.map(([date, bookings]) => (
+                    <DayGroup
+                      key={date}
+                      date={date}
+                      bookings={bookings}
+                      nextId={nextId}
+                      compactMode={compactMode}
+                      expandedIds={expandedIds}
+                      toggleExpanded={toggleExpanded}
+                      onCancel={(b) => actions.cancelBooking(b)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Past */}
+            <PastSection
+              showPast={showPast}
+              setShowPast={setShowPast}
+              filteredPast={filteredPast}
+              compactMode={compactMode}
+              expandedIds={expandedIds}
+              toggleExpanded={toggleExpanded}
+              onRestore={(b) => actions.restoreBooking(b, upcoming)}
+              onDelete={(b) => actions.deleteBookingForever(b)}
+            />
+
+            <div className="text-center text-[11px] text-gray-400">
+              بحث بالاسم/الهاتف → اتصال → وإذا لزم: إلغاء/استرجاع/حذف.
+            </div>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+</file>
+
+<file path="src/pages/adminBookings/BookingCard.jsx">
+// src/pages/adminBookings/BookingCard.jsx
+import { FaClock, FaPhone, FaCut, FaTimesCircle } from "react-icons/fa";
+import { e164ToLocalPretty } from "../../utils/phone";
+import { formatDateTime, serviceBadgeClasses, serviceLabel } from "./helpers";
+
+export default function BookingCard({
+  booking,
+  isNext,
+  compactMode,
+  expanded,
+  onToggleExpanded,
+  onCancel,
+}) {
+  const name = booking.fullName || "بدون اسم";
+
+  // ✅ لون الوقت (بدل الأسود)
+  const timePill = "bg-indigo-600 text-white border-indigo-600"; // مريح + واضح
+
+  // =========================
+  // ✅ COMPACT MODE
+  // =========================
+  if (compactMode) {
+    // ✅ إذا Expanded: لا نعرض السطر العلوي أبداً (حتى ما يصير دابليكيت)
+    if (expanded) {
+      return (
+        <div
+          className={`rounded-2xl bg-white border shadow-sm p-3 sm:p-4 ${
+            isNext
+              ? "border-emerald-300 ring-1 ring-emerald-100"
+              : "border-gray-200"
+          }`}
+        >
+          <div className="flex items-start justify-between gap-3">
+            <h3 className="text-lg sm:text-xl font-black text-gray-900 leading-tight break-words">
+              {name}
+            </h3>
+
+            <div className="shrink-0 flex items-center gap-2">
+              {isNext && (
+                <span className="text-[11px] font-extrabold px-3 py-1 rounded-full border bg-emerald-50 text-emerald-800 border-emerald-200">
+                  التالي
+                </span>
+              )}
+              <span
+                className={`inline-flex items-center gap-2 text-xs font-extrabold rounded-full px-3 py-1 border ${timePill}`}
+              >
+                <FaClock className="opacity-90" />
+                {booking.selectedTime}
+              </span>
+            </div>
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <a
+              href={`tel:${booking.phoneNumber}`}
+              className="inline-flex items-center gap-2 text-sm font-extrabold px-4 py-2 rounded-xl border border-blue-200 bg-blue-50 text-blue-800 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-200"
+              aria-label={`اتصال بالزبون ${name}`}
+              title="اتصال"
+            >
+              <FaPhone className="opacity-80" />
+              اتصال
+              <span className="font-semibold opacity-90">
+                {e164ToLocalPretty(booking.phoneNumber)}
+              </span>
+            </a>
+
+            {booking.selectedService && (
+              <span
+                className={`inline-flex items-center gap-2 text-xs font-bold rounded-full px-3 py-1 border ${serviceBadgeClasses(
+                  booking.selectedService
+                )}`}
+                aria-label="الخدمة"
+              >
+                <FaCut className="opacity-80" />
+                {serviceLabel(booking.selectedService)}
+              </span>
+            )}
+          </div>
+
+          <div className="mt-2 text-[11px] text-gray-500">
+            تم الحجز: {formatDateTime(booking.createdAt)}
+          </div>
+
+          <div className="mt-3 flex flex-col sm:flex-row gap-2">
+            <button
+              type="button"
+              onClick={onCancel}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 text-sm font-bold px-4 py-2 rounded-xl border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-200"
+              aria-label="إلغاء الحجز"
+            >
+              <FaTimesCircle />
+              إلغاء
+            </button>
+
+            <button
+              type="button"
+              onClick={onToggleExpanded}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 text-sm font-bold px-4 py-2 rounded-xl border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100"
+            >
+              إغلاق
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // ✅ Compact collapsed: سطر واحد (اسم + وقت)
+    return (
+      <div
+        className={`rounded-2xl border bg-white shadow-sm ${
+          isNext
+            ? "border-emerald-300 ring-1 ring-emerald-100"
+            : "border-gray-200"
+        }`}
+      >
+        <button
+          type="button"
+          onClick={onToggleExpanded}
+          className="w-full text-right px-3 py-3 flex items-center justify-between gap-3"
+          aria-label="فتح تفاصيل الحجز"
+          title="فتح/إغلاق"
+        >
+          <div className="min-w-0 flex items-center gap-2">
+            {isNext && (
+              <span className="text-[11px] font-extrabold px-2 py-0.5 rounded-full border bg-emerald-50 text-emerald-800 border-emerald-200 shrink-0">
+                التالي
+              </span>
+            )}
+
+            <span className="text-sm sm:text-base font-black text-gray-900 truncate">
+              {name}
+            </span>
+          </div>
+
+          <div className="shrink-0 flex items-center gap-2">
+            <span
+              className={`inline-flex items-center gap-2 text-xs font-extrabold rounded-full px-3 py-1 border ${timePill}`}
+            >
+              <FaClock className="opacity-90" />
+              {booking.selectedTime}
+            </span>
+
+            <span className="text-[11px] text-gray-400">فتح</span>
+          </div>
+        </button>
+      </div>
+    );
+  }
+
+  // =========================
+  // ✅ COMFORT MODE
+  // =========================
+  return (
+    <div
+      className={`rounded-2xl bg-white border shadow-sm p-3 sm:p-4 ${
+        isNext
+          ? "border-emerald-300 ring-1 ring-emerald-100"
+          : "border-gray-200"
+      }`}
+    >
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+        <div className="space-y-2 flex-1 min-w-0">
+          {/* ✅ الاسم كامل (بدون 3 نقاط) */}
+          <div className="flex items-start justify-between gap-3">
+            <h3 className="text-lg sm:text-xl font-black text-gray-900 leading-tight break-words">
+              {name}
+            </h3>
+
+            <div className="shrink-0 flex items-center gap-2">
+              {isNext && (
+                <span className="text-[11px] font-extrabold px-3 py-1 rounded-full border bg-emerald-50 text-emerald-800 border-emerald-200">
+                  التالي
+                </span>
+              )}
+              <span
+                className={`inline-flex items-center gap-2 text-xs font-extrabold rounded-full px-3 py-1 border ${timePill}`}
+              >
+                <FaClock className="opacity-90" />
+                {booking.selectedTime}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <a
+              href={`tel:${booking.phoneNumber}`}
+              className="inline-flex items-center gap-2 text-sm font-extrabold px-4 py-2 rounded-xl border border-blue-200 bg-blue-50 text-blue-800 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-200"
+              aria-label={`اتصال بالزبون ${name}`}
+              title="اتصال"
+            >
+              <FaPhone className="opacity-80" />
+              اتصال
+              <span className="font-semibold opacity-90">
+                {e164ToLocalPretty(booking.phoneNumber)}
+              </span>
+            </a>
+
+            <span
+              className={`inline-flex items-center gap-2 text-xs font-bold rounded-full px-3 py-1 border ${serviceBadgeClasses(
+                booking.selectedService
+              )}`}
+              aria-label="الخدمة"
+            >
+              <FaCut className="opacity-80" />
+              {serviceLabel(booking.selectedService)}
+            </span>
+          </div>
+
+          <div className="text-[11px] text-gray-500">
+            تم الحجز: {formatDateTime(booking.createdAt)}
+          </div>
+        </div>
+
+        <div className="sm:pt-0">
+          <button
+            onClick={onCancel}
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 text-sm font-bold px-4 py-2 rounded-xl border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-200"
+            aria-label="إلغاء الحجز"
+          >
+            <FaTimesCircle />
+            إلغاء
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+</file>
+
+<file path="src/pages/adminBookings/DayGroup.jsx">
+// src/pages/adminBookings/DayGroup.jsx
+import BookingCard from "./BookingCard";
+import { formatDateArabic, getDateLabel } from "./helpers";
+
+export default function DayGroup({
+  date,
+  bookings,
+  nextId,
+  compactMode,
+  expandedIds,
+  toggleExpanded,
+  onCancel,
+}) {
+  const label = getDateLabel(date);
+
+  // ✅ عدّل الرقم إذا الهيدر عندك أعلى/أقل بالموبايل
+  const HEADER_OFFSET_PX = 80;
+
+  const accent =
+    label === "اليوم"
+      ? "bg-emerald-500"
+      : label === "بكرا"
+      ? "bg-sky-500"
+      : "bg-indigo-500";
+
+  const badge =
+    label === "اليوم"
+      ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+      : label === "بكرا"
+      ? "bg-sky-50 text-sky-800 border-sky-200"
+      : "bg-slate-50 text-slate-800 border-slate-200";
+
+  return (
+    <div className="rounded-2xl bg-gray-50 border border-gray-200">
+      {/* ✅ Header واحد: واضح كبداية يوم + Sticky أثناء السكرول */}
+      <div
+        className="sticky px-3 pt-3 z-10"
+        style={{ top: `${HEADER_OFFSET_PX}px` }}
+      >
+        <div className="rounded-2xl bg-white border border-gray-200 shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between px-3 py-2">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className={`w-2 h-10 rounded-full ${accent}`} />
+
+              <div className="min-w-0 leading-tight">
+                <div className="text-sm sm:text-base font-extrabold text-gray-900 truncate">
+                  {formatDateArabic(date)}
+                </div>
+
+                {/* ✅ واضح كبداية يوم */}
+                <div className="text-[11px] text-gray-500 mt-0.5">
+                  {bookings.length} حجوزات
+                </div>
+              </div>
+
+              {label ? (
+                <span
+                  className={`shrink-0 text-[11px] font-bold rounded-full px-3 py-1 border ${badge}`}
+                >
+                  {label}
+                </span>
+              ) : null}
+            </div>
+
+            {/* ✅ شريط جانبي قوي للتمييز أثناء السكرول */}
+            <div className={`w-1.5 h-10 rounded-full ${accent}`} />
+          </div>
+        </div>
+      </div>
+
+      {/* List */}
+      <div className="p-3 space-y-3 pt-3">
+        {bookings.map((b) => {
+          const isNext = b.id === nextId;
+          const expanded = Boolean(expandedIds[b.id]);
+
+          return (
+            <BookingCard
+              key={b.id}
+              booking={b}
+              isNext={isNext}
+              compactMode={compactMode}
+              expanded={expanded}
+              onToggleExpanded={() => toggleExpanded(b.id)}
+              onCancel={() => onCancel(b)}
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+</file>
+
+<file path="src/pages/adminBookings/helpers.js">
+// src/pages/adminBookings/helpers.js
+export function formatDateArabic(dateStr) {
+  const d = new Date(dateStr);
+  return `${String(d.getDate()).padStart(2, "0")}/${String(
+    d.getMonth() + 1
+  ).padStart(2, "0")}/${d.getFullYear()}`;
+}
+
+export function formatDateTime(value) {
+  const d =
+    typeof value === "string" ? new Date(value) : value?.toDate?.() ?? value;
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yyyy = d.getFullYear();
+  const hh = String(d.getHours()).padStart(2, "0");
+  const min = String(d.getMinutes()).padStart(2, "0");
+  return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
+}
+
+export function getDateLabel(dateStr) {
+  const today = new Date().toISOString().slice(0, 10);
+  const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+  if (dateStr === today) return "اليوم";
+  if (dateStr === tomorrow) return "بكرا";
+  return "";
+}
+
+export function serviceLabel(key) {
+  return key === "haircut"
+    ? "قص شعر"
+    : key === "beard"
+    ? "تعليم لحية"
+    : "قص + لحية";
+}
+
+export function serviceBadgeClasses(key) {
+  if (key === "haircut") return "bg-blue-50 text-blue-700 border-blue-200";
+  if (key === "beard") return "bg-purple-50 text-purple-700 border-purple-200";
+  return "bg-amber-50 text-amber-800 border-amber-200";
+}
+
+export function safeLower(v) {
+  return (v ?? "").toString().toLowerCase();
+}
+
+export function dayBadgeClasses(label) {
+  if (label === "اليوم")
+    return "bg-emerald-50 text-emerald-700 border-emerald-200";
+  if (label === "بكرا") return "bg-sky-50 text-sky-700 border-sky-200";
+  return "bg-gray-50 text-gray-700 border-gray-200";
+}
+</file>
+
+<file path="src/pages/adminBookings/PastSection.jsx">
+// src/pages/adminBookings/PastSection.jsx
+import { useState } from "react";
+import {
+  FaCalendarAlt,
+  FaClock,
+  FaPhone,
+  FaTrash,
+  FaUndo,
+  FaChevronDown,
+  FaChevronUp,
+} from "react-icons/fa";
+import { e164ToLocalPretty } from "../../utils/phone";
+import {
+  formatDateArabic,
+  formatDateTime,
+  serviceBadgeClasses,
+  serviceLabel,
+} from "./helpers";
+
+export default function PastSection({
+  showPast,
+  setShowPast,
+  filteredPast,
+  onRestore,
+  onDelete,
+  compactMode,
+}) {
+  const [expandedPastIds, setExpandedPastIds] = useState({});
+
+  const togglePastExpanded = (id) => {
+    setExpandedPastIds((p) => ({ ...p, [id]: !p[id] }));
+  };
+
+  const timePillClasses =
+    "inline-flex items-center gap-2 text-xs font-extrabold rounded-full px-3 py-1 border " +
+    "bg-indigo-600 text-white border-indigo-600";
+
+  return (
+    <div className="rounded-2xl border border-amber-200 bg-amber-50/60 p-3 sm:p-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <h2 className="text-base sm:text-lg font-extrabold text-amber-900">
+            🕘 السجل (منتهية / ملغية)
+          </h2>
+          <span className="text-[11px] font-bold bg-white text-amber-900 border border-amber-200 rounded-full px-3 py-1">
+            {filteredPast.length}
+          </span>
+        </div>
+
+        <button
+          onClick={() => setShowPast((s) => !s)}
+          className="text-sm font-extrabold text-amber-900 hover:text-amber-950"
+          aria-label="عرض أو إخفاء السجل"
+        >
+          {showPast ? "إخفاء السجل" : `عرض السجل (${filteredPast.length})`}
+        </button>
+      </div>
+
+      {!showPast ? (
+        <div className="mt-3 text-xs text-amber-800/70">
+          السجل مطوي لتسهيل الشغل. افتحه عند الحاجة.
+        </div>
+      ) : filteredPast.length === 0 ? (
+        <div className="rounded-xl bg-white border border-amber-200 p-6 text-center mt-3">
+          <p className="text-amber-950 font-extrabold">لا يوجد سجل.</p>
+          <p className="text-xs text-amber-800/70 mt-1">
+            الإلغاءات والمنتهية ستظهر هنا.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3 mt-3">
+          {filteredPast.map((b) => {
+            const name = b.fullName || "بدون اسم";
+            const expanded = Boolean(expandedPastIds[b.id]);
+
+            // ✅ مضغوط للسجل
+            if (compactMode) {
+              return (
+                <div
+                  key={b.id}
+                  className="rounded-2xl bg-white border border-amber-200 shadow-sm"
+                >
+                  <button
+                    type="button"
+                    onClick={() => togglePastExpanded(b.id)}
+                    className="w-full text-right px-3 py-3 flex items-center justify-between gap-3"
+                    aria-label="فتح تفاصيل السجل"
+                  >
+                    <span className="text-sm sm:text-base font-black text-gray-900 truncate">
+                      {name}
+                    </span>
+
+                    <div className="shrink-0 flex items-center gap-2">
+                      <span className={timePillClasses}>
+                        <FaClock className="opacity-90" />
+                        {b.selectedTime}
+                      </span>
+
+                      <span className="text-[11px] text-amber-900 inline-flex items-center gap-1">
+                        {expanded ? <FaChevronUp /> : <FaChevronDown />}
+                        {expanded ? "إغلاق" : "تفاصيل"}
+                      </span>
+                    </div>
+                  </button>
+
+                  {expanded && (
+                    <div className="px-3 pb-3">
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
+                        <a
+                          href={`tel:${b.phoneNumber}`}
+                          className="inline-flex items-center gap-2 text-sm font-extrabold px-4 py-2 rounded-xl border border-blue-200 bg-blue-50 text-blue-800 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                          title="اتصال"
+                        >
+                          <FaPhone className="opacity-80" />
+                          اتصال
+                          <span className="font-semibold opacity-90">
+                            {e164ToLocalPretty(b.phoneNumber)}
+                          </span>
+                        </a>
+
+                        {b.selectedService && (
+                          <span
+                            className={`inline-flex items-center gap-2 text-xs font-bold rounded-full px-3 py-1 border ${serviceBadgeClasses(
+                              b.selectedService
+                            )}`}
+                          >
+                            {serviceLabel(b.selectedService)}
+                          </span>
+                        )}
+
+                        <span className="inline-flex items-center gap-2 text-sm text-gray-700">
+                          <FaCalendarAlt className="text-gray-400" />
+                          {formatDateArabic(b.selectedDate)}
+                        </span>
+                      </div>
+
+                      {b.cancelledAt && (
+                        <div className="text-[11px] font-semibold text-red-700 bg-red-50 border border-red-200 rounded-xl px-3 py-2 inline-block mb-3">
+                          🚫 تم الإلغاء: {formatDateTime(b.cancelledAt)}
+                        </div>
+                      )}
+
+                      <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-end">
+                        {b.cancelledAt && (
+                          <button
+                            onClick={() => onRestore(b)}
+                            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 text-sm font-bold px-4 py-2 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+                            aria-label="استرجاع الحجز"
+                          >
+                            <FaUndo />
+                            استرجاع
+                          </button>
+                        )}
+
+                        <button
+                          onClick={() => onDelete(b)}
+                          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 text-sm font-bold px-4 py-2 rounded-xl border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-200"
+                          aria-label="حذف نهائي"
+                        >
+                          <FaTrash />
+                          حذف نهائي
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
+            // ✅ مريح للسجل (زي قبل بس مع لون القسم)
+            return (
+              <div
+                key={b.id}
+                className="rounded-2xl bg-white border border-amber-200 shadow-sm p-3 sm:p-4"
+              >
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                  <div className="space-y-2 flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-3">
+                      <h3 className="text-lg sm:text-xl font-black text-gray-900 leading-snug whitespace-normal break-words">
+                        {name}
+                      </h3>
+
+                      <span className={timePillClasses}>
+                        <FaClock className="opacity-90" />
+                        {b.selectedTime}
+                      </span>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <a
+                        href={`tel:${b.phoneNumber}`}
+                        className="inline-flex items-center gap-2 text-sm font-extrabold px-4 py-2 rounded-xl border border-blue-200 bg-blue-50 text-blue-800 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                        title="اتصال"
+                      >
+                        <FaPhone className="opacity-80" />
+                        اتصال
+                        <span className="font-semibold opacity-90">
+                          {e164ToLocalPretty(b.phoneNumber)}
+                        </span>
+                      </a>
+
+                      {b.selectedService && (
+                        <span
+                          className={`inline-flex items-center gap-2 text-xs font-bold rounded-full px-3 py-1 border ${serviceBadgeClasses(
+                            b.selectedService
+                          )}`}
+                        >
+                          {serviceLabel(b.selectedService)}
+                        </span>
+                      )}
+
+                      <span className="inline-flex items-center gap-2 text-sm text-gray-700">
+                        <FaCalendarAlt className="text-gray-400" />
+                        {formatDateArabic(b.selectedDate)}
+                      </span>
+                    </div>
+
+                    {b.cancelledAt && (
+                      <div className="text-[11px] font-semibold text-red-700 bg-red-50 border border-red-200 rounded-xl px-3 py-2 inline-block">
+                        🚫 تم الإلغاء: {formatDateTime(b.cancelledAt)}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex flex-col gap-2 sm:items-end">
+                    {b.cancelledAt && (
+                      <button
+                        onClick={() => onRestore(b)}
+                        className="w-full sm:w-auto inline-flex items-center justify-center gap-2 text-sm font-bold px-4 py-2 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+                        aria-label="استرجاع الحجز"
+                      >
+                        <FaUndo />
+                        استرجاع
+                      </button>
+                    )}
+
+                    <button
+                      onClick={() => onDelete(b)}
+                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 text-sm font-bold px-4 py-2 rounded-xl border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-200"
+                      aria-label="حذف نهائي"
+                    >
+                      <FaTrash />
+                      حذف نهائي
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+</file>
+
+<file path="src/pages/adminBookings/Toolbar.jsx">
+// src/pages/adminBookings/Toolbar.jsx
+import { useState } from "react";
+import {
+  FaSearch,
+  FaFilter,
+  FaTimes,
+  FaChevronDown,
+  FaChevronUp,
+} from "react-icons/fa";
+
+export default function Toolbar({
+  searchTerm,
+  setSearchTerm,
+  serviceFilter,
+  setServiceFilter,
+  sortMode,
+  setSortMode,
+  compactMode,
+  setCompactMode,
+}) {
+  // ✅ افتراضيًا مغلق (حسب طلبك)
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="rounded-2xl border border-gray-200 bg-white shadow-sm">
+      {/* ✅ Bar صغير (بنفس روح ارتفاع الدور المضغوط) */}
+      <div className="px-3 py-3 flex items-center justify-between gap-3">
+        <button
+          type="button"
+          onClick={() => setOpen((s) => !s)}
+          className="inline-flex items-center gap-2 text-sm font-extrabold text-gray-900"
+          aria-label="فتح/إغلاق أدوات البحث"
+        >
+          {open ? (
+            <FaChevronUp className="opacity-70" />
+          ) : (
+            <FaChevronDown className="opacity-70" />
+          )}
+          أدوات البحث
+          {searchTerm.trim() ||
+          serviceFilter !== "all" ||
+          sortMode !== "soonest" ? (
+            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-900">
+              مفعّل
+            </span>
+          ) : null}
+        </button>
+
+        {/* Compact toggle (يبقى ظاهر دائمًا) */}
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] font-bold text-gray-600">مضغوط</span>
+          <button
+            type="button"
+            onClick={() => setCompactMode((s) => !s)}
+            aria-label="تبديل العرض المضغوط"
+            title="تبديل العرض"
+          >
+            <div
+              className={`relative w-14 h-7 rounded-full transition-colors flex items-center ${
+                compactMode ? "bg-emerald-500" : "bg-gray-300"
+              }`}
+            >
+              <div
+                className={`absolute top-0.5 left-0.5 w-6 h-6 rounded-full bg-white shadow-md transition-transform ${
+                  compactMode ? "translate-x-7" : "translate-x-0"
+                }`}
+              />
+            </div>
+          </button>
+        </div>
+      </div>
+
+      {/* ✅ المحتوى القابل للفتح */}
+      {open && (
+        <div className="border-t border-gray-200 bg-gray-50 p-3 rounded-b-2xl">
+          <div className="flex flex-col gap-3">
+            {/* Search */}
+            <div>
+              <label className="text-[11px] text-gray-500 flex items-center gap-2 mb-1">
+                <FaSearch className="opacity-70" />
+                بحث سريع (اسم / هاتف)
+              </label>
+
+              <div className="relative">
+                <input
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="اكتب اسم الزبون أو رقم الهاتف..."
+                  className="w-full rounded-xl border border-gray-200 px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-gray-200 bg-white"
+                  aria-label="بحث بالاسم أو رقم الهاتف"
+                />
+
+                {searchTerm.trim() && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchTerm("")}
+                    className="absolute left-2 top-1/2 -translate-y-1/2 rounded-lg px-2 py-1 text-gray-500 hover:text-gray-900 hover:bg-gray-100"
+                    aria-label="مسح البحث"
+                    title="مسح"
+                  >
+                    <FaTimes />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Filters */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-[11px] text-gray-500 flex items-center gap-2 mb-1">
+                  <FaFilter className="opacity-70" />
+                  الخدمة
+                </label>
+                <select
+                  value={serviceFilter}
+                  onChange={(e) => setServiceFilter(e.target.value)}
+                  className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-gray-200"
+                  aria-label="فلترة حسب الخدمة"
+                >
+                  <option value="all">الكل</option>
+                  <option value="haircut">قص شعر</option>
+                  <option value="beard">تعليم لحية</option>
+                  <option value="both">قص + لحية</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-[11px] text-gray-500 mb-1 block">
+                  الترتيب
+                </label>
+                <select
+                  value={sortMode}
+                  onChange={(e) => setSortMode(e.target.value)}
+                  className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-gray-200"
+                  aria-label="ترتيب الحجوزات"
+                >
+                  <option value="soonest">أقرب موعد</option>
+                  <option value="newest">أحدث حجز</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Quick reset */}
+            {(searchTerm.trim() ||
+              serviceFilter !== "all" ||
+              sortMode !== "soonest") && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchTerm("");
+                  setServiceFilter("all");
+                  setSortMode("soonest");
+                }}
+                className="w-full rounded-xl border border-gray-200 bg-white hover:bg-gray-100 text-sm font-bold py-2"
+              >
+                تصفير الأدوات
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+</file>
+
+<file path="src/pages/adminBookings/useAdminBookingsData.js">
+// src/pages/adminBookings/useAdminBookingsData.js
+import { useEffect, useMemo, useState } from "react";
+import { db } from "../../firebase";
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  doc,
+  updateDoc,
+  deleteDoc,
+  deleteField,
+} from "firebase/firestore";
+
+export function useAdminBookingsData() {
+  const [upcoming, setUpcoming] = useState([]);
+  const [recentPast, setRecentPast] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState(null);
+
+  useEffect(() => {
+    let alive = true;
+
+    async function fetchAndClassify() {
+      try {
+        const now = new Date();
+        const snap = await getDocs(query(collection(db, "bookings")));
+
+        const up = [];
+        const past = [];
+
+        for (const d of snap.docs) {
+          const data = d.data();
+          const when = new Date(`${data.selectedDate}T${data.selectedTime}:00`);
+          const diffH = (now - when) / (1000 * 60 * 60);
+
+          // نفس منطقك: بعد 2 ساعات من الموعد => حذف نهائي
+          if (diffH > 2) {
+            await deleteDoc(doc(db, "bookings", d.id));
+            continue;
+          }
+
+          if (data.cancelledAt || diffH >= 0) {
+            past.push({ id: d.id, ...data });
+          } else {
+            up.push({ id: d.id, ...data });
+          }
+        }
+
+        up.sort((a, b) => {
+          const da = new Date(`${a.selectedDate}T${a.selectedTime}:00`);
+          const dbb = new Date(`${b.selectedDate}T${b.selectedTime}:00`);
+          return da - dbb;
+        });
+
+        if (!alive) return;
+        setUpcoming(up);
+        setRecentPast(past);
+        setLoading(false);
+        setLastUpdated(new Date());
+      } catch (e) {
+        console.error("fetchAndClassify error:", e);
+        if (!alive) return;
+        setLoading(false);
+      }
+    }
+
+    fetchAndClassify();
+    const interval = setInterval(() => fetchAndClassify(), 60000);
+
+    return () => {
+      alive = false;
+      clearInterval(interval);
+    };
+  }, []);
+
+  const actions = useMemo(() => {
+    return {
+      async cancelBooking(b) {
+        const cancelledAt = new Date().toISOString();
+        await updateDoc(doc(db, "bookings", b.id), { cancelledAt });
+        setUpcoming((u) => u.filter((x) => x.id !== b.id));
+        setRecentPast((p) => [{ ...b, cancelledAt }, ...p]);
+      },
+
+      async restoreBooking(b, upcomingList) {
+        // 1) لا تسترجع إذا في upcoming بنفس الموعد
+        if (
+          upcomingList.some(
+            (x) =>
+              x.selectedDate === b.selectedDate &&
+              x.selectedTime === b.selectedTime
+          )
+        ) {
+          alert("لا يمكن استرجاع هذا الحجز؛ الموعد محجوز حالياً.");
+          return;
+        }
+
+        // 2) تحقق من فايرستور: أي حجز غير ملغي على نفس الموعد؟
+        const conflictQ = query(
+          collection(db, "bookings"),
+          where("selectedDate", "==", b.selectedDate),
+          where("selectedTime", "==", b.selectedTime)
+        );
+        const conflictSnap = await getDocs(conflictQ);
+        const activeConflicts = conflictSnap.docs
+          .map((d) => d.data())
+          .filter((data) => !data.cancelledAt);
+
+        if (activeConflicts.length > 0) {
+          alert("لا يمكن استرجاع هذا الحجز؛ تم حجز هذا الموعد من قبل.");
+          return;
+        }
+
+        // UI optimistic
+        setRecentPast((p) => p.filter((x) => x.id !== b.id));
+        setUpcoming((u) =>
+          [...u, b].sort((a, c) => {
+            const da = new Date(`${a.selectedDate}T${a.selectedTime}:00`);
+            const dc = new Date(`${c.selectedDate}T${c.selectedTime}:00`);
+            return da - dc;
+          })
+        );
+
+        await updateDoc(doc(db, "bookings", b.id), {
+          cancelledAt: deleteField(),
+        });
+
+        // مثل كودك السابق (حتى لو مو ضروري): نخليه عشان ما نغيّر سلوك
+        window.location.reload();
+      },
+
+      async deleteBookingForever(b) {
+        const ok = window.confirm("متأكد بدك حذف نهائي؟ (ما بنقدر نرجّعه)");
+        if (!ok) return;
+        await deleteDoc(doc(db, "bookings", b.id));
+        setRecentPast((p) => p.filter((x) => x.id !== b.id));
+      },
+    };
+  }, []);
+
+  return {
+    upcoming,
+    recentPast,
+    loading,
+    lastUpdated,
+    actions,
+  };
 }
 </file>
 
@@ -5519,715 +6733,6 @@ function InfoRow({ label, value, icon }) {
 export default BookingTracker;
 </file>
 
-<file path="src/pages/AdminBookings.jsx">
-import { useEffect, useMemo, useState } from "react";
-import { db } from "../firebase";
-import {
-  collection,
-  query,
-  where,
-  getDocs,
-  doc,
-  updateDoc,
-  deleteDoc,
-  deleteField,
-} from "firebase/firestore";
-import { useNavigate } from "react-router-dom";
-import {
-  FaUser,
-  FaPhone,
-  FaCalendarAlt,
-  FaClock,
-  FaCut,
-  FaSearch,
-  FaFilter,
-  FaSyncAlt,
-  FaTrash,
-  FaUndo,
-  FaTimesCircle,
-  FaTimes,
-} from "react-icons/fa";
-import { e164ToLocalPretty } from "../utils/phone";
-
-function formatDateArabic(dateStr) {
-  const d = new Date(dateStr);
-  return `${String(d.getDate()).padStart(2, "0")}/${String(
-    d.getMonth() + 1
-  ).padStart(2, "0")}/${d.getFullYear()}`;
-}
-
-function formatDateTime(value) {
-  const d = typeof value === "string" ? new Date(value) : value.toDate();
-  const dd = String(d.getDate()).padStart(2, "0");
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const yyyy = d.getFullYear();
-  const hh = String(d.getHours()).padStart(2, "0");
-  const min = String(d.getMinutes()).padStart(2, "0");
-  return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
-}
-
-function getDateLabel(dateStr) {
-  const today = new Date().toISOString().slice(0, 10);
-  const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
-  if (dateStr === today) return "اليوم";
-  if (dateStr === tomorrow) return "بكرا";
-  return "";
-}
-
-function serviceLabel(key) {
-  return key === "haircut"
-    ? "قص شعر"
-    : key === "beard"
-    ? "تعليم لحية"
-    : "قص + لحية";
-}
-
-function serviceBadgeClasses(key) {
-  // هادي/احترافي
-  if (key === "haircut") return "bg-blue-50 text-blue-700 border-blue-200";
-  if (key === "beard") return "bg-purple-50 text-purple-700 border-purple-200";
-  return "bg-amber-50 text-amber-800 border-amber-200";
-}
-
-function safeLower(v) {
-  return (v ?? "").toString().toLowerCase();
-}
-
-// شارة اليوم/بكرا بشكل محترم
-function dayBadgeClasses(label) {
-  if (label === "اليوم")
-    return "bg-emerald-50 text-emerald-700 border-emerald-200";
-  if (label === "بكرا") return "bg-sky-50 text-sky-700 border-sky-200";
-  return "bg-gray-50 text-gray-700 border-gray-200";
-}
-
-export default function AdminBookings() {
-  const navigate = useNavigate();
-  const [upcoming, setUpcoming] = useState([]);
-  const [recentPast, setRecentPast] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  // UI (عرض فقط)
-  const [searchTerm, setSearchTerm] = useState("");
-  const [serviceFilter, setServiceFilter] = useState("all"); // all | haircut | beard | both
-  const [sortMode, setSortMode] = useState("soonest"); // soonest | newest
-  const [lastUpdated, setLastUpdated] = useState(null);
-
-  // السجل مطوي افتراضيًا
-  const [showPast, setShowPast] = useState(true);
-
-  useEffect(() => {
-    async function fetchAndClassify() {
-      const now = new Date();
-      const snap = await getDocs(query(collection(db, "bookings")));
-
-      const up = [];
-      const past = [];
-
-      for (const d of snap.docs) {
-        const data = d.data();
-        const when = new Date(`${data.selectedDate}T${data.selectedTime}:00`);
-        const diffH = (now - when) / (1000 * 60 * 60);
-
-        if (diffH > 2) {
-          await deleteDoc(doc(db, "bookings", d.id));
-          continue;
-        }
-
-        if (data.cancelledAt || diffH >= 0) {
-          past.push({ id: d.id, ...data });
-        } else {
-          up.push({ id: d.id, ...data });
-        }
-      }
-
-      up.sort((a, b) => {
-        const da = new Date(`${a.selectedDate}T${a.selectedTime}:00`);
-        const dbb = new Date(`${b.selectedDate}T${b.selectedTime}:00`);
-        return da - dbb;
-      });
-
-      setUpcoming(up);
-      setRecentPast(past);
-      setLoading(false);
-      setLastUpdated(new Date());
-    }
-
-    fetchAndClassify();
-    const interval = setInterval(() => fetchAndClassify(), 60000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const handleCancel = async (b) => {
-    const cancelledAt = new Date().toISOString();
-    await updateDoc(doc(db, "bookings", b.id), { cancelledAt });
-    setUpcoming((u) => u.filter((x) => x.id !== b.id));
-    setRecentPast((p) => [{ ...b, cancelledAt }, ...p]);
-  };
-
-  const handleRestore = async (b) => {
-    if (
-      upcoming.some(
-        (x) =>
-          x.selectedDate === b.selectedDate && x.selectedTime === b.selectedTime
-      )
-    ) {
-      alert("لا يمكن استرجاع هذا الحجز؛ الموعد محجوز حالياً.");
-      return;
-    }
-
-    const conflictQ = query(
-      collection(db, "bookings"),
-      where("selectedDate", "==", b.selectedDate),
-      where("selectedTime", "==", b.selectedTime)
-    );
-    const conflictSnap = await getDocs(conflictQ);
-    const activeConflicts = conflictSnap.docs
-      .map((d) => d.data())
-      .filter((data) => !data.cancelledAt);
-
-    if (activeConflicts.length > 0) {
-      alert("لا يمكن استرجاع هذا الحجز؛ تم حجز هذا الموعد من قبل.");
-      return;
-    }
-
-    setRecentPast((p) => p.filter((x) => x.id !== b.id));
-    setUpcoming((u) =>
-      [...u, b].sort((a, c) => {
-        const da = new Date(`${a.selectedDate}T${a.selectedTime}:00`);
-        const dc = new Date(`${c.selectedDate}T${c.selectedTime}:00`);
-        return da - dc;
-      })
-    );
-
-    await updateDoc(doc(db, "bookings", b.id), { cancelledAt: deleteField() });
-    window.location.reload();
-  };
-
-  const handleDelete = async (b) => {
-    const ok = window.confirm("متأكد بدك حذف نهائي؟ (ما بنقدر نرجّعه)");
-    if (!ok) return;
-    await deleteDoc(doc(db, "bookings", b.id));
-    setRecentPast((p) => p.filter((x) => x.id !== b.id));
-  };
-
-  // فلترة/ترتيب للعرض فقط
-  const filteredUpcoming = useMemo(() => {
-    const term = safeLower(searchTerm).trim();
-    let list = [...upcoming];
-
-    if (serviceFilter !== "all") {
-      list = list.filter((b) => b.selectedService === serviceFilter);
-    }
-
-    if (term) {
-      list = list.filter((b) => {
-        const name = safeLower(b.fullName);
-        const phonePretty = safeLower(e164ToLocalPretty(b.phoneNumber));
-        const phoneRaw = safeLower(b.phoneNumber);
-        return (
-          name.includes(term) ||
-          phonePretty.includes(term) ||
-          phoneRaw.includes(term)
-        );
-      });
-    }
-
-    if (sortMode === "newest") {
-      list.sort((a, b) => {
-        const da =
-          typeof a.createdAt === "string"
-            ? new Date(a.createdAt)
-            : a.createdAt?.toDate?.() ?? new Date(0);
-        const dbb =
-          typeof b.createdAt === "string"
-            ? new Date(b.createdAt)
-            : b.createdAt?.toDate?.() ?? new Date(0);
-        return dbb - da;
-      });
-    } else {
-      list.sort((a, b) => {
-        const da = new Date(`${a.selectedDate}T${a.selectedTime}:00`);
-        const dbb = new Date(`${b.selectedDate}T${b.selectedTime}:00`);
-        return da - dbb;
-      });
-    }
-
-    return list;
-  }, [upcoming, searchTerm, serviceFilter, sortMode]);
-
-  const filteredPast = useMemo(() => {
-    const term = safeLower(searchTerm).trim();
-    let list = [...recentPast];
-
-    if (serviceFilter !== "all") {
-      list = list.filter(
-        (b) => (b.selectedService ?? "both") === serviceFilter
-      );
-    }
-
-    if (term) {
-      list = list.filter((b) => {
-        const name = safeLower(b.fullName);
-        const phonePretty = safeLower(e164ToLocalPretty(b.phoneNumber));
-        const phoneRaw = safeLower(b.phoneNumber);
-        return (
-          name.includes(term) ||
-          phonePretty.includes(term) ||
-          phoneRaw.includes(term)
-        );
-      });
-    }
-
-    list.sort((a, b) => {
-      const da = b.cancelledAt
-        ? new Date(b.cancelledAt)
-        : new Date(`${b.selectedDate}T${b.selectedTime}:00`);
-      const dbb = a.cancelledAt
-        ? new Date(a.cancelledAt)
-        : new Date(`${a.selectedDate}T${a.selectedTime}:00`);
-      return da - dbb;
-    });
-
-    return list;
-  }, [recentPast, searchTerm, serviceFilter]);
-
-  const upcomingByDate = useMemo(() => {
-    return Object.entries(
-      filteredUpcoming.reduce((acc, b) => {
-        (acc[b.selectedDate] = acc[b.selectedDate] || []).push(b);
-        return acc;
-      }, {})
-    ).sort(([a], [b]) => a.localeCompare(b));
-  }, [filteredUpcoming]);
-
-  // “التالي” لأول عنصر (بعد الفلترة والترتيب)
-  const nextId = filteredUpcoming[0]?.id ?? null;
-
-
-  return (
-    <section className="min-h-screen bg-gray-100 pt-24 p-4 font-body" dir="rtl">
-      <div className="max-w-5xl mx-auto bg-white rounded-2xl shadow-xl p-4 sm:p-6 space-y-4">
-        {/* Compact Top Bar */}
-        <div className="flex items-center justify-between gap-3">
-          <button
-            onClick={() => navigate(-1)}
-            className="text-blue-700 hover:text-blue-900 text-sm font-semibold"
-          >
-            ← الرجوع
-          </button>
-
-          <div className="flex-1">
-            <div className="flex items-center justify-center gap-2 flex-wrap">
-              <h1 className="text-lg sm:text-xl font-extrabold text-gold">
-                لوحة الحجوزات
-              </h1>
-
-              <span className="text-[11px] font-bold px-3 py-1 rounded-full border bg-emerald-50 text-emerald-800 border-emerald-200">
-                القادمة: {filteredUpcoming.length}
-              </span>
-
-              <span className="text-[11px] font-bold px-3 py-1 rounded-full border bg-yellow-50 text-yellow-900 border-yellow-200">
-                السجل: {filteredPast.length}
-              </span>
-            </div>
-          </div>
-
-          <div className="hidden sm:flex items-center gap-2 text-[11px] text-gray-400">
-            <FaSyncAlt className="opacity-70" />
-            <span>
-              {lastUpdated
-                ? `آخر تحديث: ${String(lastUpdated.getHours()).padStart(
-                    2,
-                    "0"
-                  )}:${String(lastUpdated.getMinutes()).padStart(2, "0")}`
-                : "آخر تحديث: —"}
-            </span>
-          </div>
-        </div>
-        {/* Sticky Tools (ثابت فوق) */}
-        <div className="sticky top-0 z-50 -mx-4 sm:mx-0">
-          <div className="px-4 sm:px-0">
-            <div className="rounded-none sm:rounded-2xl border-b sm:border border-gray-200 bg-gray-50/95 backdrop-blur shadow-sm p-3">
-              <div className="flex flex-col gap-3">
-                {/* Search */}
-                <div>
-                  <label className="text-[11px] text-gray-500 flex items-center gap-2 mb-1">
-                    <FaSearch className="opacity-70" />
-                    بحث سريع (اسم / هاتف)
-                  </label>
-
-                  <div className="relative">
-                    <input
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      placeholder="اكتب اسم الزبون أو رقم الهاتف..."
-                      className="w-full rounded-xl border border-gray-200 px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-gray-200 bg-white"
-                      aria-label="بحث بالاسم أو رقم الهاتف"
-                    />
-
-                    {searchTerm.trim() && (
-                      <button
-                        type="button"
-                        onClick={() => setSearchTerm("")}
-                        className="absolute left-2 top-1/2 -translate-y-1/2 rounded-lg px-2 py-1 text-gray-500 hover:text-gray-900 hover:bg-gray-100"
-                        aria-label="مسح البحث"
-                        title="مسح"
-                      >
-                        <FaTimes />
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Filters - موبايل: صف واحد مرتب */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-[11px] text-gray-500 flex items-center gap-2 mb-1">
-                      <FaFilter className="opacity-70" />
-                      الخدمة
-                    </label>
-                    <select
-                      value={serviceFilter}
-                      onChange={(e) => setServiceFilter(e.target.value)}
-                      className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-gray-200"
-                      aria-label="فلترة حسب الخدمة"
-                    >
-                      <option value="all">الكل</option>
-                      <option value="haircut">قص شعر</option>
-                      <option value="beard">تعليم لحية</option>
-                      <option value="both">قص + لحية</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="text-[11px] text-gray-500 mb-1 block">
-                      الترتيب
-                    </label>
-                    <select
-                      value={sortMode}
-                      onChange={(e) => setSortMode(e.target.value)}
-                      className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-gray-200"
-                      aria-label="ترتيب الحجوزات"
-                    >
-                      <option value="soonest">أقرب موعد</option>
-                      <option value="newest">أحدث حجز</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {loading ? (
-          // (8) Skeleton بسيط بدل نص
-          <div className="space-y-3">
-            <div className="h-20 rounded-2xl bg-gray-100 border border-gray-200 animate-pulse" />
-            <div className="h-28 rounded-2xl bg-gray-100 border border-gray-200 animate-pulse" />
-            <div className="h-28 rounded-2xl bg-gray-100 border border-gray-200 animate-pulse" />
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {/* Upcoming */}
-            <div className="rounded-2xl border border-gray-200 bg-white p-3 sm:p-4">
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-base sm:text-lg font-extrabold text-gray-900">
-                  📆 الحجوزات القادمة
-                </h2>
-                <span className="text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full px-3 py-1">
-                  {filteredUpcoming.length} موعد
-                </span>
-              </div>
-
-              {/* (7) Empty state بسيط */}
-              {filteredUpcoming.length === 0 ? (
-                <div className="rounded-xl bg-gray-50 border border-gray-200 p-6 text-center">
-                  <p className="text-gray-900 font-extrabold">
-                    لا توجد حجوزات.
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    أي حجز جديد سيظهر هنا تلقائيًا.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {upcomingByDate.map(([date, bookings]) => {
-                    const label = getDateLabel(date);
-
-                    return (
-                      <div
-                        key={date}
-                        className="rounded-2xl bg-gray-50 border border-gray-200 p-3"
-                      >
-                        {/* Day header (professional) */}
-                        <div className="rounded-xl bg-white border border-gray-200 px-4 py-3 mb-3">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div
-                                className={`w-1.5 h-9 rounded-full ${
-                                  label === "اليوم"
-                                    ? "bg-emerald-500"
-                                    : label === "بكرا"
-                                    ? "bg-sky-500"
-                                    : "bg-gray-300"
-                                }`}
-                              />
-                              <div className="leading-tight">
-                                <div className="text-sm sm:text-base font-extrabold text-gray-900">
-                                  {formatDateArabic(date)}
-                                </div>
-                                <div className="text-[11px] text-gray-500 mt-0.5">
-                                  {bookings.length} حجوزات
-                                </div>
-                              </div>
-
-                              {label && (
-                                <span
-                                  className={`text-[11px] font-bold rounded-full px-3 py-1 border ${dayBadgeClasses(
-                                    label
-                                  )}`}
-                                >
-                                  {label}
-                                </span>
-                              )}
-                            </div>
-
-                            <div className="text-[11px] font-bold text-gray-600 bg-gray-100 border border-gray-200 rounded-lg px-3 py-1.5">
-                              {bookings.length}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Bookings list */}
-                        <div className="space-y-3">
-                          {bookings.map((b) => {
-                            const isNext = b.id === nextId;
-
-                            return (
-                              <div
-                                key={b.id}
-                                className={`rounded-2xl bg-white border shadow-sm p-3 sm:p-4 ${
-                                  isNext
-                                    ? "border-emerald-300 ring-1 ring-emerald-100"
-                                    : "border-gray-200"
-                                }`}
-                              >
-                                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                                  <div className="space-y-2 flex-1">
-                                    {/* Line 1: Name + time + NEXT badge */}
-                                    <div className="flex items-start justify-between gap-3">
-                                      <div className="flex items-start gap-2 min-w-0">
-                                        <FaUser className="text-gold mt-1 text-sm opacity-80 shrink-0" />
-                                        <h3 className="text-lg sm:text-xl font-black text-gray-900 leading-tight truncate">
-                                          {b.fullName}
-                                        </h3>
-                                      </div>
-
-                                      <div className="shrink-0 flex items-center gap-2">
-                                        {isNext && (
-                                          <span className="text-[11px] font-extrabold px-3 py-1 rounded-full border bg-emerald-50 text-emerald-800 border-emerald-200">
-                                            التالي
-                                          </span>
-                                        )}
-                                        <span className="inline-flex items-center gap-2 text-xs font-extrabold rounded-full px-3 py-1 border bg-gray-900 text-white border-gray-900">
-                                          <FaClock className="opacity-90" />
-                                          {b.selectedTime}
-                                        </span>
-                                      </div>
-                                    </div>
-
-                                    {/* Line 2: PHONE FIRST (اتصال + الرقم) */}
-                                    <div className="flex flex-wrap items-center gap-2">
-                                      <a
-                                        href={`tel:${b.phoneNumber}`}
-                                        className="inline-flex items-center gap-2 text-sm font-extrabold px-4 py-2 rounded-xl border border-blue-200 bg-blue-50 text-blue-800 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                                        aria-label={`اتصال بالزبون ${b.fullName}`}
-                                        title="اتصال"
-                                      >
-                                        <FaPhone className="opacity-80" />
-                                        اتصال
-                                        <span className="font-semibold opacity-90">
-                                          {e164ToLocalPretty(b.phoneNumber)}
-                                        </span>
-                                      </a>
-
-                                      {/* Service after phone (secondary) */}
-                                      <span
-                                        className={`inline-flex items-center gap-2 text-xs font-bold rounded-full px-3 py-1 border ${serviceBadgeClasses(
-                                          b.selectedService
-                                        )}`}
-                                        aria-label="الخدمة"
-                                      >
-                                        <FaCut className="opacity-80" />
-                                        {serviceLabel(b.selectedService)}
-                                      </span>
-                                    </div>
-
-                                    <div className="text-[11px] text-gray-500">
-                                      تم الحجز: {formatDateTime(b.createdAt)}
-                                    </div>
-                                  </div>
-
-                                  {/* Actions */}
-                                  <div className="sm:pt-0">
-                                    <button
-                                      onClick={() => handleCancel(b)}
-                                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 text-sm font-bold px-4 py-2 rounded-xl border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-200"
-                                      aria-label="إلغاء الحجز"
-                                    >
-                                      <FaTimesCircle />
-                                      إلغاء
-                                    </button>
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* Past (collapsed) */}
-            <div className="rounded-2xl border border-gray-200 bg-white p-3 sm:p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <h2 className="text-base sm:text-lg font-extrabold text-gray-900">
-                    🕘 السجل (منتهية / ملغية)
-                  </h2>
-                  <span className="text-[11px] font-bold bg-yellow-50 text-yellow-900 border border-yellow-200 rounded-full px-3 py-1">
-                    {filteredPast.length}
-                  </span>
-                </div>
-
-                <button
-                  onClick={() => setShowPast((s) => !s)}
-                  className="text-sm font-extrabold text-blue-700 hover:text-blue-900"
-                  aria-label="عرض أو إخفاء السجل"
-                >
-                  {showPast
-                    ? "إخفاء السجل"
-                    : `عرض السجل (${filteredPast.length})`}
-                </button>
-              </div>
-
-              {!showPast ? (
-                <div className="mt-3 text-xs text-gray-500">
-                  السجل مطوي لتسهيل الشغل. افتحه عند الحاجة.
-                </div>
-              ) : filteredPast.length === 0 ? (
-                <div className="rounded-xl bg-gray-50 border border-gray-200 p-6 text-center mt-3">
-                  <p className="text-gray-900 font-extrabold">لا يوجد سجل.</p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    الإلغاءات والمنتهية ستظهر هنا.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-3 mt-3">
-                  {filteredPast.map((b) => (
-                    <div
-                      key={b.id}
-                      className="rounded-2xl bg-white border border-gray-200 shadow-sm p-3 sm:p-4"
-                    >
-                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                        <div className="space-y-2 flex-1">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex items-start gap-2 min-w-0">
-                              <FaUser className="text-gold mt-1 text-sm opacity-80 shrink-0" />
-                              <h3 className="text-lg sm:text-xl font-black text-gray-900 leading-tight truncate">
-                                {b.fullName}
-                              </h3>
-                            </div>
-
-                            <span className="shrink-0 inline-flex items-center gap-2 text-xs font-extrabold rounded-full px-3 py-1 border bg-gray-900 text-white border-gray-900">
-                              <FaClock className="opacity-90" />
-                              {b.selectedTime}
-                            </span>
-                          </div>
-
-                          {/* Phone first here too */}
-                          <div className="flex flex-wrap items-center gap-2">
-                            <a
-                              href={`tel:${b.phoneNumber}`}
-                              className="inline-flex items-center gap-2 text-sm font-extrabold px-4 py-2 rounded-xl border border-blue-200 bg-blue-50 text-blue-800 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                              aria-label={`اتصال بالزبون ${b.fullName}`}
-                              title="اتصال"
-                            >
-                              <FaPhone className="opacity-80" />
-                              اتصال
-                              <span className="font-semibold opacity-90">
-                                {e164ToLocalPretty(b.phoneNumber)}
-                              </span>
-                            </a>
-
-                            {b.selectedService && (
-                              <span
-                                className={`inline-flex items-center gap-2 text-xs font-bold rounded-full px-3 py-1 border ${serviceBadgeClasses(
-                                  b.selectedService
-                                )}`}
-                              >
-                                <FaCut className="opacity-80" />
-                                {serviceLabel(b.selectedService)}
-                              </span>
-                            )}
-
-                            <span className="inline-flex items-center gap-2 text-sm text-gray-700">
-                              <FaCalendarAlt className="text-gray-400" />
-                              {formatDateArabic(b.selectedDate)}
-                            </span>
-                          </div>
-
-                          {b.cancelledAt && (
-                            <div className="text-[11px] font-semibold text-red-700 bg-red-50 border border-red-200 rounded-xl px-3 py-2 inline-block">
-                              🚫 تم الإلغاء: {formatDateTime(b.cancelledAt)}
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="flex flex-col gap-2 sm:items-end">
-                          {b.cancelledAt && (
-                            <button
-                              onClick={() => handleRestore(b)}
-                              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 text-sm font-bold px-4 py-2 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 focus:outline-none focus:ring-2 focus:ring-emerald-200"
-                              aria-label="استرجاع الحجز"
-                            >
-                              <FaUndo />
-                              استرجاع
-                            </button>
-                          )}
-
-                          <button
-                            onClick={() => handleDelete(b)}
-                            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 text-sm font-bold px-4 py-2 rounded-xl border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-200"
-                            aria-label="حذف نهائي"
-                          >
-                            <FaTrash />
-                            حذف نهائي
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Tiny footer (اختياري) */}
-            <div className="text-center text-[11px] text-gray-400">
-              ابحث بالاسم/الهاتف → اضغط اتصال → وإذا لزم ألغي.
-            </div>
-          </div>
-        )}
-      </div>
-    </section>
-  );
-}
-</file>
-
 <file path="src/pages/Home.jsx">
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
@@ -6268,6 +6773,15 @@ function Home() {
 }
 
 export default Home;
+</file>
+
+<file path="src/pages/AdminBookings.jsx">
+// src/pages/AdminBookings.jsx
+import AdminBookingsPage from "./adminBookings/AdminBookingsPage";
+
+export default function AdminBookings() {
+  return <AdminBookingsPage />;
+}
 </file>
 
 <file path="src/translations/en.json">
