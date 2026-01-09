@@ -1,10 +1,10 @@
-This file is a merged representation of a subset of the codebase, containing files not matching ignore patterns, combined into a single document by Repomix.
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
 
 <file_summary>
 This section contains a summary of this file.
 
 <purpose>
-This file contains a packed representation of a subset of the repository's contents that is considered the most important context.
+This file contains a packed representation of the entire repository's contents.
 It is designed to be easily consumable by AI systems for analysis, code review,
 or other automated processes.
 </purpose>
@@ -32,7 +32,6 @@ The content is organized as follows:
 <notes>
 - Some files may have been excluded based on .gitignore rules and Repomix's configuration
 - Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
-- Files matching these patterns are excluded: node_modules, dist, build, .expo, .next, coverage, assets, public, images, fonts, *.png, *.jpg, *.jpeg, *.svg, *.mp3, *.mp4, *.lock
 - Files matching patterns in .gitignore are excluded
 - Files matching default ignore patterns are excluded
 - Files are sorted by Git change count (files with more changes are at the bottom)
@@ -54,6 +53,16 @@ functions/package.json
 index.html
 package.json
 postcss.config.cjs
+public/barber-hero.jpg
+public/barber-logo.png
+public/cuts/p1.jpg
+public/cuts/p2.jpg
+public/cuts/p3.jpg
+public/cuts/p4.jpg
+public/cuts/p5.jpg
+public/cuts/p6.jpg
+public/firebase-messaging-sw.js
+public/vite.svg
 README.md
 src/App.css
 src/App.jsx
@@ -63,7 +72,6 @@ src/assets/react.svg
 src/components/about/AboutContent.jsx
 src/components/BackToTopButton.jsx
 src/components/booking/BookingSection.jsx
-src/components/booking/bookingService.js
 src/components/booking/BookingTracker.jsx
 src/components/booking/CheckReservation.jsx
 src/components/booking/parts/DateField.jsx
@@ -119,6 +127,7 @@ src/utils/cancelGuard.js
 src/utils/dateTime.js
 src/utils/phone.js
 src/utils/phone.jsx
+src/utils/timeSlots.js
 src/utils/validators.js
 tailwind.config.js
 vercel.json
@@ -323,6 +332,10 @@ module.exports = {
     autoprefixer: {},
   },
 };
+</file>
+
+<file path="public/vite.svg">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" class="iconify iconify--logos" width="31.88" height="32" preserveAspectRatio="xMidYMid meet" viewBox="0 0 256 257"><defs><linearGradient id="IconifyId1813088fe1fbc01fb466" x1="-.828%" x2="57.636%" y1="7.652%" y2="78.411%"><stop offset="0%" stop-color="#41D1FF"></stop><stop offset="100%" stop-color="#BD34FE"></stop></linearGradient><linearGradient id="IconifyId1813088fe1fbc01fb467" x1="43.376%" x2="50.316%" y1="2.242%" y2="89.03%"><stop offset="0%" stop-color="#FFEA83"></stop><stop offset="8.333%" stop-color="#FFDD35"></stop><stop offset="100%" stop-color="#FFA800"></stop></linearGradient></defs><path fill="url(#IconifyId1813088fe1fbc01fb466)" d="M255.153 37.938L134.897 252.976c-2.483 4.44-8.862 4.466-11.382.048L.875 37.958c-2.746-4.814 1.371-10.646 6.827-9.67l120.385 21.517a6.537 6.537 0 0 0 2.322-.004l117.867-21.483c5.438-.991 9.574 4.796 6.877 9.62Z"></path><path fill="url(#IconifyId1813088fe1fbc01fb467)" d="M185.432.063L96.44 17.501a3.268 3.268 0 0 0-2.634 3.014l-5.474 92.456a3.268 3.268 0 0 0 3.997 3.378l24.777-5.718c2.318-.535 4.413 1.507 3.936 3.838l-7.361 36.047c-.495 2.426 1.782 4.5 4.151 3.78l15.304-4.649c2.372-.72 4.652 1.36 4.15 3.788l-11.698 56.621c-.732 3.542 3.979 5.473 5.943 2.437l1.313-2.028l72.516-144.72c1.215-2.423-.88-5.186-3.54-4.672l-25.505 4.922c-2.396.462-4.435-1.77-3.759-4.114l16.646-57.705c.677-2.35-1.37-4.583-3.769-4.113Z"></path></svg>
 </file>
 
 <file path="README.md">
@@ -1657,78 +1670,6 @@ export default function ProductsPage() {
 }
 </file>
 
-<file path="src/services/bookingService.js">
-// src/services/bookingService.js
-import { db } from "../firebase";
-import {
-  doc,
-  getDoc,
-  collection,
-  addDoc,
-  serverTimestamp,
-  query,
-  where,
-  getDocs,
-} from "firebase/firestore";
-
-// هل اليوم محجوب بالكامل؟
-export async function fetchBlockedDay(dateYMD) {
-  const snap = await getDoc(doc(db, "blockedDays", dateYMD));
-  return snap.exists();
-}
-
-// أوقات محظورة لليوم
-export async function fetchBlockedTimes(dateYMD) {
-  const snap = await getDoc(doc(db, "blockedTimes", dateYMD));
-  return snap.exists() ? snap.data().times || [] : [];
-}
-
-// حجوزات فعّالة (غير ملغاة) لليوم
-export async function fetchActiveBookingsByDate(dateYMD) {
-  const q = query(
-    collection(db, "bookings"),
-    where("selectedDate", "==", dateYMD)
-  );
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => d.data()).filter((b) => !b.cancelledAt);
-}
-
-// رقم هاتف محظور؟
-export async function isPhoneBlocked(cleanPhone) {
-  const snap = await getDoc(doc(db, "blockedPhones", cleanPhone));
-  return snap.exists();
-}
-
-// هل لديه حجوزات سابقة؟
-export async function hasExistingBookings(cleanPhone) {
-  const q = query(
-    collection(db, "bookings"),
-    where("phoneNumber", "==", cleanPhone)
-  );
-  const snap = await getDocs(q);
-  return !snap.empty;
-}
-
-// تضارب على نفس التاريخ/الوقت؟
-export async function hasActiveConflict(dateYMD, hhmm) {
-  const q = query(
-    collection(db, "bookings"),
-    where("selectedDate", "==", dateYMD),
-    where("selectedTime", "==", hhmm)
-  );
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => d.data()).some((b) => !b.cancelledAt);
-}
-
-// إنشاء الحجز
-export async function createBooking(payload) {
-  await addDoc(collection(db, "bookings"), {
-    ...payload,
-    createdAt: serverTimestamp(),
-  });
-}
-</file>
-
 <file path="src/utils/cancelGuard.js">
 // ثابت: نافذة الإلغاء بالدقائق
 export const CANCELLATION_WINDOW_MIN = 50;
@@ -1832,6 +1773,72 @@ export function buildILPhoneVariants(input = "") {
 // 5) فحص سريع لأن الرقم يبدو موبايل IL صالح (اختياري)
 export function isLikelyILMobile(canonical = "") {
   return /^9725\d{8}$/.test(canonical);
+}
+</file>
+
+<file path="src/utils/timeSlots.js">
+// src/utils/timeSlots.js
+
+/**
+ * يولّد أدوار كل 30 دقيقة بين from و to
+ * - from/to بصيغة "HH:mm"
+ * - includeEnd: لو true بيشمل خانة to نفسها (الافتراضي false عشان ما نطلع دور على وقت الإغلاق بالضبط)
+ */
+export function generateTimeSlots30(from, to, { includeEnd = false } = {}) {
+  if (!from || !to) return [];
+
+  const [fh, fm] = String(from).split(":").map(Number);
+  const [th, tm] = String(to).split(":").map(Number);
+  if (![fh, fm, th, tm].every((n) => Number.isFinite(n))) return [];
+
+  const start = new Date();
+  start.setHours(fh, fm, 0, 0);
+
+  const end = new Date();
+  end.setHours(th, tm, 0, 0);
+
+  // لو from بعد to (غلط) نرجّع فاضي
+  if (start > end) return [];
+
+  const out = [];
+  const cur = new Date(start);
+
+  while (cur < end || (includeEnd && cur <= end)) {
+    out.push(cur.toTimeString().slice(0, 5));
+    cur.setMinutes(cur.getMinutes() + 30);
+  }
+
+  return out;
+}
+
+/** يزيد وقت "HH:mm" بعدد دقائق (مثلاً 30) ويرجع "HH:mm" */
+export function addMinutesHHmm(hhmm, minutesToAdd) {
+  const [h, m] = String(hhmm || "00:00")
+    .split(":")
+    .map(Number);
+  if (!Number.isFinite(h) || !Number.isFinite(m)) return hhmm;
+
+  const d = new Date();
+  d.setHours(h, m, 0, 0);
+  d.setMinutes(d.getMinutes() + (Number(minutesToAdd) || 0));
+  return d.toTimeString().slice(0, 5);
+}
+
+export function getWeekdayNameEN(dateYMD) {
+  // dateYMD: "YYYY-MM-DD"
+  try {
+    const [y, mo, da] = dateYMD.split("-").map(Number);
+    const d = new Date(y, mo - 1, da);
+    if (!(d instanceof Date) || isNaN(d)) return "";
+    return d.toLocaleDateString("en-US", { weekday: "long" });
+  } catch {
+    return "";
+  }
+}
+
+export function isTodayYMD(dateYMD) {
+  const today = new Date().toLocaleDateString("sv-SE"); // YYYY-MM-DD
+  return dateYMD === today;
 }
 </file>
 
@@ -2083,122 +2090,6 @@ function BackToTopButton() {
 export default BackToTopButton;
 </file>
 
-<file path="src/components/booking/bookingService.js">
-// src/services/bookingService.js
-import { db } from "../firebase";
-import {
-  doc,
-  getDoc,
-  collection,
-  addDoc,
-  serverTimestamp,
-  query,
-  where,
-  getDocs,
-} from "firebase/firestore";
-
-import { toILPhoneE164 } from "../utils/phone";
-
-// يوم محجوب بالكامل؟
-export async function fetchBlockedDay(dateYMD) {
-  const snap = await getDoc(doc(db, "blockedDays", dateYMD));
-  return snap.exists();
-}
-
-// أوقات محجوبة لليوم
-export async function fetchBlockedTimes(dateYMD) {
-  const snap = await getDoc(doc(db, "blockedTimes", dateYMD));
-  return snap.exists() ? snap.data().times || [] : [];
-}
-
-// حجوزات فعّالة لليوم
-export async function fetchActiveBookingsByDate(dateYMD) {
-  const q = query(
-    collection(db, "bookings"),
-    where("selectedDate", "==", dateYMD)
-  );
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => d.data()).filter((b) => !b.cancelledAt);
-}
-
-// رقم محظور؟ (E.164)
-export async function isPhoneBlocked(inputPhone) {
-  const phoneE164 = toILPhoneE164(inputPhone);
-  const snap = await getDoc(doc(db, "blockedPhones", phoneE164));
-  return snap.exists();
-}
-
-// هل له حجوزات سابقة؟ (E.164) - عام (كل الأيام)
-export async function hasExistingBookings(inputPhone) {
-  const phoneE164 = toILPhoneE164(inputPhone);
-  const q = query(
-    collection(db, "bookings"),
-    where("phoneNumber", "==", phoneE164)
-  );
-  const snap = await getDocs(q);
-  return !snap.empty;
-}
-
-// تضارب على نفس التاريخ/الوقت؟
-export async function hasActiveConflict(dateYMD, hhmm) {
-  const q = query(
-    collection(db, "bookings"),
-    where("selectedDate", "==", dateYMD),
-    where("selectedTime", "==", hhmm)
-  );
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => d.data()).some((b) => !b.cancelledAt);
-}
-
-/* =========================================
-   إعدادات الحلاق: حجز واحد لكل رقم في اليوم
-   ========================================= */
-
-// هل وضع "حجز واحد لكل رقم في اليوم" مفعّل؟
-export async function isLimitOneBookingPerDayEnabled() {
-  try {
-    const ref = doc(db, "barberSettings", "global");
-    const snap = await getDoc(ref);
-    if (!snap.exists()) return false;
-
-    const data = snap.data();
-    // دعم اسم حقل واحد أساسي + اسم بديل احتياطي
-    const value =
-      typeof data.limitOneBookingPerDayPerPhone === "boolean"
-        ? data.limitOneBookingPerDayPerPhone
-        : !!data.limitOneBookingPerDay;
-
-    return value;
-  } catch (err) {
-    console.error("isLimitOneBookingPerDayEnabled error:", err);
-    // لو صار خطأ، منرجع false عشان ما نخرّب تجربة المستخدم
-    return false;
-  }
-}
-
-// هل يوجد حجز فعّال لنفس الرقم في نفس اليوم؟
-export async function hasSameDayBookingForPhone(inputPhone, dateYMD) {
-  const phoneE164 = toILPhoneE164(inputPhone);
-  const q = query(
-    collection(db, "bookings"),
-    where("phoneNumber", "==", phoneE164),
-    where("selectedDate", "==", dateYMD)
-  );
-  const snap = await getDocs(q);
-  if (snap.empty) return false;
-
-  return snap.docs.map((d) => d.data()).some((b) => !b.cancelledAt);
-}
-
-// إنشاء الحجز
-export async function createBooking(payload) {
-  await addDoc(collection(db, "bookings"), {
-    ...payload,
-    createdAt: serverTimestamp(),
-  });
-}
-</file>
-
 <file path="src/components/booking/parts/PhoneInput.jsx">
 // src/components/booking/parts/PhoneInput.jsx
 import React, { forwardRef } from "react";
@@ -2337,121 +2228,6 @@ function SecretBarberButton() {
 }
 
 export default SecretBarberButton;
-</file>
-
-<file path="src/hooks/useAvailableTimes.js">
-// src/hooks/useAvailableTimes.js
-import { useEffect, useState } from "react";
-import { localYMD, generateTimeSlots } from "../utils/dateTime";
-import {
-  fetchBlockedDay,
-  fetchBlockedTimes,
-  fetchActiveBookingsByDate,
-} from "../services/bookingService";
-
-export default function useAvailableTimes(selectedDate, workingHours) {
-  const [availableTimes, setAvailableTimes] = useState([]);
-  const [isDayBlocked, setIsDayBlocked] = useState(false);
-  const [bookings, setBookings] = useState([]);
-  const [loadingTimes, setLoadingTimes] = useState(false); // ✅ جديد
-
-  useEffect(() => {
-    if (!selectedDate) {
-      setAvailableTimes([]);
-      setIsDayBlocked(false);
-      setLoadingTimes(false);
-      return;
-    }
-
-    const run = async () => {
-      try {
-        setLoadingTimes(true); // ✅ بدء التحميل
-
-        const dayBlocked = await fetchBlockedDay(selectedDate);
-        if (dayBlocked) {
-          setIsDayBlocked(true);
-          setAvailableTimes([]);
-          return;
-        } else {
-          setIsDayBlocked(false);
-        }
-
-        const [yyyy, mm, dd] = selectedDate.split("-");
-        const dateObj = new Date(Number(yyyy), Number(mm) - 1, Number(dd));
-        const weekday = dateObj.toLocaleDateString("en-US", {
-          weekday: "long",
-        });
-
-        const dayHours = workingHours?.[weekday] || null;
-        if (weekday === "Sunday" || !dayHours) {
-          setAvailableTimes([]);
-          return;
-        }
-
-        const allSlots = generateTimeSlots(dayHours.from, dayHours.to);
-
-        const [blocked, active] = await Promise.all([
-          fetchBlockedTimes(selectedDate),
-          fetchActiveBookingsByDate(selectedDate),
-        ]);
-        const booked = active.map((b) => b.selectedTime);
-        const unavailable = Array.from(
-          new Set([...(blocked || []), ...booked])
-        );
-
-        let available = allSlots.filter((t) => !unavailable.includes(t));
-
-        const isToday = selectedDate === localYMD(new Date());
-        if (isToday) {
-          const now = new Date();
-          const h = now.getHours();
-          const m = now.getMinutes();
-          available = available.filter((time) => {
-            const [hour, minute] = time.split(":").map(Number);
-            return hour > h || (hour === h && minute > m);
-          });
-        }
-
-        setAvailableTimes(available);
-      } catch (e) {
-        console.error("useAvailableTimes error:", e);
-        setAvailableTimes([]);
-        setIsDayBlocked(false);
-      } finally {
-        setLoadingTimes(false); // ✅ إنهاء التحميل (مهما صار)
-      }
-    };
-
-    run();
-  }, [selectedDate, workingHours]);
-
-  const reloadBookings = async () => {
-    if (!selectedDate) {
-      setBookings([]);
-      return;
-    }
-    try {
-      const active = await fetchActiveBookingsByDate(selectedDate);
-      setBookings(active);
-    } catch (e) {
-      console.error("useAvailableTimes bookings error:", e);
-      setBookings([]);
-    }
-  };
-
-  useEffect(() => {
-    reloadBookings();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedDate]);
-
-  return {
-    availableTimes,
-    isDayBlocked,
-    bookings,
-    reloadBookings,
-    loadingTimes,
-  }; // ✅
-}
 </file>
 
 <file path="src/hooks/useBookingSubmit.js">
@@ -2699,6 +2475,147 @@ function NotFound() {
 export default NotFound;
 </file>
 
+<file path="src/services/bookingService.js">
+// src/services/bookingService.js
+import { db } from "../firebase";
+import {
+  doc,
+  getDoc,
+  collection,
+  addDoc,
+  serverTimestamp,
+  query,
+  where,
+  getDocs,
+  setDoc,
+  increment,
+  runTransaction,
+} from "firebase/firestore";
+
+import { toILPhoneE164 } from "../utils/phone";
+
+// يوم محجوب بالكامل؟
+export async function fetchBlockedDay(dateYMD) {
+  const snap = await getDoc(doc(db, "blockedDays", dateYMD));
+  return snap.exists();
+}
+
+// أوقات محجوبة لليوم
+export async function fetchBlockedTimes(dateYMD) {
+  const snap = await getDoc(doc(db, "blockedTimes", dateYMD));
+  return snap.exists() ? snap.data().times || [] : [];
+}
+
+// حجوزات فعّالة لليوم
+export async function fetchActiveBookingsByDate(dateYMD) {
+  const q = query(
+    collection(db, "bookings"),
+    where("selectedDate", "==", dateYMD)
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => d.data()).filter((b) => !b.cancelledAt);
+}
+
+// رقم محظور؟ (E.164)
+export async function isPhoneBlocked(inputPhone) {
+  const phoneE164 = toILPhoneE164(inputPhone);
+  const snap = await getDoc(doc(db, "blockedPhones", phoneE164));
+  return snap.exists();
+}
+
+// هل له حجوزات سابقة؟ (E.164)
+export async function hasExistingBookings(inputPhone) {
+  const phoneE164 = toILPhoneE164(inputPhone);
+  const q = query(
+    collection(db, "bookings"),
+    where("phoneNumber", "==", phoneE164)
+  );
+  const snap = await getDocs(q);
+  return !snap.empty;
+}
+
+// تضارب على نفس التاريخ/الوقت؟
+export async function hasActiveConflict(dateYMD, hhmm) {
+  const q = query(
+    collection(db, "bookings"),
+    where("selectedDate", "==", dateYMD),
+    where("selectedTime", "==", hhmm)
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => d.data()).some((b) => !b.cancelledAt);
+}
+
+// إنشاء الحجز + محاولة تحديث عدّاد الشهر (بدون ما نخرب الحجز لو فشل العداد)
+export async function createBooking(payload) {
+  // 1) احفظ الحجز (هذا هو الأهم)
+  await addDoc(collection(db, "bookings"), {
+    ...payload,
+    cancelledAt: payload?.cancelledAt ?? null, // تأكيد وجوده
+    createdAt: serverTimestamp(),
+  });
+
+  // 2) حاول حدّث العداد (إذا فشل ما نوقف المستخدم)
+  try {
+    const monthKey = String(payload?.selectedDate || "").slice(0, 7); // YYYY-MM
+    if (!monthKey || monthKey.length !== 7) return;
+
+    const ref = doc(db, "statsMonthly", monthKey);
+
+    // total = عدد الحجوزات الفعّالة للشهر (Active)
+    await setDoc(
+      ref,
+      { total: increment(1), updatedAt: serverTimestamp() },
+      { merge: true }
+    );
+  } catch (err) {
+    console.warn("statsMonthly increment failed (ignored):", err);
+  }
+}
+
+/**
+ * إلغاء حجز: ينقص العداد فقط إذا الحجز كان فعّال (مش ملغي).
+ * لازم تمرّر bookingId (doc id).
+ */
+export async function cancelBooking(bookingId) {
+  const bookingRef = doc(db, "bookings", bookingId);
+
+  try {
+    await runTransaction(db, async (tx) => {
+      const snap = await tx.get(bookingRef);
+      if (!snap.exists()) throw new Error("Booking not found");
+
+      const b = snap.data();
+
+      // إذا ملغي أصلاً: لا تعمل شي (عشان ما ينقص مرتين)
+      if (b.cancelledAt) return;
+
+      const monthKey = String(b.selectedDate || "").slice(0, 7); // YYYY-MM
+      if (!monthKey || monthKey.length !== 7) {
+        // نلغي الحجز بدون ما نلمس العداد إذا الداتا ناقصة
+        tx.update(bookingRef, { cancelledAt: serverTimestamp() });
+        return;
+      }
+
+      const monthRef = doc(db, "statsMonthly", monthKey);
+
+      // 1) علّم الحجز كملغي
+      tx.update(bookingRef, { cancelledAt: serverTimestamp() });
+
+      // 2) أنقص العداد الفعّال
+      tx.set(
+        monthRef,
+        { total: increment(-1), updatedAt: serverTimestamp() },
+        { merge: true }
+      );
+    });
+  } catch (err) {
+    // مهم: لو فشل الترانزاكشن، لا تسكت… لأنه ممكن يضل العداد غلط
+    console.error("cancelBooking failed:", err);
+    throw err;
+  }
+}
+</file>
+
 <file path="src/utils/dateTime.js">
 // src/utils/dateTime.js
 export function localYMD(d = new Date()) {
@@ -2866,6 +2783,31 @@ export function e164ToLocalPretty(p) {
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
+</file>
+
+<file path="public/firebase-messaging-sw.js">
+/* global importScripts, firebase */
+importScripts('https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/10.11.0/firebase-messaging-compat.js');
+
+firebase.initializeApp({
+  apiKey: "AIzaSyCRpZf2RKFWk7aT8rF5CEEDVkjblJg5uC8",
+  authDomain: "arfatbarber.firebaseapp.com",
+  projectId: "arfatbarber",
+  storageBucket: "arfatbarber.appspot.com",
+  messagingSenderId: "275175753990",
+  appId: "1:275175753990:web:20bd913d8fef6da6c37687"
+});
+
+const messaging = firebase.messaging();
+
+messaging.onBackgroundMessage(function(payload) {
+  console.log('[firebase-messaging-sw.js] Received background message ', payload);
+  self.registration.showNotification(payload.notification.title, {
+    body: payload.notification.body,
+    icon: '/barber-logo.png' // أيقونة اختيارية
+  });
+});
 </file>
 
 <file path="src/components/booking/parts/OpeningStatusCard.jsx">
@@ -3740,6 +3682,220 @@ export const auth = getAuth(app);
 export { app };
 </file>
 
+<file path="src/hooks/useAvailableTimes.js">
+// src/hooks/useAvailableTimes.js
+import { useEffect, useMemo, useState } from "react";
+import { db } from "../firebase";
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  query,
+  where,
+} from "firebase/firestore";
+
+/**
+ * Helpers (خارج الهوك عشان ما يعمل missing-deps)
+ */
+function toDateAt(ymd, hhmm) {
+  try {
+    return new Date(`${ymd}T${hhmm}:00`);
+  } catch {
+    return null;
+  }
+}
+
+function addMinutesToHHMM(hhmm, minsToAdd) {
+  const [h, m] = String(hhmm || "00:00")
+    .split(":")
+    .map(Number);
+  const base = new Date();
+  base.setHours(h || 0, m || 0, 0, 0);
+  base.setMinutes(base.getMinutes() + (Number(minsToAdd) || 0));
+  const hh = String(base.getHours()).padStart(2, "0");
+  const mm = String(base.getMinutes()).padStart(2, "0");
+  return `${hh}:${mm}`;
+}
+
+/**
+ * يولّد أدوار 30 دقيقة (النهاية غير شاملة)
+ * مثال: from 12:00 to 20:00 => آخر دور 19:30
+ */
+function generateSlots30Min(from, to) {
+  if (!from || !to) return [];
+  const [fh, fm] = from.split(":").map(Number);
+  const [th, tm] = to.split(":").map(Number);
+
+  const cur = new Date();
+  cur.setHours(fh, fm, 0, 0);
+
+  const end = new Date();
+  end.setHours(th, tm, 0, 0);
+
+  const out = [];
+  while (cur <= end) {
+    out.push(cur.toTimeString().slice(0, 5));
+    cur.setMinutes(cur.getMinutes() + 30);
+  }
+  return out;
+}
+
+/**
+ * Hook:
+ * - يجيب availableTimes لزبون حسب:
+ *   workingHours + blockedDays + blockedTimes + bookings + slotExtras
+ *
+ * slotExtras schema:
+ *   collection: slotExtras
+ *   doc id: YYYY-MM-DD
+ *   fields:
+ *     - extraSlots: number (مثلاً +2 يزيد دورين بعد آخر دور، -1 ينقص آخر دور)
+ */
+export default function useAvailableTimes(selectedDate, workingHours) {
+  const [availableTimes, setAvailableTimes] = useState([]);
+  const [isDayBlocked, setIsDayBlocked] = useState(false);
+  const [loadingTimes, setLoadingTimes] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+
+    async function run() {
+      if (!selectedDate) {
+        if (!alive) return;
+        setAvailableTimes([]);
+        setIsDayBlocked(false);
+        setLoadingTimes(false);
+        return;
+      }
+
+      setLoadingTimes(true);
+
+      try {
+        // 1) blocked day؟
+        const dayBlockRef = doc(db, "blockedDays", selectedDate);
+        const dayBlockSnap = await getDoc(dayBlockRef);
+        const blocked = dayBlockSnap.exists();
+        if (!alive) return;
+
+        setIsDayBlocked(blocked);
+
+        if (blocked) {
+          setAvailableTimes([]);
+          return;
+        }
+
+        // 2) ساعات العمل الأساسية حسب اليوم
+        const d = new Date(`${selectedDate}T00:00:00`);
+        const weekday = d.toLocaleDateString("en-US", { weekday: "long" });
+        const hours = workingHours?.[weekday] || null;
+
+        if (!hours?.from || !hours?.to) {
+          setAvailableTimes([]);
+          return;
+        }
+
+        // 3) slotExtras (زيادة/نقصان عدد الأدوار)
+        let extraSlots = 0;
+        try {
+          const extrasSnap = await getDoc(doc(db, "slotExtras", selectedDate));
+          if (extrasSnap.exists()) {
+            const data = extrasSnap.data() || {};
+            const n = Number(data.extraSlots);
+            extraSlots = Number.isFinite(n) ? Math.trunc(n) : 0;
+          }
+        } catch {
+          extraSlots = 0;
+        }
+
+        const baseSlots = generateSlots30Min(hours.from, hours.to);
+
+        let slots = baseSlots;
+        if (extraSlots !== 0) {
+          if (extraSlots > 0) {
+            const extraCount = Math.floor(extraSlots);
+            const last = baseSlots[baseSlots.length - 1];
+            const extras = [];
+            for (let i = 1; i <= extraCount; i++) {
+              extras.push(addMinutesToHHMM(last, i * 30));
+            }
+            slots = [...baseSlots, ...extras];
+          } else {
+            const cut = Math.abs(Math.floor(extraSlots));
+            slots = baseSlots.slice(0, Math.max(0, baseSlots.length - cut));
+          }
+        }
+
+        // 4) blockedTimes لهذا اليوم
+        const blockedTimesSnap = await getDoc(
+          doc(db, "blockedTimes", selectedDate)
+        );
+        const blockedTimes =
+          blockedTimesSnap.exists() &&
+          Array.isArray(blockedTimesSnap.data()?.times)
+            ? blockedTimesSnap.data().times
+            : [];
+
+        // 5) الحجوزات لنفس التاريخ (ونعتبر cancelledAt غير فعّال)
+        const qBookings = query(
+          collection(db, "bookings"),
+          where("selectedDate", "==", selectedDate)
+        );
+        const bookingsSnap = await getDocs(qBookings);
+        const bookedSet = new Set();
+        bookingsSnap.docs.forEach((docu) => {
+          const b = docu.data();
+          if (!b?.cancelledAt && b?.selectedTime) {
+            bookedSet.add(b.selectedTime);
+          }
+        });
+
+        // 6) فلترة: احذف المحجوز + المحظور + الماضي لليوم الحالي
+        const now = new Date();
+        const todayStr = now.toLocaleDateString("sv-SE"); // YYYY-MM-DD
+        const isToday = selectedDate === todayStr;
+
+        const blockedSet = new Set(blockedTimes);
+
+        const finalSlots = slots.filter((t) => {
+          if (blockedSet.has(t)) return false;
+          if (bookedSet.has(t)) return false;
+
+          if (isToday) {
+            const dt = toDateAt(selectedDate, t);
+            if (!dt) return false;
+            return dt > now;
+          }
+
+          return true;
+        });
+
+        if (!alive) return;
+        setAvailableTimes(finalSlots);
+      } catch (e) {
+        console.error("useAvailableTimes error:", e);
+        if (!alive) return;
+        setIsDayBlocked(false);
+        setAvailableTimes([]);
+      } finally {
+        if (alive) setLoadingTimes(false);
+      }
+    }
+
+    run();
+
+    return () => {
+      alive = false;
+    };
+  }, [selectedDate, workingHours]);
+
+  return useMemo(
+    () => ({ availableTimes, isDayBlocked, loadingTimes }),
+    [availableTimes, isDayBlocked, loadingTimes]
+  );
+}
+</file>
+
 <file path="src/pages/Contact.jsx">
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
@@ -3847,223 +4003,6 @@ function Contact() {
 }
 
 export default Contact;
-</file>
-
-<file path="src/pages/Dashboard.jsx">
-// ✅ src/pages/Dashboard.jsx
-import { useEffect, useState } from "react";
-import { db } from "../firebase";
-import {
-  collection,
-  getDocs,
-} from "firebase/firestore";
-import { useNavigate } from "react-router-dom";
-
-export default function Dashboard() {
-  const navigate = useNavigate();
-
-  const [closedDates, setClosedDates] = useState([]);
-  const [blockedByDay, setBlockedByDay] = useState({});
-  const [todayStats, setTodayStats] = useState({
-    total: 0,
-    passed: 0,
-    upcoming: 0,
-    firstTime: null,
-    lastTime: null,
-  });
-  const [weekStats, setWeekStats] = useState({
-    total: 0,
-    passed: 0,
-    upcoming: 0,
-    from: "",
-    to: "",
-  });
-const [totalBookings, setTotalBookings] = useState(0);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      const now = new Date();
-      const todayStr = now.toISOString().slice(0, 10);
-
-      const closedSnap = await getDocs(collection(db, "blockedDays"));
-      const futureClosed = closedSnap.docs
-        .map(doc => doc.id)
-        .filter(date => date >= todayStr)
-        .sort();
-      setClosedDates(futureClosed);
-
-      const timesSnap = await getDocs(collection(db, "blockedTimes"));
-      const result = {};
-      timesSnap.docs.forEach(doc => {
-        const date = doc.id;
-        const data = doc.data();
-        if (data?.times?.length && date >= todayStr) {
-          result[date] = data.times.sort();
-        }
-      });
-      setBlockedByDay(result);
-
-      const bookingsSnap = await getDocs(collection(db, "bookings"));
-      const bookings = bookingsSnap.docs.map(doc => doc.data()).filter(b => !b.cancelledAt);
-setTotalBookings(bookings.length);
-
-      const todayBookings = bookings.filter(b => b.selectedDate === todayStr);
-      const passed = todayBookings.filter(b => new Date(`${b.selectedDate}T${b.selectedTime}:00`) <= now);
-      const upcoming = todayBookings.filter(b => new Date(`${b.selectedDate}T${b.selectedTime}:00`) > now);
-      const sortedTimes = todayBookings.map(b => b.selectedTime).sort((a, b) => a.localeCompare(b));
-      const firstTime = sortedTimes[0] || null;
-      const lastTime = sortedTimes[sortedTimes.length - 1] || null;
-
-      setTodayStats({
-        total: todayBookings.length,
-        passed: passed.length,
-        upcoming: upcoming.length,
-        firstTime,
-        lastTime,
-      });
-
-      const day = now.getDay();
-      const diffToSunday = day === 0 ? 0 : day;
-      const start = new Date(now);
-      start.setDate(now.getDate() - diffToSunday);
-      const end = new Date(start);
-      end.setDate(start.getDate() + 6);
-
-      const fromStr = start.toISOString().slice(0, 10);
-      const toStr = end.toISOString().slice(0, 10);
-
-      const weekBookings = bookings.filter(b => b.selectedDate >= fromStr && b.selectedDate <= toStr);
-      let weekPassed = 0, weekUpcoming = 0;
-      weekBookings.forEach(b => {
-        const bookingTime = new Date(`${b.selectedDate}T${b.selectedTime}:00`);
-        if (bookingTime < now) weekPassed++;
-        else weekUpcoming++;
-      });
-
-      setWeekStats({
-        total: weekBookings.length,
-        passed: weekPassed,
-        upcoming: weekUpcoming,
-        from: fromStr,
-        to: toStr,
-      });
-    };
-
-    fetchData();
-  }, []);
-
-  const formatDate = (dateStr) => {
-    const date = new Date(dateStr);
-    const weekday = date.toLocaleDateString("ar-EG", { weekday: "long" });
-    const formatted = date.toLocaleDateString("ar-EG");
-    return `${weekday} ${formatted}`;
-  };
-
-  return (
-<section className="min-h-screen bg-gradient-to-br from-gray-100 to-gray-200 pt-36 pb-24 px-4 font-ar" dir="rtl">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-10">
-          <h1 className="text-3xl font-bold text-yellow-700 tracking-tight">📊 لوحة الإحصائيات</h1>
-          <button
-            onClick={() => navigate(-1)}
-            className="text-sm text-blue-600 hover:underline"
-          >
-            ← الرجوع
-          </button>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-
-          {/* Weekly Stats */}
-          <CardBox color="blue" title="إحصائيات الأسبوع">
-            <p className="text-sm text-gray-500 mb-3">من {formatDate(weekStats.from)} إلى {formatDate(weekStats.to)}</p>
-            <ul className="space-y-2 text-sm text-gray-700">
-            <li>🧮 عدد الأدوار الكلي: <span className="text-purple-700 font-semibold">{totalBookings}</span></li>
-
-              <li>📊  عدد الحجوزات هذا الاسبوع: <span className="font-semibold">{weekStats.total}</span></li>
-              <li>✅ الأدوار التي مرّت: <span className="text-green-700 font-semibold">{weekStats.passed}</span></li>
-              <li>⏳ الأدوار القادمة: <span className="text-blue-700 font-semibold">{weekStats.upcoming}</span></li>
-            </ul>
-          </CardBox>
-
-          {/* Today Stats */}
-          <CardBox color="green" title="إحصائيات اليوم">
-            <ul className="space-y-2 text-sm text-gray-700">
-              <li>📋 عدد الحجوزات اليوم: <span className="font-semibold">{todayStats.total}</span></li>
-              <li>✅ الأدوار التي مرّت: <span className="text-green-700 font-semibold">{todayStats.passed}</span></li>
-              <li>⏳ الأدوار القادمة: <span className="text-blue-700 font-semibold">{todayStats.upcoming}</span></li>
-              {todayStats.firstTime && <li>🕒 أول حجز: <span className="font-semibold text-gray-800">{todayStats.firstTime}</span></li>}
-              {todayStats.lastTime && <li>🕔 آخر حجز: <span className="font-semibold text-gray-800">{todayStats.lastTime}</span></li>}
-            </ul>
-          </CardBox>
-
-          {/* Blocked Times */}
-          <CardBox color="red" title="الأوقات المحظورة">
-            {Object.keys(blockedByDay).length === 0 && (
-              <p className="text-sm text-gray-500">لا توجد أوقات محظورة.</p>
-            )}
-            {Object.entries(blockedByDay).map(([date, times]) => (
-              <div key={date} className="mb-3">
-                <p className="text-red-700 font-semibold mb-1">📅 {formatDate(date)}</p>
-                <div className="flex flex-wrap gap-2">
-                  {times.map(time => (
-                    <span
-                      key={time}
-                      className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs"
-                    >
-                      {time}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </CardBox>
-
-          {/* Closed Days */}
-          <CardBox color="yellow" title="الأيام المغلقة القادمة">
-            <p className="text-sm text-gray-500 mb-2">عدد الأيام: {closedDates.length}</p>
-            <ul className="space-y-1">
-              {closedDates.map(date => (
-                <li key={date} className="text-red-700 text-sm">
-                  🔒 {formatDate(date)}
-                </li>
-              ))}
-              {closedDates.length === 0 && (
-                <li className="text-sm text-gray-500">لا توجد أيام مغلقة قادمة.</li>
-              )}
-            </ul>
-          </CardBox>
-
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function CardBox({ color = "gray", title, children }) {
-  const border = {
-    blue: "border-blue-100",
-    green: "border-green-100",
-    red: "border-red-100",
-    yellow: "border-yellow-100",
-    gray: "border-gray-200",
-  }[color];
-
-  const titleColor = {
-    blue: "text-blue-900",
-    green: "text-green-900",
-    red: "text-red-900",
-    yellow: "text-yellow-900",
-    gray: "text-gray-900",
-  }[color];
-
-  return (
-    <div className={`bg-white p-6 rounded-2xl border ${border} shadow-md transition-all hover:shadow-lg`}>
-      <h2 className={`text-lg font-bold mb-3 ${titleColor}`}>{title}</h2>
-      {children}
-    </div>
-  );
-}
 </file>
 
 <file path="src/components/booking/CheckReservation.jsx">
@@ -4767,6 +4706,418 @@ function Header() {
 export default Header;
 </file>
 
+<file path="src/pages/Dashboard.jsx">
+// ✅ src/pages/Dashboard.jsx
+import { useEffect, useMemo, useState } from "react";
+import { db } from "../firebase";
+import { collection, getDocs, doc, getDoc } from "firebase/firestore";
+import { useNavigate } from "react-router-dom";
+
+function ymd(d) {
+  const x = new Date(d);
+  const y = x.getFullYear();
+  const m = String(x.getMonth() + 1).padStart(2, "0");
+  const day = String(x.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function addMonths(date, delta) {
+  const d = new Date(date);
+  d.setMonth(d.getMonth() + delta);
+  return d;
+}
+
+function fmtMonthTitle(date) {
+  // عنوان بسيط للحلاق (عربي)
+  return date.toLocaleDateString("ar-EG", { year: "numeric", month: "long" });
+}
+
+export default function Dashboard() {
+  const navigate = useNavigate();
+
+  const [closedDates, setClosedDates] = useState([]);
+  const [blockedByDay, setBlockedByDay] = useState({});
+  const [todayStats, setTodayStats] = useState({
+    total: 0,
+    passed: 0,
+    upcoming: 0,
+    firstTime: null,
+    lastTime: null,
+  });
+  const [weekStats, setWeekStats] = useState({
+    total: 0,
+    passed: 0,
+    upcoming: 0,
+    from: "",
+    to: "",
+  });
+  const [totalBookings, setTotalBookings] = useState(0);
+
+  // ✅ تقرير شهري + مقارنة
+  const [monthStats, setMonthStats] = useState({ title: "", total: 0 });
+  const [prevMonthStats, setPrevMonthStats] = useState({ title: "", total: 0 });
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const now = new Date();
+      const todayStr = ymd(now);
+
+      // ===== blocked days (المستقبل فقط) =====
+      const closedSnap = await getDocs(collection(db, "blockedDays"));
+      const futureClosed = closedSnap.docs
+        .map((doc) => doc.id)
+        .filter((date) => date >= todayStr)
+        .sort();
+      setClosedDates(futureClosed);
+
+      // ===== blocked times (المستقبل فقط) =====
+      const timesSnap = await getDocs(collection(db, "blockedTimes"));
+      const result = {};
+      timesSnap.docs.forEach((docu) => {
+        const date = docu.id;
+        const data = docu.data();
+        if (data?.times?.length && date >= todayStr) {
+          result[date] = data.times.sort();
+        }
+      });
+      setBlockedByDay(result);
+
+      // ===== bookings (active فقط) =====
+      const bookingsSnap = await getDocs(collection(db, "bookings"));
+      const bookings = bookingsSnap.docs
+        .map((docu) => docu.data())
+        .filter((b) => !b.cancelledAt);
+
+      setTotalBookings(bookings.length);
+
+      // ===== اليوم =====
+      const todayBookings = bookings.filter((b) => b.selectedDate === todayStr);
+      const passedToday = todayBookings.filter(
+        (b) => new Date(`${b.selectedDate}T${b.selectedTime}:00`) <= now
+      );
+      const upcomingToday = todayBookings.filter(
+        (b) => new Date(`${b.selectedDate}T${b.selectedTime}:00`) > now
+      );
+      const sortedTimes = todayBookings
+        .map((b) => b.selectedTime)
+        .sort((a, b) => a.localeCompare(b));
+
+      setTodayStats({
+        total: todayBookings.length,
+        passed: passedToday.length,
+        upcoming: upcomingToday.length,
+        firstTime: sortedTimes[0] || null,
+        lastTime: sortedTimes[sortedTimes.length - 1] || null,
+      });
+
+      // ===== الأسبوع (من الأحد للسبت) =====
+      const day = now.getDay(); // 0 Sunday
+      const diffToSunday = day === 0 ? 0 : day;
+      const start = new Date(now);
+      start.setDate(now.getDate() - diffToSunday);
+      start.setHours(0, 0, 0, 0);
+
+      const end = new Date(start);
+      end.setDate(start.getDate() + 6);
+      end.setHours(23, 59, 59, 999);
+
+      const fromStr = ymd(start);
+      const toStr = ymd(end);
+
+      const weekBookings = bookings.filter(
+        (b) => b.selectedDate >= fromStr && b.selectedDate <= toStr
+      );
+
+      let weekPassed = 0,
+        weekUpcoming = 0;
+      weekBookings.forEach((b) => {
+        const bookingTime = new Date(`${b.selectedDate}T${b.selectedTime}:00`);
+        if (bookingTime < now) weekPassed++;
+        else weekUpcoming++;
+      });
+
+      setWeekStats({
+        total: weekBookings.length,
+        passed: weekPassed,
+        upcoming: weekUpcoming,
+        from: fromStr,
+        to: toStr,
+      });
+
+      // ===== ✅ الشهر الحالي + الشهر الماضي =====
+      // ===== ✅ الشهر الحالي + الشهر الماضي (COUNTERS ثابتة) =====
+      const curKey = ymd(now).slice(0, 7); // "YYYY-MM"
+      const prevKey = ymd(addMonths(now, -1)).slice(0, 7);
+
+      const curSnap = await getDoc(doc(db, "statsMonthly", curKey));
+      const prevSnap = await getDoc(doc(db, "statsMonthly", prevKey));
+
+      const curTotal = curSnap.exists()
+        ? Number(curSnap.data()?.activeTotal || 0)
+        : 0;
+      const prevTotal = prevSnap.exists()
+        ? Number(prevSnap.data()?.total || 0)
+        : 0;
+
+      setMonthStats({ title: fmtMonthTitle(now), total: curTotal });
+      setPrevMonthStats({
+        title: fmtMonthTitle(addMonths(now, -1)),
+        total: prevTotal,
+      });
+    };
+
+    fetchData();
+  }, []);
+
+  const formatDate = (dateStr) => {
+    const date = new Date(dateStr);
+    const weekday = date.toLocaleDateString("ar-EG", { weekday: "long" });
+    const formatted = date.toLocaleDateString("ar-EG");
+    return `${weekday} ${formatted}`;
+  };
+
+  const monthDelta = useMemo(() => {
+    // مقارنة واضحة: فرق العدد الكلي + نسبة
+    const a = monthStats.total;
+    const b = prevMonthStats.total;
+
+    const diff = a - b;
+    const pct = b === 0 ? (a === 0 ? 0 : 100) : Math.round((diff / b) * 100);
+
+    return { diff, pct };
+  }, [monthStats.total, prevMonthStats.total]);
+
+  return (
+    <section
+      className="min-h-screen bg-gradient-to-br from-gray-100 to-gray-200 pt-36 pb-24 px-4 font-ar"
+      dir="rtl"
+    >
+      <div className="max-w-7xl mx-auto">
+        <div className="flex justify-between items-center mb-10">
+          <h1 className="text-3xl font-bold text-yellow-700 tracking-tight">
+            📊 لوحة الإحصائيات
+          </h1>
+          <button
+            onClick={() => navigate(-1)}
+            className="text-sm text-blue-600 hover:underline"
+          >
+            ← الرجوع
+          </button>
+        </div>
+
+        {/* ✅ كرت التقرير الشهري (واضح ومقارنة) */}
+        <div className="mb-8">
+          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-md">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-extrabold text-slate-900">
+                  📅 التقرير الشهري
+                </h2>
+                <p className="text-xs text-slate-500 mt-1">
+                  مقارنة الشهر الحالي مع الشهر الماضي بشكل مباشر وواضح.
+                </p>
+              </div>
+
+              <div className="text-sm bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
+                <div className="font-bold text-slate-800">
+                  الفرق:{" "}
+                  <span
+                    className={
+                      monthDelta.diff >= 0 ? "text-emerald-700" : "text-red-700"
+                    }
+                  >
+                    {monthDelta.diff >= 0
+                      ? `+${monthDelta.diff}`
+                      : monthDelta.diff}
+                  </span>{" "}
+                  (
+                  {monthDelta.pct >= 0
+                    ? `+${monthDelta.pct}%`
+                    : `${monthDelta.pct}%`}
+                  )
+                </div>
+                <div className="text-xs text-slate-500 mt-1">
+                  *النسبة تعتمد على عدد الحجوزات الكلي في الشهر الماضي.
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <CardBox color="blue" title={`هذا الشهر: ${monthStats.title}`}>
+                <ul className="space-y-2 text-sm text-gray-700">
+                  <li>
+                    📊 العدد الكلي:{" "}
+                    <span className="font-semibold text-slate-900">
+                      {monthStats.total}
+                    </span>
+                  </li>
+                </ul>
+              </CardBox>
+
+              <CardBox
+                color="yellow"
+                title={`الشهر الماضي: ${prevMonthStats.title}`}
+              >
+                <ul className="space-y-2 text-sm text-gray-700">
+                  <li>
+                    📊 العدد الكلي:{" "}
+                    <span className="font-semibold text-slate-900">
+                      {prevMonthStats.total}
+                    </span>
+                  </li>
+                </ul>
+              </CardBox>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {/* Weekly Stats */}
+          <CardBox color="blue" title="إحصائيات الأسبوع">
+            <p className="text-sm text-gray-500 mb-3">
+              من {formatDate(weekStats.from)} إلى {formatDate(weekStats.to)}
+            </p>
+            <ul className="space-y-2 text-sm text-gray-700">
+              <li>
+                🧮 عدد الأدوار الكلي:{" "}
+                <span className="text-purple-700 font-semibold">
+                  {totalBookings}
+                </span>
+              </li>
+
+              <li>
+                📊 عدد الحجوزات هذا الأسبوع:{" "}
+                <span className="font-semibold">{weekStats.total}</span>
+              </li>
+              <li>
+                ✅ الأدوار التي مرّت:{" "}
+                <span className="text-green-700 font-semibold">
+                  {weekStats.passed}
+                </span>
+              </li>
+              <li>
+                ⏳ الأدوار القادمة:{" "}
+                <span className="text-blue-700 font-semibold">
+                  {weekStats.upcoming}
+                </span>
+              </li>
+            </ul>
+          </CardBox>
+
+          {/* Today Stats */}
+          <CardBox color="green" title="إحصائيات اليوم">
+            <ul className="space-y-2 text-sm text-gray-700">
+              <li>
+                📋 عدد الحجوزات اليوم:{" "}
+                <span className="font-semibold">{todayStats.total}</span>
+              </li>
+              <li>
+                ✅ الأدوار التي مرّت:{" "}
+                <span className="text-green-700 font-semibold">
+                  {todayStats.passed}
+                </span>
+              </li>
+              <li>
+                ⏳ الأدوار القادمة:{" "}
+                <span className="text-blue-700 font-semibold">
+                  {todayStats.upcoming}
+                </span>
+              </li>
+              {todayStats.firstTime && (
+                <li>
+                  🕒 أول حجز:{" "}
+                  <span className="font-semibold text-gray-800">
+                    {todayStats.firstTime}
+                  </span>
+                </li>
+              )}
+              {todayStats.lastTime && (
+                <li>
+                  🕔 آخر حجز:{" "}
+                  <span className="font-semibold text-gray-800">
+                    {todayStats.lastTime}
+                  </span>
+                </li>
+              )}
+            </ul>
+          </CardBox>
+
+          {/* Blocked Times */}
+          <CardBox color="red" title="الأوقات المحظورة">
+            {Object.keys(blockedByDay).length === 0 && (
+              <p className="text-sm text-gray-500">لا توجد أوقات محظورة.</p>
+            )}
+            {Object.entries(blockedByDay).map(([date, times]) => (
+              <div key={date} className="mb-3">
+                <p className="text-red-700 font-semibold mb-1">
+                  📅 {formatDate(date)}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {times.map((time) => (
+                    <span
+                      key={time}
+                      className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs"
+                    >
+                      {time}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </CardBox>
+
+          {/* Closed Days */}
+          <CardBox color="yellow" title="الأيام المغلقة القادمة">
+            <p className="text-sm text-gray-500 mb-2">
+              عدد الأيام: {closedDates.length}
+            </p>
+            <ul className="space-y-1">
+              {closedDates.map((date) => (
+                <li key={date} className="text-red-700 text-sm">
+                  🔒 {formatDate(date)}
+                </li>
+              ))}
+              {closedDates.length === 0 && (
+                <li className="text-sm text-gray-500">
+                  لا توجد أيام مغلقة قادمة.
+                </li>
+              )}
+            </ul>
+          </CardBox>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function CardBox({ color = "gray", title, children }) {
+  const border = {
+    blue: "border-blue-100",
+    green: "border-green-100",
+    red: "border-red-100",
+    yellow: "border-yellow-100",
+    gray: "border-gray-200",
+  }[color];
+
+  const titleColor = {
+    blue: "text-blue-900",
+    green: "text-green-900",
+    red: "text-red-900",
+    yellow: "text-yellow-900",
+    gray: "text-gray-900",
+  }[color];
+
+  return (
+    <div
+      className={`bg-white p-6 rounded-2xl border ${border} shadow-md transition-all hover:shadow-lg`}
+    >
+      <h2 className={`text-lg font-bold mb-3 ${titleColor}`}>{title}</h2>
+      {children}
+    </div>
+  );
+}
+</file>
+
 <file path="src/components/booking/BookingTracker.jsx">
 // src/components/BookingTracker.jsx
 import { useState } from "react";
@@ -5169,7 +5520,7 @@ export default BookingTracker;
 </file>
 
 <file path="src/pages/AdminBookings.jsx">
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { db } from "../firebase";
 import {
   collection,
@@ -5182,7 +5533,20 @@ import {
   deleteField,
 } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
-import { FaUser, FaPhone, FaCalendarAlt, FaClock, FaCut } from "react-icons/fa";
+import {
+  FaUser,
+  FaPhone,
+  FaCalendarAlt,
+  FaClock,
+  FaCut,
+  FaSearch,
+  FaFilter,
+  FaSyncAlt,
+  FaTrash,
+  FaUndo,
+  FaTimesCircle,
+  FaTimes,
+} from "react-icons/fa";
 import { e164ToLocalPretty } from "../utils/phone";
 
 function formatDateArabic(dateStr) {
@@ -5205,9 +5569,36 @@ function formatDateTime(value) {
 function getDateLabel(dateStr) {
   const today = new Date().toISOString().slice(0, 10);
   const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
-  if (dateStr === today) return " (اليوم)";
-  if (dateStr === tomorrow) return " (بكرا)";
+  if (dateStr === today) return "اليوم";
+  if (dateStr === tomorrow) return "بكرا";
   return "";
+}
+
+function serviceLabel(key) {
+  return key === "haircut"
+    ? "قص شعر"
+    : key === "beard"
+    ? "تعليم لحية"
+    : "قص + لحية";
+}
+
+function serviceBadgeClasses(key) {
+  // هادي/احترافي
+  if (key === "haircut") return "bg-blue-50 text-blue-700 border-blue-200";
+  if (key === "beard") return "bg-purple-50 text-purple-700 border-purple-200";
+  return "bg-amber-50 text-amber-800 border-amber-200";
+}
+
+function safeLower(v) {
+  return (v ?? "").toString().toLowerCase();
+}
+
+// شارة اليوم/بكرا بشكل محترم
+function dayBadgeClasses(label) {
+  if (label === "اليوم")
+    return "bg-emerald-50 text-emerald-700 border-emerald-200";
+  if (label === "بكرا") return "bg-sky-50 text-sky-700 border-sky-200";
+  return "bg-gray-50 text-gray-700 border-gray-200";
 }
 
 export default function AdminBookings() {
@@ -5215,6 +5606,15 @@ export default function AdminBookings() {
   const [upcoming, setUpcoming] = useState([]);
   const [recentPast, setRecentPast] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // UI (عرض فقط)
+  const [searchTerm, setSearchTerm] = useState("");
+  const [serviceFilter, setServiceFilter] = useState("all"); // all | haircut | beard | both
+  const [sortMode, setSortMode] = useState("soonest"); // soonest | newest
+  const [lastUpdated, setLastUpdated] = useState(null);
+
+  // السجل مطوي افتراضيًا
+  const [showPast, setShowPast] = useState(true);
 
   useEffect(() => {
     async function fetchAndClassify() {
@@ -5250,6 +5650,7 @@ export default function AdminBookings() {
       setUpcoming(up);
       setRecentPast(past);
       setLoading(false);
+      setLastUpdated(new Date());
     }
 
     fetchAndClassify();
@@ -5298,163 +5699,526 @@ export default function AdminBookings() {
         return da - dc;
       })
     );
+
     await updateDoc(doc(db, "bookings", b.id), { cancelledAt: deleteField() });
     window.location.reload();
   };
 
   const handleDelete = async (b) => {
+    const ok = window.confirm("متأكد بدك حذف نهائي؟ (ما بنقدر نرجّعه)");
+    if (!ok) return;
     await deleteDoc(doc(db, "bookings", b.id));
     setRecentPast((p) => p.filter((x) => x.id !== b.id));
   };
 
+  // فلترة/ترتيب للعرض فقط
+  const filteredUpcoming = useMemo(() => {
+    const term = safeLower(searchTerm).trim();
+    let list = [...upcoming];
+
+    if (serviceFilter !== "all") {
+      list = list.filter((b) => b.selectedService === serviceFilter);
+    }
+
+    if (term) {
+      list = list.filter((b) => {
+        const name = safeLower(b.fullName);
+        const phonePretty = safeLower(e164ToLocalPretty(b.phoneNumber));
+        const phoneRaw = safeLower(b.phoneNumber);
+        return (
+          name.includes(term) ||
+          phonePretty.includes(term) ||
+          phoneRaw.includes(term)
+        );
+      });
+    }
+
+    if (sortMode === "newest") {
+      list.sort((a, b) => {
+        const da =
+          typeof a.createdAt === "string"
+            ? new Date(a.createdAt)
+            : a.createdAt?.toDate?.() ?? new Date(0);
+        const dbb =
+          typeof b.createdAt === "string"
+            ? new Date(b.createdAt)
+            : b.createdAt?.toDate?.() ?? new Date(0);
+        return dbb - da;
+      });
+    } else {
+      list.sort((a, b) => {
+        const da = new Date(`${a.selectedDate}T${a.selectedTime}:00`);
+        const dbb = new Date(`${b.selectedDate}T${b.selectedTime}:00`);
+        return da - dbb;
+      });
+    }
+
+    return list;
+  }, [upcoming, searchTerm, serviceFilter, sortMode]);
+
+  const filteredPast = useMemo(() => {
+    const term = safeLower(searchTerm).trim();
+    let list = [...recentPast];
+
+    if (serviceFilter !== "all") {
+      list = list.filter(
+        (b) => (b.selectedService ?? "both") === serviceFilter
+      );
+    }
+
+    if (term) {
+      list = list.filter((b) => {
+        const name = safeLower(b.fullName);
+        const phonePretty = safeLower(e164ToLocalPretty(b.phoneNumber));
+        const phoneRaw = safeLower(b.phoneNumber);
+        return (
+          name.includes(term) ||
+          phonePretty.includes(term) ||
+          phoneRaw.includes(term)
+        );
+      });
+    }
+
+    list.sort((a, b) => {
+      const da = b.cancelledAt
+        ? new Date(b.cancelledAt)
+        : new Date(`${b.selectedDate}T${b.selectedTime}:00`);
+      const dbb = a.cancelledAt
+        ? new Date(a.cancelledAt)
+        : new Date(`${a.selectedDate}T${a.selectedTime}:00`);
+      return da - dbb;
+    });
+
+    return list;
+  }, [recentPast, searchTerm, serviceFilter]);
+
+  const upcomingByDate = useMemo(() => {
+    return Object.entries(
+      filteredUpcoming.reduce((acc, b) => {
+        (acc[b.selectedDate] = acc[b.selectedDate] || []).push(b);
+        return acc;
+      }, {})
+    ).sort(([a], [b]) => a.localeCompare(b));
+  }, [filteredUpcoming]);
+
+  // “التالي” لأول عنصر (بعد الفلترة والترتيب)
+  const nextId = filteredUpcoming[0]?.id ?? null;
+
+
   return (
     <section className="min-h-screen bg-gray-100 pt-24 p-4 font-body" dir="rtl">
-      <div className="max-w-5xl mx-auto bg-white rounded-2xl shadow-xl p-6 space-y-6">
-        <div className="flex justify-between items-center mb-4">
+      <div className="max-w-5xl mx-auto bg-white rounded-2xl shadow-xl p-4 sm:p-6 space-y-4">
+        {/* Compact Top Bar */}
+        <div className="flex items-center justify-between gap-3">
           <button
             onClick={() => navigate(-1)}
-            className="text-blue-600 hover:underline text-sm"
+            className="text-blue-700 hover:text-blue-900 text-sm font-semibold"
           >
             ← الرجوع
           </button>
-          <h1 className="text-2xl font-bold text-gold">لوحة الحجوزات</h1>
+
+          <div className="flex-1">
+            <div className="flex items-center justify-center gap-2 flex-wrap">
+              <h1 className="text-lg sm:text-xl font-extrabold text-gold">
+                لوحة الحجوزات
+              </h1>
+
+              <span className="text-[11px] font-bold px-3 py-1 rounded-full border bg-emerald-50 text-emerald-800 border-emerald-200">
+                القادمة: {filteredUpcoming.length}
+              </span>
+
+              <span className="text-[11px] font-bold px-3 py-1 rounded-full border bg-yellow-50 text-yellow-900 border-yellow-200">
+                السجل: {filteredPast.length}
+              </span>
+            </div>
+          </div>
+
+          <div className="hidden sm:flex items-center gap-2 text-[11px] text-gray-400">
+            <FaSyncAlt className="opacity-70" />
+            <span>
+              {lastUpdated
+                ? `آخر تحديث: ${String(lastUpdated.getHours()).padStart(
+                    2,
+                    "0"
+                  )}:${String(lastUpdated.getMinutes()).padStart(2, "0")}`
+                : "آخر تحديث: —"}
+            </span>
+          </div>
+        </div>
+        {/* Sticky Tools (ثابت فوق) */}
+        <div className="sticky top-0 z-50 -mx-4 sm:mx-0">
+          <div className="px-4 sm:px-0">
+            <div className="rounded-none sm:rounded-2xl border-b sm:border border-gray-200 bg-gray-50/95 backdrop-blur shadow-sm p-3">
+              <div className="flex flex-col gap-3">
+                {/* Search */}
+                <div>
+                  <label className="text-[11px] text-gray-500 flex items-center gap-2 mb-1">
+                    <FaSearch className="opacity-70" />
+                    بحث سريع (اسم / هاتف)
+                  </label>
+
+                  <div className="relative">
+                    <input
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      placeholder="اكتب اسم الزبون أو رقم الهاتف..."
+                      className="w-full rounded-xl border border-gray-200 px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-gray-200 bg-white"
+                      aria-label="بحث بالاسم أو رقم الهاتف"
+                    />
+
+                    {searchTerm.trim() && (
+                      <button
+                        type="button"
+                        onClick={() => setSearchTerm("")}
+                        className="absolute left-2 top-1/2 -translate-y-1/2 rounded-lg px-2 py-1 text-gray-500 hover:text-gray-900 hover:bg-gray-100"
+                        aria-label="مسح البحث"
+                        title="مسح"
+                      >
+                        <FaTimes />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Filters - موبايل: صف واحد مرتب */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[11px] text-gray-500 flex items-center gap-2 mb-1">
+                      <FaFilter className="opacity-70" />
+                      الخدمة
+                    </label>
+                    <select
+                      value={serviceFilter}
+                      onChange={(e) => setServiceFilter(e.target.value)}
+                      className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-gray-200"
+                      aria-label="فلترة حسب الخدمة"
+                    >
+                      <option value="all">الكل</option>
+                      <option value="haircut">قص شعر</option>
+                      <option value="beard">تعليم لحية</option>
+                      <option value="both">قص + لحية</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] text-gray-500 mb-1 block">
+                      الترتيب
+                    </label>
+                    <select
+                      value={sortMode}
+                      onChange={(e) => setSortMode(e.target.value)}
+                      className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-gray-200"
+                      aria-label="ترتيب الحجوزات"
+                    >
+                      <option value="soonest">أقرب موعد</option>
+                      <option value="newest">أحدث حجز</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         {loading ? (
-          <p className="text-center py-10 text-gray-500">جاري التحميل...</p>
+          // (8) Skeleton بسيط بدل نص
+          <div className="space-y-3">
+            <div className="h-20 rounded-2xl bg-gray-100 border border-gray-200 animate-pulse" />
+            <div className="h-28 rounded-2xl bg-gray-100 border border-gray-200 animate-pulse" />
+            <div className="h-28 rounded-2xl bg-gray-100 border border-gray-200 animate-pulse" />
+          </div>
         ) : (
-          <div className="space-y-6">
-            <div className="bg-green-50 rounded-xl shadow p-4 border border-green-200">
-              <h2 className="text-xl font-semibold text-green-800 mb-4">
-                📆 الحجوزات القادمة
-              </h2>
-              {upcoming.length === 0 ? (
-                <p className="text-gray-600">لا توجد حجوزات قادمة حالياً.</p>
+          <div className="space-y-4">
+            {/* Upcoming */}
+            <div className="rounded-2xl border border-gray-200 bg-white p-3 sm:p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-base sm:text-lg font-extrabold text-gray-900">
+                  📆 الحجوزات القادمة
+                </h2>
+                <span className="text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full px-3 py-1">
+                  {filteredUpcoming.length} موعد
+                </span>
+              </div>
+
+              {/* (7) Empty state بسيط */}
+              {filteredUpcoming.length === 0 ? (
+                <div className="rounded-xl bg-gray-50 border border-gray-200 p-6 text-center">
+                  <p className="text-gray-900 font-extrabold">
+                    لا توجد حجوزات.
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    أي حجز جديد سيظهر هنا تلقائيًا.
+                  </p>
+                </div>
               ) : (
-                Object.entries(
-                  upcoming.reduce((acc, b) => {
-                    (acc[b.selectedDate] = acc[b.selectedDate] || []).push(b);
-                    return acc;
-                  }, {})
-                )
-                  .sort(([a], [b]) => a.localeCompare(b))
-                  .map(([date, bookings]) => (
-                    <div key={date} className="mb-6">
-                      <h3 className="text-lg font-medium text-green-900 mb-2 border-b pb-1 border-green-300">
-                        📅 {formatDateArabic(date)}
-                        {getDateLabel(date)}
-                      </h3>
-                      <div className="space-y-3">
-                        {bookings.map((b) => (
-                          <div
-                            key={b.id}
-                            className="flex justify-between items-center bg-white border border-gray-200 rounded-xl px-4 py-3"
-                          >
-                            <div className="text-sm space-y-1">
-                              <p>
-                                <FaUser className="inline text-gold mr-1" />{" "}
-                                {b.fullName}
-                              </p>
-                              <p>
-                                <FaPhone className="inline text-gray-500 mr-1" />{" "}
-                                <a
-                                  href={`tel:${b.phoneNumber}`}
-                                  className="text-blue-600 hover:underline"
+                <div className="space-y-4">
+                  {upcomingByDate.map(([date, bookings]) => {
+                    const label = getDateLabel(date);
+
+                    return (
+                      <div
+                        key={date}
+                        className="rounded-2xl bg-gray-50 border border-gray-200 p-3"
+                      >
+                        {/* Day header (professional) */}
+                        <div className="rounded-xl bg-white border border-gray-200 px-4 py-3 mb-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div
+                                className={`w-1.5 h-9 rounded-full ${
+                                  label === "اليوم"
+                                    ? "bg-emerald-500"
+                                    : label === "بكرا"
+                                    ? "bg-sky-500"
+                                    : "bg-gray-300"
+                                }`}
+                              />
+                              <div className="leading-tight">
+                                <div className="text-sm sm:text-base font-extrabold text-gray-900">
+                                  {formatDateArabic(date)}
+                                </div>
+                                <div className="text-[11px] text-gray-500 mt-0.5">
+                                  {bookings.length} حجوزات
+                                </div>
+                              </div>
+
+                              {label && (
+                                <span
+                                  className={`text-[11px] font-bold rounded-full px-3 py-1 border ${dayBadgeClasses(
+                                    label
+                                  )}`}
                                 >
-                                  {e164ToLocalPretty(b.phoneNumber)}
-                                </a>
-                              </p>
-                              <p>
-                                <FaClock className="inline text-gray-500 mr-1" />{" "}
-                                {b.selectedTime}
-                              </p>
-                              <p>
-                                <FaCut className="inline text-gray-500 mr-1" />{" "}
-                                {b.selectedService === "haircut"
-                                  ? "قص شعر"
-                                  : b.selectedService === "beard"
-                                  ? "تعليم لحية"
-                                  : "قص شعر + لحية"}
-                              </p>
-                              <p className="text-xs text-gray-600">
-                                تم الحجز: {formatDateTime(b.createdAt)}
-                              </p>
+                                  {label}
+                                </span>
+                              )}
                             </div>
-                            <button
-                              onClick={() => handleCancel(b)}
-                              className="text-red-600 hover:underline text-sm"
-                            >
-                              إلغاء
-                            </button>
+
+                            <div className="text-[11px] font-bold text-gray-600 bg-gray-100 border border-gray-200 rounded-lg px-3 py-1.5">
+                              {bookings.length}
+                            </div>
                           </div>
-                        ))}
+                        </div>
+
+                        {/* Bookings list */}
+                        <div className="space-y-3">
+                          {bookings.map((b) => {
+                            const isNext = b.id === nextId;
+
+                            return (
+                              <div
+                                key={b.id}
+                                className={`rounded-2xl bg-white border shadow-sm p-3 sm:p-4 ${
+                                  isNext
+                                    ? "border-emerald-300 ring-1 ring-emerald-100"
+                                    : "border-gray-200"
+                                }`}
+                              >
+                                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                                  <div className="space-y-2 flex-1">
+                                    {/* Line 1: Name + time + NEXT badge */}
+                                    <div className="flex items-start justify-between gap-3">
+                                      <div className="flex items-start gap-2 min-w-0">
+                                        <FaUser className="text-gold mt-1 text-sm opacity-80 shrink-0" />
+                                        <h3 className="text-lg sm:text-xl font-black text-gray-900 leading-tight truncate">
+                                          {b.fullName}
+                                        </h3>
+                                      </div>
+
+                                      <div className="shrink-0 flex items-center gap-2">
+                                        {isNext && (
+                                          <span className="text-[11px] font-extrabold px-3 py-1 rounded-full border bg-emerald-50 text-emerald-800 border-emerald-200">
+                                            التالي
+                                          </span>
+                                        )}
+                                        <span className="inline-flex items-center gap-2 text-xs font-extrabold rounded-full px-3 py-1 border bg-gray-900 text-white border-gray-900">
+                                          <FaClock className="opacity-90" />
+                                          {b.selectedTime}
+                                        </span>
+                                      </div>
+                                    </div>
+
+                                    {/* Line 2: PHONE FIRST (اتصال + الرقم) */}
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <a
+                                        href={`tel:${b.phoneNumber}`}
+                                        className="inline-flex items-center gap-2 text-sm font-extrabold px-4 py-2 rounded-xl border border-blue-200 bg-blue-50 text-blue-800 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                                        aria-label={`اتصال بالزبون ${b.fullName}`}
+                                        title="اتصال"
+                                      >
+                                        <FaPhone className="opacity-80" />
+                                        اتصال
+                                        <span className="font-semibold opacity-90">
+                                          {e164ToLocalPretty(b.phoneNumber)}
+                                        </span>
+                                      </a>
+
+                                      {/* Service after phone (secondary) */}
+                                      <span
+                                        className={`inline-flex items-center gap-2 text-xs font-bold rounded-full px-3 py-1 border ${serviceBadgeClasses(
+                                          b.selectedService
+                                        )}`}
+                                        aria-label="الخدمة"
+                                      >
+                                        <FaCut className="opacity-80" />
+                                        {serviceLabel(b.selectedService)}
+                                      </span>
+                                    </div>
+
+                                    <div className="text-[11px] text-gray-500">
+                                      تم الحجز: {formatDateTime(b.createdAt)}
+                                    </div>
+                                  </div>
+
+                                  {/* Actions */}
+                                  <div className="sm:pt-0">
+                                    <button
+                                      onClick={() => handleCancel(b)}
+                                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 text-sm font-bold px-4 py-2 rounded-xl border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-200"
+                                      aria-label="إلغاء الحجز"
+                                    >
+                                      <FaTimesCircle />
+                                      إلغاء
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
-                    </div>
-                  ))
+                    );
+                  })}
+                </div>
               )}
             </div>
 
-            <div className="bg-yellow-50 rounded-xl shadow p-4 border border-yellow-300">
-              <h2 className="text-xl font-semibold text-yellow-800 mb-4">
-                🕘 الحجوزات المنتهية حديثًا
-              </h2>
-              {recentPast.length === 0 ? (
-                <p className="text-gray-600">لا توجد حجوزات منتهية حالياً.</p>
+            {/* Past (collapsed) */}
+            <div className="rounded-2xl border border-gray-200 bg-white p-3 sm:p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-base sm:text-lg font-extrabold text-gray-900">
+                    🕘 السجل (منتهية / ملغية)
+                  </h2>
+                  <span className="text-[11px] font-bold bg-yellow-50 text-yellow-900 border border-yellow-200 rounded-full px-3 py-1">
+                    {filteredPast.length}
+                  </span>
+                </div>
+
+                <button
+                  onClick={() => setShowPast((s) => !s)}
+                  className="text-sm font-extrabold text-blue-700 hover:text-blue-900"
+                  aria-label="عرض أو إخفاء السجل"
+                >
+                  {showPast
+                    ? "إخفاء السجل"
+                    : `عرض السجل (${filteredPast.length})`}
+                </button>
+              </div>
+
+              {!showPast ? (
+                <div className="mt-3 text-xs text-gray-500">
+                  السجل مطوي لتسهيل الشغل. افتحه عند الحاجة.
+                </div>
+              ) : filteredPast.length === 0 ? (
+                <div className="rounded-xl bg-gray-50 border border-gray-200 p-6 text-center mt-3">
+                  <p className="text-gray-900 font-extrabold">لا يوجد سجل.</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    الإلغاءات والمنتهية ستظهر هنا.
+                  </p>
+                </div>
               ) : (
-                <div className="space-y-3">
-                  {recentPast.map((b) => (
+                <div className="space-y-3 mt-3">
+                  {filteredPast.map((b) => (
                     <div
                       key={b.id}
-                      className="flex justify-between items-center bg-white border border-gray-200 rounded-xl px-4 py-3"
+                      className="rounded-2xl bg-white border border-gray-200 shadow-sm p-3 sm:p-4"
                     >
-                      <div className="text-sm space-y-1">
-                        <p>
-                          <FaUser className="inline text-gold mr-1" />{" "}
-                          {b.fullName}
-                        </p>
-                        <p>
-                          <FaPhone className="inline text-gray-500 mr-1" />{" "}
-                          <a
-                            href={`tel:${b.phoneNumber}`}
-                            className="text-blue-600 hover:underline"
-                          >
-                            {e164ToLocalPretty(b.phoneNumber)}
-                          </a>
-                        </p>
-                        <p>
-                          <FaCalendarAlt className="inline text-gray-500 mr-1" />{" "}
-                          {formatDateArabic(b.selectedDate)}
-                        </p>
-                        <p>
-                          <FaClock className="inline text-gray-500 mr-1" />{" "}
-                          {b.selectedTime}
-                        </p>
-                        {b.cancelledAt && (
-                          <p className="text-xs text-red-500">
-                            🚫 تم الإلغاء: {formatDateTime(b.cancelledAt)}
-                          </p>
-                        )}
-                      </div>
-                      <div className="flex flex-col gap-2 text-sm text-center">
-                        {b.cancelledAt && (
+                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                        <div className="space-y-2 flex-1">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-start gap-2 min-w-0">
+                              <FaUser className="text-gold mt-1 text-sm opacity-80 shrink-0" />
+                              <h3 className="text-lg sm:text-xl font-black text-gray-900 leading-tight truncate">
+                                {b.fullName}
+                              </h3>
+                            </div>
+
+                            <span className="shrink-0 inline-flex items-center gap-2 text-xs font-extrabold rounded-full px-3 py-1 border bg-gray-900 text-white border-gray-900">
+                              <FaClock className="opacity-90" />
+                              {b.selectedTime}
+                            </span>
+                          </div>
+
+                          {/* Phone first here too */}
+                          <div className="flex flex-wrap items-center gap-2">
+                            <a
+                              href={`tel:${b.phoneNumber}`}
+                              className="inline-flex items-center gap-2 text-sm font-extrabold px-4 py-2 rounded-xl border border-blue-200 bg-blue-50 text-blue-800 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                              aria-label={`اتصال بالزبون ${b.fullName}`}
+                              title="اتصال"
+                            >
+                              <FaPhone className="opacity-80" />
+                              اتصال
+                              <span className="font-semibold opacity-90">
+                                {e164ToLocalPretty(b.phoneNumber)}
+                              </span>
+                            </a>
+
+                            {b.selectedService && (
+                              <span
+                                className={`inline-flex items-center gap-2 text-xs font-bold rounded-full px-3 py-1 border ${serviceBadgeClasses(
+                                  b.selectedService
+                                )}`}
+                              >
+                                <FaCut className="opacity-80" />
+                                {serviceLabel(b.selectedService)}
+                              </span>
+                            )}
+
+                            <span className="inline-flex items-center gap-2 text-sm text-gray-700">
+                              <FaCalendarAlt className="text-gray-400" />
+                              {formatDateArabic(b.selectedDate)}
+                            </span>
+                          </div>
+
+                          {b.cancelledAt && (
+                            <div className="text-[11px] font-semibold text-red-700 bg-red-50 border border-red-200 rounded-xl px-3 py-2 inline-block">
+                              🚫 تم الإلغاء: {formatDateTime(b.cancelledAt)}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex flex-col gap-2 sm:items-end">
+                          {b.cancelledAt && (
+                            <button
+                              onClick={() => handleRestore(b)}
+                              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 text-sm font-bold px-4 py-2 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+                              aria-label="استرجاع الحجز"
+                            >
+                              <FaUndo />
+                              استرجاع
+                            </button>
+                          )}
+
                           <button
-                            onClick={() => handleRestore(b)}
-                            className="text-green-700 hover:underline"
+                            onClick={() => handleDelete(b)}
+                            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 text-sm font-bold px-4 py-2 rounded-xl border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-200"
+                            aria-label="حذف نهائي"
                           >
-                            استرجاع
+                            <FaTrash />
+                            حذف نهائي
                           </button>
-                        )}
-                        <button
-                          onClick={() => handleDelete(b)}
-                          className="text-gray-600 hover:underline"
-                        >
-                          حذف نهائي
-                        </button>
+                        </div>
                       </div>
                     </div>
                   ))}
                 </div>
               )}
+            </div>
+
+            {/* Tiny footer (اختياري) */}
+            <div className="text-center text-[11px] text-gray-400">
+              ابحث بالاسم/الهاتف → اضغط اتصال → وإذا لزم ألغي.
             </div>
           </div>
         )}
@@ -5504,665 +6268,6 @@ function Home() {
 }
 
 export default Home;
-</file>
-
-<file path="src/pages/BarberPanel.jsx">
-// src/pages/products/BarberPanel.jsx
-import { useState, useEffect } from "react";
-import { useTranslation } from "react-i18next";
-import { useNavigate, Link } from "react-router-dom";
-import { db } from "../firebase";
-import {
-  doc,
-  getDoc,
-  setDoc,
-  updateDoc,
-  arrayUnion,
-  arrayRemove,
-  collection,
-  query,
-  where,
-  getDocs,
-  deleteDoc,
-  onSnapshot, // ✅ تحديث لحظي للحجوزات
-} from "firebase/firestore";
-import { e164ToLocalPretty } from "../utils/phone";
-
-const workingHours = {
-  Sunday: null,
-  Monday: { from: "12:00", to: "21:00" },
-  Tuesday: { from: "12:00", to: "21:00" },
-  Wednesday: { from: "12:00", to: "21:00" },
-  Thursday: { from: "12:00", to: "22:00" },
-  Friday: { from: "13:00", to: "23:30" },
-  Saturday: { from: "11:00", to: "19:30" },
-};
-
-const generateTimeSlots = (from, to) => {
-  const slots = [];
-  const [fromHour, fromMinute] = from.split(":").map(Number);
-  const [toHour, toMinute] = to.split(":").map(Number);
-  let current = new Date();
-  current.setHours(fromHour, fromMinute, 0, 0);
-  const end = new Date();
-  end.setHours(toHour, toMinute, 0, 0);
-
-  while (current <= end) {
-    slots.push(current.toTimeString().slice(0, 5));
-    current.setMinutes(current.getMinutes() + 30);
-  }
-  return slots;
-};
-
-function getDayName(dateStr) {
-  const date = new Date(dateStr);
-  return date.toLocaleDateString("en-US", { weekday: "long" });
-}
-
-function DateDropdown({ selectedDate, onChange }) {
-  const [options, setOptions] = useState([]);
-
-  useEffect(() => {
-    const temp = [];
-    const today = new Date();
-    const tomorrow = new Date(today);
-    tomorrow.setDate(today.getDate() + 1);
-
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(today);
-      d.setDate(today.getDate() + i);
-      const iso = d.toISOString().slice(0, 10);
-
-      const daysAr = [
-        "الأحد",
-        "الإثنين",
-        "الثلاثاء",
-        "الأربعاء",
-        "الخميس",
-        "الجمعة",
-        "السبت",
-      ];
-      let label = daysAr[d.getDay()];
-      if (d.toDateString() === today.toDateString()) label += " (اليوم)";
-      else if (d.toDateString() === tomorrow.toDateString()) label += " (بكرا)";
-
-      temp.push({ value: iso, label });
-    }
-    setOptions(temp);
-  }, []);
-
-  return (
-    <select
-      value={selectedDate}
-      onChange={(e) => onChange(e.target.value)}
-      className="w-full px-4 py-3 border border-gray-300 bg-white rounded-xl focus:outline-none focus:ring-2 focus:ring-gold transition mb-4"
-    >
-      <option value="" disabled>
-        اختر التاريخ من القائمة
-      </option>
-      {options.map(({ value, label }) => (
-        <option key={value} value={value}>
-          {label}
-        </option>
-      ))}
-    </select>
-  );
-}
-
-export default function BarberPanel() {
-  const { t, i18n } = useTranslation();
-  const navigate = useNavigate();
-  const isArabic = i18n.language === "ar";
-  const fontClass = isArabic ? "font-ar" : "font-body";
-
-  const [selectedDate, setSelectedDate] = useState("");
-  const [blockedTimes, setBlockedTimes] = useState([]);
-  const [selectedTimes, setSelectedTimes] = useState([]);
-  const [bookings, setBookings] = useState([]);
-  const [statusMessage, setStatusMessage] = useState("");
-  const [isDayBlocked, setIsDayBlocked] = useState(false);
-  const [loadingBlock, setLoadingBlock] = useState(false);
-
-  // ⚙️ إعداد "حجز واحد لكل رقم في اليوم"
-  const [limitOnePerDay, setLimitOnePerDay] = useState(false);
-  const [loadingSettings, setLoadingSettings] = useState(true);
-  const [savingSettings, setSavingSettings] = useState(false);
-
-  // حالة اليوم (مغلق / مفتوح)
-  useEffect(() => {
-    if (!selectedDate) return;
-    (async () => {
-      try {
-        const ref = doc(db, "blockedDays", selectedDate);
-        const snap = await getDoc(ref);
-        setIsDayBlocked(snap.exists());
-      } catch {
-        setIsDayBlocked(false);
-      }
-    })();
-  }, [selectedDate]);
-
-  const toggleDay = async () => {
-    if (!selectedDate) return;
-    setLoadingBlock(true);
-    const ref = doc(db, "blockedDays", selectedDate);
-    try {
-      if (isDayBlocked) {
-        await deleteDoc(ref);
-        setIsDayBlocked(false);
-      } else {
-        const bookingsSnap = await getDocs(
-          query(
-            collection(db, "bookings"),
-            where("selectedDate", "==", selectedDate)
-          )
-        );
-        const activeBookings = bookingsSnap.docs.filter(
-          (doc) => !doc.data().cancelledAt
-        );
-        if (activeBookings.length > 0) {
-          alert("⚠️ لا يمكن تعطيل هذا اليوم لأن هناك حجوزات لم يتم إلغاؤها.");
-          return;
-        }
-        await setDoc(ref, {});
-        setIsDayBlocked(true);
-      }
-    } catch (e) {
-      console.error(e);
-    }
-    setLoadingBlock(false);
-  };
-
-  // ⏰ تسجيل خروج تلقائي بعد ساعتين عدم نشاط
-  useEffect(() => {
-    let timer;
-    const resetTimer = () => {
-      if (timer) clearTimeout(timer);
-      timer = setTimeout(() => {
-        localStorage.removeItem("barberUser");
-        alert("⚠️ تم تسجيل الخروج بسبب عدم النشاط لمدة ساعتين.");
-        navigate("/login");
-      }, 2 * 60 * 60 * 1000);
-    };
-    resetTimer();
-    const handleActivity = () => resetTimer();
-    window.addEventListener("click", handleActivity);
-    window.addEventListener("keydown", handleActivity);
-    return () => {
-      clearTimeout(timer);
-      window.removeEventListener("click", handleActivity);
-      window.removeEventListener("keydown", handleActivity);
-    };
-  }, [navigate]);
-
-  // ✅ جلب جميع الحجوزات لحظيًا (Real-time)
-  useEffect(() => {
-    const q = query(collection(db, "bookings"));
-    const unsubscribe = onSnapshot(
-      q,
-      (snap) => {
-        const data = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-        setBookings(data);
-      },
-      (err) => {
-        console.error("خطأ بجلب الحجوزات (onSnapshot):", err);
-      }
-    );
-
-    return () => unsubscribe();
-  }, []);
-
-  // جلب إعداد "حجز واحد لكل رقم في اليوم"
-  useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        const ref = doc(db, "barberSettings", "global");
-        const snap = await getDoc(ref);
-        if (snap.exists()) {
-          const data = snap.data();
-          const value =
-            typeof data.limitOneBookingPerDayPerPhone === "boolean"
-              ? data.limitOneBookingPerDayPerPhone
-              : !!data.limitOneBookingPerDay;
-          setLimitOnePerDay(value);
-        } else {
-          setLimitOnePerDay(false);
-        }
-      } catch (err) {
-        console.error("خطأ بجلب إعدادات الحلاق:", err);
-        setLimitOnePerDay(false);
-      } finally {
-        setLoadingSettings(false);
-      }
-    };
-    fetchSettings();
-  }, []);
-
-  const handleToggleLimitOnePerDay = async () => {
-    if (loadingSettings || savingSettings) return;
-    try {
-      setSavingSettings(true);
-      const ref = doc(db, "barberSettings", "global");
-      await setDoc(
-        ref,
-        { limitOneBookingPerDayPerPhone: !limitOnePerDay },
-        { merge: true }
-      );
-      setLimitOnePerDay((prev) => !prev);
-    } catch (err) {
-      console.error("خطأ بتحديث إعداد حجز واحد لليوم:", err);
-      alert("حدث خطأ أثناء تحديث الإعداد. حاول مرة أخرى.");
-    } finally {
-      setSavingSettings(false);
-    }
-  };
-
-  // الأوقات المحظورة
-  useEffect(() => {
-    if (!selectedDate) {
-      setBlockedTimes([]);
-      setSelectedTimes([]);
-      setStatusMessage("");
-      return;
-    }
-    const fetchBlocked = async () => {
-      try {
-        const ref = doc(db, "blockedTimes", selectedDate);
-        const snap = await getDoc(ref);
-        if (snap.exists()) setBlockedTimes(snap.data().times || []);
-        else setBlockedTimes([]);
-        setSelectedTimes([]);
-        setStatusMessage("");
-      } catch (err) {
-        console.error("خطأ بجلب الأوقات المحظورة:", err);
-        setBlockedTimes([]);
-      }
-    };
-    fetchBlocked();
-  }, [selectedDate]);
-
-  const isTimeBooked = (time) =>
-    bookings.some(
-      (b) => b.selectedDate === selectedDate && b.selectedTime === time
-    );
-
-  const handleToggleTime = async (time) => {
-    if (isTimeBooked(time)) {
-      setStatusMessage("هذه الساعة محجوزة ولا يمكن تعديلها.");
-      return;
-    }
-
-    if (blockedTimes.includes(time)) {
-      const updated = blockedTimes.filter((t) => t !== time);
-      setBlockedTimes(updated);
-      try {
-        const ref = doc(db, "blockedTimes", selectedDate);
-        await updateDoc(ref, { times: arrayRemove(time) });
-        setStatusMessage("✅ تم استرجاع الساعة بنجاح");
-      } catch (err) {
-        console.error("خطأ باسترجاع الساعة:", err);
-        setStatusMessage("حدث خطأ، حاول مرة أخرى.");
-      }
-      setTimeout(() => setStatusMessage(""), 2500);
-      return;
-    }
-
-    setSelectedTimes((prev) =>
-      prev.includes(time) ? prev.filter((t) => t !== time) : [...prev, time]
-    );
-    setStatusMessage("");
-  };
-
-  const handleApplyBlock = async () => {
-    if (!selectedDate || selectedTimes.length === 0) {
-      setStatusMessage("اختر ساعة واحدة على الأقل للحظر.");
-      return;
-    }
-
-    for (const time of selectedTimes) {
-      if (isTimeBooked(time)) {
-        setStatusMessage(`الساعة ${time} محجوزة.`);
-        return;
-      }
-    }
-
-    try {
-      const ref = doc(db, "blockedTimes", selectedDate);
-      const snap = await getDoc(ref);
-      if (!snap.exists()) await setDoc(ref, { times: [] });
-      for (const time of selectedTimes) {
-        await updateDoc(ref, { times: arrayUnion(time) });
-      }
-      setBlockedTimes([...blockedTimes, ...selectedTimes]);
-      setSelectedTimes([]);
-      setStatusMessage("✅ تم حظر الأوقات بنجاح");
-    } catch (err) {
-      console.error("خطأ بتطبيق الحظر:", err);
-      setStatusMessage("حدث خطأ، حاول مرة أخرى.");
-    }
-    setTimeout(() => setStatusMessage(""), 2500);
-  };
-
-  const dayName = selectedDate ? getDayName(selectedDate) : "";
-  const times =
-    workingHours[dayName]?.from &&
-    generateTimeSlots(workingHours[dayName].from, workingHours[dayName].to);
-
-  const now = new Date();
-  const todayStr = now.toLocaleDateString("sv-SE"); // "YYYY-MM-DD"
-  const isToday = selectedDate === todayStr;
-
-  let filteredTimes = times;
-  if (isToday && times) {
-    filteredTimes = times.filter((time) => {
-      const slotTime = new Date(`${selectedDate}T${time}:00`);
-      return slotTime > now;
-    });
-  }
-
-  // 🔍 ترتيب "أحدث الحجوزات" حسب وقت إنشاء الحجز فعليًا
-  const getBookingCreationDate = (b) => {
-    // لو createdAt من Firestore (Timestamp)
-    if (b.createdAt && typeof b.createdAt.toDate === "function") {
-      return b.createdAt.toDate();
-    }
-
-    // لو مخزن كـ Date عادي
-    if (b.createdAt instanceof Date) {
-      return b.createdAt;
-    }
-
-    // احتياط: نرجع لموعد الحجز نفسه
-    try {
-      if (b.selectedDate && b.selectedTime) {
-        return new Date(`${b.selectedDate}T${b.selectedTime}:00`);
-      }
-    } catch {
-      // ignore parse errors
-    }
-
-    // قديم جدًا
-    return new Date(0);
-  };
-
-  const activeBookings = bookings.filter((b) => !b.cancelledAt);
-
-  // 🎯 أحدث 5 حجوزات حسب وقت إنشاء الحجز
-  const recentBookings = [...activeBookings]
-    .sort((a, b) => getBookingCreationDate(a) - getBookingCreationDate(b))
-    .slice(-5) // آخر 5 (الأحدث)
-    .reverse(); // نخلي الأحدث أول واحد
-
-  return (
-    <div className={`min-h-screen bg-gray-100 p-6 ${fontClass}`} dir="rtl">
-      <div className="h-16"></div>
-
-      {/* اللوحة الرئيسية لإدارة الساعات */}
-      <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden">
-        <div className="flex flex-col md:flex-row items-center justify-between bg-white px-8 py-6 border-b">
-          <h1 className="text-3xl font-semibold text-gray-800">
-            إدارة الساعات
-          </h1>
-          <div className="mt-4 md:mt-0 flex flex-wrap items-center gap-3 text-sm">
-            <button
-              onClick={() => navigate("/admin-bookings")}
-              className="text-blue-600 hover:underline transition-colors"
-            >
-              لوحة الحجوزات
-            </button>
-            <Link
-              to="/blocked-phones"
-              className="text-yellow-700 hover:underline transition-colors"
-            >
-              الأرقام المحظورة
-            </Link>
-            <button
-              onClick={() => {
-                if (window.confirm("هل أنت متأكد أنك تريد تسجيل الخروج؟")) {
-                  localStorage.removeItem("barberUser");
-                  navigate("/login");
-                }
-              }}
-              className="text-red-600 hover:underline transition-colors"
-            >
-              تسجيل الخروج
-            </button>
-            <button
-              onClick={() => navigate("/dashboard")}
-              className="text-green-700 hover:underline transition-colors"
-            >
-              الإحصائيات
-            </button>
-          </div>
-        </div>
-
-        {/* اختيار التاريخ + حالة اليوم */}
-        <div className="p-8">
-          <label className="block mb-3 text-lg font-medium text-gray-700">
-            اختر التاريخ
-          </label>
-          <DateDropdown
-            selectedDate={selectedDate}
-            onChange={setSelectedDate}
-          />
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            className="w-full border border-gray-300 rounded-xl px-4 py-3 bg-gray-50 text-gray-800 focus:outline-none focus:ring-2 focus:ring-gold transition mb-4"
-            min={new Date().toISOString().split("T")[0]}
-          />
-
-          {selectedDate && (
-            <div className="flex items-center justify-between mb-4">
-              <span>حالة اليوم:</span>
-              <button
-                onClick={toggleDay}
-                disabled={loadingBlock}
-                className={`px-4 py-2 rounded text-white font-semibold transition ${
-                  isDayBlocked
-                    ? "bg-red-500 hover:bg-red-600"
-                    : "bg-green-500 hover:bg-green-600"
-                }`}
-              >
-                {loadingBlock
-                  ? "جاري..."
-                  : isDayBlocked
-                  ? "تفعيل اليوم"
-                  : "تعطيل اليوم"}
-              </button>
-            </div>
-          )}
-
-          {!selectedDate && (
-            <p className="mt-2 text-sm text-gray-500">
-              يمكنك استخدام القائمة أو التقويم لاختيار أي تاريخ.
-            </p>
-          )}
-          {selectedDate && !times && (
-            <p className="mt-3 text-sm text-red-600 font-medium">
-              هذا اليوم مغلق
-            </p>
-          )}
-        </div>
-
-        {selectedDate && times && !isDayBlocked && (
-          <div className="p-8 pt-4 border-t bg-gray-50">
-            <h2 className="text-xl font-semibold text-gray-700 mb-4">
-              الأوقات المتاحة:
-            </h2>
-            <div className="grid grid-cols-3 sm:grid-cols-4 gap-4 mb-6">
-              {filteredTimes.map((time) => {
-                const booked = bookings.some(
-                  (b) =>
-                    b.selectedDate === selectedDate && b.selectedTime === time
-                );
-                const isBlocked = blockedTimes.includes(time);
-                const isSelected = selectedTimes.includes(time);
-
-                return (
-                  <button
-                    key={time}
-                    onClick={() => handleToggleTime(time)}
-                    disabled={booked}
-                    className={`py-2 rounded-xl text-sm font-medium text-center transition-all duration-200 ${
-                      booked
-                        ? "bg-red-700 text-white cursor-not-allowed"
-                        : isBlocked
-                        ? "bg-red-200 text-red-800"
-                        : isSelected
-                        ? "bg-yellow-300 text-gray-900 ring-2 ring-yellow-500"
-                        : "bg-green-100 text-green-800 hover:bg-green-200"
-                    }`}
-                    title={
-                      booked
-                        ? "هذه الساعة محجوزة"
-                        : isBlocked
-                        ? "هذه الساعة محظورة"
-                        : "اضغط للحظر/الإلغاء"
-                    }
-                  >
-                    {time}
-                  </button>
-                );
-              })}
-            </div>
-            {selectedTimes.length > 0 ? (
-              <button
-                onClick={handleApplyBlock}
-                className="w-full bg-red-600 text-white py-3 rounded-xl font-semibold hover:bg-red-700 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500"
-              >
-                {t("remove_selected_times") ||
-                  "تطبيق الحظر على الساعات المحددة"}
-              </button>
-            ) : (
-              <p className="text-sm text-gray-500">
-                اختر ساعة أو أكثر ثم اضغط لحظرها.
-              </p>
-            )}
-          </div>
-        )}
-
-        {selectedDate && isDayBlocked && (
-          <div className="p-8 pt-4 border-t bg-yellow-50 text-center text-red-600 font-semibold text-lg">
-            تم تعطيل هذا اليوم بالكامل. لا يمكن تعديل أو حظر الساعات حتى يتم
-            تفعيله من جديد.
-          </div>
-        )}
-
-        {statusMessage && (
-          <div className="p-4 bg-green-100 border border-green-300 text-green-800 text-center font-medium">
-            {statusMessage}
-          </div>
-        )}
-      </div>
-
-      {/* عرض سريع للحجوزات الأخيرة – شكل احترافي وواضح */}
-      {recentBookings.length > 0 && (
-        <div className="max-w-3xl mx-auto mt-6 text-xs sm:text-sm">
-          <div className="bg-white rounded-2xl shadow-md border border-slate-200 p-4 sm:p-5 text-slate-900">
-            {/* العنوان */}
-            <div className="flex items-center justify-between gap-2 mb-3">
-              <div className="flex items-center gap-2">
-                <span className="text-lg">📅</span>
-                <div className="flex flex-col">
-                  <h2 className="font-semibold text-slate-900">
-                    أحدث الحجوزات (رقم موحّد)
-                  </h2>
-                  <span className="text-[11px] text-slate-500">
-                    آخر {recentBookings.length} حجوزات فعّالة
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* القائمة */}
-            <div className="mt-2 border-t border-slate-100 divide-y divide-slate-100">
-              {recentBookings.map((b, idx) => (
-                <div
-                  key={b.id}
-                  className="py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 hover:bg-slate-50 rounded-xl px-2"
-                >
-                  {/* الاسم + التاريخ والساعة */}
-                  <div className="flex items-start gap-3">
-                    <div className="mt-1">
-                      <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-slate-100 text-[11px] text-slate-500">
-                        {idx + 1}
-                      </span>
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="font-semibold text-slate-900 text-sm sm:text-base">
-                        {b.fullName || "بدون اسم"}
-                      </span>
-                      <div className="mt-1 inline-flex flex-wrap items-center gap-2 text-[11px]">
-                        <span className="inline-flex items-center rounded-full bg-amber-50 px-3 py-0.5 border border-amber-200 text-amber-800">
-                          {b.selectedDate || "—"}
-                        </span>
-                        <span className="inline-flex items-center rounded-full bg-sky-50 px-3 py-0.5 border border-sky-200 text-sky-700">
-                          {b.selectedTime || "—"}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* رقم الهاتف */}
-                  <div className="flex items-center gap-2 sm:justify-end sm:min-w-[150px] text-[11px] sm:text-xs">
-                    <span className="text-slate-500">الرقم الموحّد:</span>
-                    <span className="font-mono text-sm text-slate-900">
-                      {e164ToLocalPretty(b.phoneNumber)}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ⚙️ كرت إعداد "حجز واحد لكل رقم / يوم" – في آخر الصفحة */}
-      <div className="max-w-3xl mx-auto mt-6">
-        <div className="bg-white rounded-2xl shadow p-4 border border-gray-200 text-center">
-          <h2 className="text-sm font-semibold text-gray-800 mb-2">
-            وضع حجز واحد لكل رقم / يوم
-          </h2>
-          <div className="flex items-center justify-center gap-4 mb-2">
-            {/* النص على اليمين */}
-            <span className="text-xs font-semibold text-gray-700">
-              {limitOnePerDay ? "مُفَعَّل" : "مُعَطَّل"}
-            </span>
-
-            {/* السويتش */}
-            <button
-              type="button"
-              onClick={handleToggleLimitOnePerDay}
-              disabled={loadingSettings || savingSettings}
-              className="disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              <div
-                className={`relative w-16 h-8 rounded-full transition-colors flex items-center ${
-                  limitOnePerDay ? "bg-emerald-500" : "bg-gray-300"
-                }`}
-              >
-                {/* الدائرة */}
-                <div
-                  className={`absolute top-0.5 left-0.5 w-7 h-7 rounded-full bg-white shadow-md transition-transform ${
-                    limitOnePerDay ? "translate-x-8" : "translate-x-0"
-                  }`}
-                ></div>
-              </div>
-            </button>
-          </div>
-
-          <p className="text-xs text-gray-500">
-            {limitOnePerDay
-              ? "مُفعَّل: لا يمكن لنفس الرقم حجز أكثر من موعد في نفس اليوم."
-              : "مُعطَّل: يمكن لنفس الرقم حجز أكثر من موعد في نفس اليوم."}
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
 </file>
 
 <file path="src/translations/en.json">
@@ -6305,6 +6410,995 @@ export default function BarberPanel() {
 
 
 
+}
+</file>
+
+<file path="src/pages/BarberPanel.jsx">
+// src/pages/BarberPanel.jsx
+import { useState, useEffect, useMemo } from "react";
+import { useTranslation } from "react-i18next";
+import { useNavigate, Link } from "react-router-dom";
+import { db } from "../firebase";
+import {
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+  arrayUnion,
+  arrayRemove,
+  collection,
+  query,
+  where,
+  getDocs,
+  deleteDoc,
+  onSnapshot,
+} from "firebase/firestore";
+import { e164ToLocalPretty } from "../utils/phone";
+
+// ✅ حسب مشروعك (زي ما بالصورة): الملف هون
+import workingHours from "../components/booking/workingHours";
+
+// ========= helpers =========
+function safeInt(v, fallback = 0) {
+  const n = Number(v);
+  return Number.isFinite(n) ? Math.trunc(n) : fallback;
+}
+
+function addDaysYMD(ymd, days) {
+  const d = new Date(`${ymd}T00:00:00`);
+  d.setDate(d.getDate() + (Number(days) || 0));
+  return d.toISOString().slice(0, 10);
+}
+
+function getWeekdayNameEN(ymd) {
+  const d = new Date(`${ymd}T00:00:00`);
+  return d.toLocaleDateString("en-US", { weekday: "long" });
+}
+
+function addMinutesToHHMM(hhmm, minsToAdd) {
+  const [h, m] = String(hhmm || "00:00")
+    .split(":")
+    .map(Number);
+  const base = new Date();
+  base.setHours(h || 0, m || 0, 0, 0);
+  base.setMinutes(base.getMinutes() + (Number(minsToAdd) || 0));
+  const HH = String(base.getHours()).padStart(2, "0");
+  const MM = String(base.getMinutes()).padStart(2, "0");
+  return `${HH}:${MM}`;
+}
+
+/**
+ * ✅ أدوار 30 دقيقة (النهاية غير شاملة)
+ * مثال: 12:00 -> 20:00 => آخر دور 19:30
+ */
+function generateSlots30Min(from, to) {
+  if (!from || !to) return [];
+  const [fh, fm] = from.split(":").map(Number);
+  const [th, tm] = to.split(":").map(Number);
+
+  const cur = new Date();
+  cur.setHours(fh, fm, 0, 0);
+
+  const end = new Date();
+  end.setHours(th, tm, 0, 0);
+
+  const out = [];
+  while (cur < end) {
+    out.push(cur.toTimeString().slice(0, 5));
+    cur.setMinutes(cur.getMinutes() + 30);
+  }
+  return out;
+}
+
+function applyExtraSlots(baseSlots, extraSlots) {
+  const n = safeInt(extraSlots, 0);
+  if (!n) return baseSlots;
+
+  if (n > 0) {
+    const last = baseSlots[baseSlots.length - 1];
+    const extras = [];
+    for (let i = 1; i <= n; i++) extras.push(addMinutesToHHMM(last, i * 30));
+    return [...baseSlots, ...extras];
+  }
+
+  const cut = Math.abs(n);
+  return baseSlots.slice(0, Math.max(0, baseSlots.length - cut));
+}
+
+// ========= DateDropdown =========
+function DateDropdown({ selectedDate, onChange }) {
+  const [options, setOptions] = useState([]);
+
+  useEffect(() => {
+    const temp = [];
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+
+    // ✅ خليها 14 يوم عشان الحلاق يقدر يختار "الأسبوع الجاي" بسهولة
+    for (let i = 0; i < 14; i++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() + i);
+      const iso = d.toISOString().slice(0, 10);
+
+      const daysAr = [
+        "الأحد",
+        "الإثنين",
+        "الثلاثاء",
+        "الأربعاء",
+        "الخميس",
+        "الجمعة",
+        "السبت",
+      ];
+      let label = daysAr[d.getDay()];
+      if (d.toDateString() === today.toDateString()) label += " (اليوم)";
+      else if (d.toDateString() === tomorrow.toDateString()) label += " (بكرا)";
+
+      temp.push({ value: iso, label });
+    }
+
+    setOptions(temp);
+  }, []);
+
+  return (
+    <select
+      value={selectedDate}
+      onChange={(e) => onChange(e.target.value)}
+      className="w-full px-4 py-3 border border-gray-300 bg-white rounded-xl focus:outline-none focus:ring-2 focus:ring-gold transition mb-4"
+    >
+      <option value="" disabled>
+        اختر التاريخ من القائمة
+      </option>
+      {options.map(({ value, label }) => (
+        <option key={value} value={value}>
+          {label}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+export default function BarberPanel() {
+  const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
+  const isArabic = i18n.language === "ar";
+  const fontClass = isArabic ? "font-ar" : "font-body";
+
+  const [selectedDate, setSelectedDate] = useState("");
+  const [blockedTimes, setBlockedTimes] = useState([]);
+  const [selectedTimes, setSelectedTimes] = useState([]);
+  const [bookings, setBookings] = useState([]);
+  const [statusMessage, setStatusMessage] = useState("");
+  const [isDayBlocked, setIsDayBlocked] = useState(false);
+  const [loadingBlock, setLoadingBlock] = useState(false);
+
+  // إعداد: حجز واحد لكل رقم/يوم
+  const [limitOnePerDay, setLimitOnePerDay] = useState(false);
+  const [loadingSettings, setLoadingSettings] = useState(true);
+  const [savingSettings, setSavingSettings] = useState(false);
+
+  // ✅ extra slots (slotExtras)
+  const [extraSlots, setExtraSlots] = useState(0);
+  const [loadingExtras, setLoadingExtras] = useState(false);
+  const [savingExtras, setSavingExtras] = useState(false);
+
+  // نطاق تطبيق التعديل
+  const [applyMode, setApplyMode] = useState("THIS_DATE"); // THIS_DATE | SAME_WEEKDAY_UNTIL | EVERY_DAY_UNTIL
+  const [applyUntil, setApplyUntil] = useState("");
+
+  // ====== حالة اليوم (blockedDays) ======
+  useEffect(() => {
+    if (!selectedDate) return;
+    (async () => {
+      try {
+        const ref = doc(db, "blockedDays", selectedDate);
+        const snap = await getDoc(ref);
+        setIsDayBlocked(snap.exists());
+      } catch {
+        setIsDayBlocked(false);
+      }
+    })();
+  }, [selectedDate]);
+
+  const toggleDay = async () => {
+    if (!selectedDate) return;
+    setLoadingBlock(true);
+    const ref = doc(db, "blockedDays", selectedDate);
+    try {
+      if (isDayBlocked) {
+        await deleteDoc(ref);
+        setIsDayBlocked(false);
+      } else {
+        const bookingsSnap = await getDocs(
+          query(
+            collection(db, "bookings"),
+            where("selectedDate", "==", selectedDate)
+          )
+        );
+        const activeBookings = bookingsSnap.docs.filter(
+          (d) => !d.data().cancelledAt
+        );
+        if (activeBookings.length > 0) {
+          alert("⚠️ لا يمكن تعطيل هذا اليوم لأن هناك حجوزات لم يتم إلغاؤها.");
+          return;
+        }
+        await setDoc(ref, {});
+        setIsDayBlocked(true);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    setLoadingBlock(false);
+  };
+
+  // ====== تسجيل خروج تلقائي ======
+  useEffect(() => {
+    let timer;
+    const resetTimer = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        localStorage.removeItem("barberUser");
+        alert("⚠️ تم تسجيل الخروج بسبب عدم النشاط لمدة ساعتين.");
+        navigate("/login");
+      }, 2 * 60 * 60 * 1000);
+    };
+    resetTimer();
+    const handleActivity = () => resetTimer();
+    window.addEventListener("click", handleActivity);
+    window.addEventListener("keydown", handleActivity);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("click", handleActivity);
+      window.removeEventListener("keydown", handleActivity);
+    };
+  }, [navigate]);
+
+  // ====== جلب الحجوزات لحظيًا ======
+  useEffect(() => {
+    const q = query(collection(db, "bookings"));
+    const unsub = onSnapshot(
+      q,
+      (snap) => setBookings(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
+      (err) => console.error("خطأ بجلب الحجوزات (onSnapshot):", err)
+    );
+    return () => unsub();
+  }, []);
+
+  // ====== جلب إعداد limitOnePerDay ======
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const ref = doc(db, "barberSettings", "global");
+        const snap = await getDoc(ref);
+        if (snap.exists()) {
+          const data = snap.data();
+          const value =
+            typeof data.limitOneBookingPerDayPerPhone === "boolean"
+              ? data.limitOneBookingPerDayPerPhone
+              : !!data.limitOneBookingPerDay;
+          setLimitOnePerDay(value);
+        } else setLimitOnePerDay(false);
+      } catch (err) {
+        console.error("خطأ بجلب إعدادات الحلاق:", err);
+        setLimitOnePerDay(false);
+      } finally {
+        setLoadingSettings(false);
+      }
+    };
+    fetchSettings();
+  }, []);
+
+  const handleToggleLimitOnePerDay = async () => {
+    if (loadingSettings || savingSettings) return;
+    try {
+      setSavingSettings(true);
+      const ref = doc(db, "barberSettings", "global");
+      await setDoc(
+        ref,
+        { limitOneBookingPerDayPerPhone: !limitOnePerDay },
+        { merge: true }
+      );
+      setLimitOnePerDay((p) => !p);
+    } catch (err) {
+      console.error("خطأ بتحديث الإعداد:", err);
+      alert("حدث خطأ أثناء تحديث الإعداد. حاول مرة أخرى.");
+    } finally {
+      setSavingSettings(false);
+    }
+  };
+
+  // ====== الأوقات المحظورة (blockedTimes) ======
+  useEffect(() => {
+    if (!selectedDate) {
+      setBlockedTimes([]);
+      setSelectedTimes([]);
+      setStatusMessage("");
+      return;
+    }
+    (async () => {
+      try {
+        const ref = doc(db, "blockedTimes", selectedDate);
+        const snap = await getDoc(ref);
+        if (snap.exists()) setBlockedTimes(snap.data().times || []);
+        else setBlockedTimes([]);
+        setSelectedTimes([]);
+        setStatusMessage("");
+      } catch (err) {
+        console.error("خطأ بجلب الأوقات المحظورة:", err);
+        setBlockedTimes([]);
+      }
+    })();
+  }, [selectedDate]);
+
+  const handleToggleTime = async (time) => {
+    const isTimeBooked = bookings.some(
+      (b) =>
+        b.selectedDate === selectedDate &&
+        b.selectedTime === time &&
+        !b.cancelledAt
+    );
+
+    if (isTimeBooked) {
+      setStatusMessage("هذه الساعة محجوزة ولا يمكن تعديلها.");
+      return;
+    }
+
+    if (blockedTimes.includes(time)) {
+      const updated = blockedTimes.filter((t) => t !== time);
+      setBlockedTimes(updated);
+      try {
+        const ref = doc(db, "blockedTimes", selectedDate);
+        await updateDoc(ref, { times: arrayRemove(time) });
+        setStatusMessage("✅ تم استرجاع الساعة بنجاح");
+      } catch (err) {
+        console.error("خطأ باسترجاع الساعة:", err);
+        setStatusMessage("حدث خطأ، حاول مرة أخرى.");
+      }
+      setTimeout(() => setStatusMessage(""), 2500);
+      return;
+    }
+
+    setSelectedTimes((prev) =>
+      prev.includes(time) ? prev.filter((t) => t !== time) : [...prev, time]
+    );
+    setStatusMessage("");
+  };
+
+  const handleApplyBlock = async () => {
+    if (!selectedDate || selectedTimes.length === 0) {
+      setStatusMessage("اختر ساعة واحدة على الأقل للحظر.");
+      return;
+    }
+
+    for (const time of selectedTimes) {
+      const booked = bookings.some(
+        (b) =>
+          b.selectedDate === selectedDate &&
+          b.selectedTime === time &&
+          !b.cancelledAt
+      );
+      if (booked) {
+        setStatusMessage(`الساعة ${time} محجوزة.`);
+        return;
+      }
+    }
+
+    try {
+      const ref = doc(db, "blockedTimes", selectedDate);
+      const snap = await getDoc(ref);
+      if (!snap.exists()) await setDoc(ref, { times: [] });
+      for (const time of selectedTimes)
+        await updateDoc(ref, { times: arrayUnion(time) });
+      setBlockedTimes([...blockedTimes, ...selectedTimes]);
+      setSelectedTimes([]);
+      setStatusMessage("✅ تم حظر الأوقات بنجاح");
+    } catch (err) {
+      console.error("خطأ بتطبيق الحظر:", err);
+      setStatusMessage("حدث خطأ، حاول مرة أخرى.");
+    }
+    setTimeout(() => setStatusMessage(""), 2500);
+  };
+
+  // ====== ✅ جلب extraSlots لليوم المختار ======
+  useEffect(() => {
+    if (!selectedDate) {
+      setExtraSlots(0);
+      setApplyMode("THIS_DATE");
+      setApplyUntil("");
+      return;
+    }
+
+    let alive = true;
+    (async () => {
+      setLoadingExtras(true);
+      try {
+        const snap = await getDoc(doc(db, "slotExtras", selectedDate));
+        if (!alive) return;
+
+        setExtraSlots(snap.exists() ? safeInt(snap.data()?.extraSlots, 0) : 0);
+
+        // افتراضي واضح وبسيط
+        setApplyMode("THIS_DATE");
+        setApplyUntil("");
+      } catch (e) {
+        console.error("fetch slotExtras error:", e);
+        if (alive) setExtraSlots(0);
+      } finally {
+        if (alive) setLoadingExtras(false);
+      }
+    })();
+
+    return () => {
+      alive = false;
+    };
+  }, [selectedDate]);
+
+  // =====================================================================
+  // ✅✅ المهم: شبكة ساعات الحلاق = workingHours + extraSlots فقط
+  // ممنوع نعمل union مع bookings/blockedTimes لأنه يخلق ساعات "برا الدوام"
+  // =====================================================================
+  const timesForBarberGrid = useMemo(() => {
+    if (!selectedDate) return [];
+    const weekday = getWeekdayNameEN(selectedDate);
+    const hours = workingHours?.[weekday] || null;
+    if (!hours?.from || !hours?.to) return [];
+
+    const base = generateSlots30Min(hours.from, hours.to);
+    return applyExtraSlots(base, extraSlots);
+  }, [selectedDate, extraSlots]);
+
+  // فلترة الماضي لليوم الحالي فقط (نفس منطق الزبون)
+  const todayStr = useMemo(() => new Date().toLocaleDateString("sv-SE"), []);
+  const isToday = selectedDate && selectedDate === todayStr;
+
+  const gridTimesFiltered = useMemo(() => {
+    if (!timesForBarberGrid.length) return [];
+    if (!isToday) return timesForBarberGrid;
+    const now = new Date();
+    return timesForBarberGrid.filter(
+      (time) => new Date(`${selectedDate}T${time}:00`) > now
+    );
+  }, [timesForBarberGrid, isToday, selectedDate]);
+
+  // ====== أحدث الحجوزات ======
+  const activeBookings = useMemo(
+    () => bookings.filter((b) => !b.cancelledAt),
+    [bookings]
+  );
+
+  const recentBookings = useMemo(() => {
+    const getBookingCreationDate = (b) => {
+      if (b.createdAt && typeof b.createdAt.toDate === "function")
+        return b.createdAt.toDate();
+      if (b.createdAt instanceof Date) return b.createdAt;
+      try {
+        if (b.selectedDate && b.selectedTime)
+          return new Date(`${b.selectedDate}T${b.selectedTime}:00`);
+      } catch {
+        // ignore
+      }
+      return new Date(0);
+    };
+
+    return [...activeBookings]
+      .sort((a, b) => getBookingCreationDate(a) - getBookingCreationDate(b))
+      .slice(-5)
+      .reverse();
+  }, [activeBookings]);
+
+  // ====== ✅ تطبيق تعديل extraSlots (اليوم/نفس يوم الأسبوع/كل الأيام) ======
+  const applyExtraSlotsChange = async (nextValue) => {
+    if (!selectedDate) return;
+
+    const value = safeInt(nextValue, 0);
+
+    // حماية بسيطة
+    if (value < -10 || value > 10) {
+      alert("⚠️ مسموح من -10 إلى +10 فقط (كل رقم = 30 دقيقة).");
+      return;
+    }
+
+    const weekdayOfSelected = getWeekdayNameEN(selectedDate);
+
+    const buildTargets = () => {
+      if (applyMode === "THIS_DATE") return [selectedDate];
+
+      if (!applyUntil) return null;
+
+      const start = selectedDate;
+      const end = applyUntil;
+      if (end < start) return null;
+
+      const targets = [];
+      let d = start;
+      while (d <= end) {
+        if (applyMode === "EVERY_DAY_UNTIL") {
+          targets.push(d);
+        } else if (applyMode === "SAME_WEEKDAY_UNTIL") {
+          const wd = getWeekdayNameEN(d);
+          if (wd === weekdayOfSelected) targets.push(d);
+        }
+        d = addDaysYMD(d, 1);
+      }
+      return targets;
+    };
+
+    const targets = buildTargets();
+    if (!targets) {
+      alert("⚠️ اختَر تاريخ نهاية صحيح (لازم يكون بعد/يساوي تاريخ البداية).");
+      return;
+    }
+
+    // منع تقليل أدوار إذا رح ينحذف دور عليه حجز
+    if (value < 0) {
+      for (const ymd of targets) {
+        const weekday = getWeekdayNameEN(ymd);
+        const hours = workingHours?.[weekday] || null;
+        if (!hours?.from || !hours?.to) continue;
+
+        const base = generateSlots30Min(hours.from, hours.to);
+
+        const currentExtraSnap = await getDoc(doc(db, "slotExtras", ymd));
+        const currentExtra = currentExtraSnap.exists()
+          ? safeInt(currentExtraSnap.data()?.extraSlots, 0)
+          : 0;
+
+        const currentSlots = applyExtraSlots(base, currentExtra);
+        const nextSlots = applyExtraSlots(base, value);
+
+        const removed = currentSlots.filter((s) => !nextSlots.includes(s));
+        if (removed.length) {
+          const hasBookingOnRemoved = activeBookings.some(
+            (b) => b.selectedDate === ymd && removed.includes(b.selectedTime)
+          );
+          if (hasBookingOnRemoved) {
+            alert(
+              `⚠️ لا يمكن تقليل الأدوار في ${ymd} لأن هناك حجز على دور سيتم حذفه.\n(حلّها: الغِ الحجز أو غيّر التعديل)`
+            );
+            return;
+          }
+        }
+      }
+    }
+
+    try {
+      setSavingExtras(true);
+
+      const writes = targets.map((ymd) =>
+        setDoc(
+          doc(db, "slotExtras", ymd),
+          { extraSlots: value },
+          { merge: true }
+        )
+      );
+      await Promise.all(writes);
+
+      setExtraSlots(value);
+
+      setStatusMessage(
+        applyMode === "THIS_DATE"
+          ? `✅ تم تطبيق التعديل على ${selectedDate}`
+          : applyMode === "SAME_WEEKDAY_UNTIL"
+          ? `✅ تم تطبيق التعديل على كل ${weekdayOfSelected} حتى ${applyUntil}`
+          : `✅ تم تطبيق التعديل على كل الأيام حتى ${applyUntil}`
+      );
+    } catch (e) {
+      console.error("save slotExtras error:", e);
+      alert("حدث خطأ أثناء حفظ التعديل. حاول مرة أخرى.");
+    } finally {
+      setSavingExtras(false);
+      setTimeout(() => setStatusMessage(""), 2500);
+    }
+  };
+
+  const dayIsClosedByHours = useMemo(() => {
+    if (!selectedDate) return false;
+    const weekday = getWeekdayNameEN(selectedDate);
+    const hours = workingHours?.[weekday] || null;
+    return !hours?.from || !hours?.to;
+  }, [selectedDate]);
+
+  return (
+    <div className={`min-h-screen bg-gray-100 p-6 ${fontClass}`} dir="rtl">
+      <div className="h-16"></div>
+
+      <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden">
+        <div className="flex flex-col md:flex-row items-center justify-between bg-white px-8 py-6 border-b">
+          <h1 className="text-3xl font-semibold text-gray-800">
+            إدارة الساعات
+          </h1>
+
+          <div className="mt-4 md:mt-0 flex flex-wrap items-center gap-3 text-sm">
+            <button
+              onClick={() => navigate("/admin-bookings")}
+              className="text-blue-600 hover:underline transition-colors"
+            >
+              لوحة الحجوزات
+            </button>
+
+            <Link
+              to="/blocked-phones"
+              className="text-yellow-700 hover:underline transition-colors"
+            >
+              الأرقام المحظورة
+            </Link>
+
+            <button
+              onClick={() => {
+                if (window.confirm("هل أنت متأكد أنك تريد تسجيل الخروج؟")) {
+                  localStorage.removeItem("barberUser");
+                  navigate("/login");
+                }
+              }}
+              className="text-red-600 hover:underline transition-colors"
+            >
+              تسجيل الخروج
+            </button>
+
+            <button
+              onClick={() => navigate("/dashboard")}
+              className="text-green-700 hover:underline transition-colors"
+            >
+              الإحصائيات
+            </button>
+          </div>
+        </div>
+
+        {/* اختيار التاريخ + حالة اليوم */}
+        <div className="p-8">
+          <label className="block mb-3 text-lg font-medium text-gray-700">
+            اختر التاريخ
+          </label>
+
+          <DateDropdown
+            selectedDate={selectedDate}
+            onChange={setSelectedDate}
+          />
+
+          <input
+            type="date"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            className="w-full border border-gray-300 rounded-xl px-4 py-3 bg-gray-50 text-gray-800 focus:outline-none focus:ring-2 focus:ring-gold transition mb-4"
+            min={new Date().toISOString().split("T")[0]}
+          />
+
+          {selectedDate && (
+            <div className="flex items-center justify-between mb-4">
+              <span>حالة اليوم:</span>
+              <button
+                onClick={toggleDay}
+                disabled={loadingBlock}
+                className={`px-4 py-2 rounded text-white font-semibold transition ${
+                  isDayBlocked
+                    ? "bg-red-500 hover:bg-red-600"
+                    : "bg-green-500 hover:bg-green-600"
+                }`}
+              >
+                {loadingBlock
+                  ? "جاري..."
+                  : isDayBlocked
+                  ? "تفعيل اليوم"
+                  : "تعطيل اليوم"}
+              </button>
+            </div>
+          )}
+
+          {!selectedDate && (
+            <p className="mt-2 text-sm text-gray-500">
+              يمكنك استخدام القائمة أو التقويم لاختيار أي تاريخ.
+            </p>
+          )}
+
+          {selectedDate && dayIsClosedByHours && (
+            <p className="mt-3 text-sm text-red-600 font-medium">
+              هذا اليوم مغلق
+            </p>
+          )}
+        </div>
+
+        {/* لوحة الساعات (مطابقة للزبون) */}
+        {selectedDate && !dayIsClosedByHours && !isDayBlocked && (
+          <div className="p-8 pt-4 border-t bg-gray-50">
+            <h2 className="text-xl font-semibold text-gray-700 mb-4">
+              الأوقات (مطابقة للزبون):
+            </h2>
+
+            <div className="grid grid-cols-3 sm:grid-cols-4 gap-4 mb-6">
+              {gridTimesFiltered.map((time) => {
+                const booked = bookings.some(
+                  (b) =>
+                    b.selectedDate === selectedDate &&
+                    b.selectedTime === time &&
+                    !b.cancelledAt
+                );
+                const isBlocked = blockedTimes.includes(time);
+                const isSelected = selectedTimes.includes(time);
+
+                return (
+                  <button
+                    key={time}
+                    onClick={() => handleToggleTime(time)}
+                    disabled={booked}
+                    className={`py-2 rounded-xl text-sm font-medium text-center transition-all duration-200 ${
+                      booked
+                        ? "bg-red-700 text-white cursor-not-allowed"
+                        : isBlocked
+                        ? "bg-red-200 text-red-800"
+                        : isSelected
+                        ? "bg-yellow-300 text-gray-900 ring-2 ring-yellow-500"
+                        : "bg-green-100 text-green-800 hover:bg-green-200"
+                    }`}
+                    title={
+                      booked
+                        ? "هذه الساعة محجوزة"
+                        : isBlocked
+                        ? "هذه الساعة محظورة"
+                        : "اضغط للحظر/الإلغاء"
+                    }
+                  >
+                    {time}
+                  </button>
+                );
+              })}
+            </div>
+
+            {selectedTimes.length > 0 ? (
+              <button
+                onClick={handleApplyBlock}
+                className="w-full bg-red-600 text-white py-3 rounded-xl font-semibold hover:bg-red-700 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500"
+              >
+                {t("remove_selected_times") ||
+                  "تطبيق الحظر على الساعات المحددة"}
+              </button>
+            ) : (
+              <p className="text-sm text-gray-500">
+                اختر ساعة أو أكثر ثم اضغط لحظرها.
+              </p>
+            )}
+          </div>
+        )}
+
+        {selectedDate && isDayBlocked && (
+          <div className="p-8 pt-4 border-t bg-yellow-50 text-center text-red-600 font-semibold text-lg">
+            تم تعطيل هذا اليوم بالكامل. لا يمكن تعديل أو حظر الساعات حتى يتم
+            تفعيله من جديد.
+          </div>
+        )}
+
+        {/* ✅ كرت زيادة/نقص الأدوار — تحت الساعات */}
+        {selectedDate && !dayIsClosedByHours && !isDayBlocked && (
+          <div className="px-8 pb-8">
+            <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-5 mt-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                  <h2 className="text-base font-bold text-slate-900">
+                    ➕➖ زيادة/نقص عدد الأدوار (كل دور = 30 دقيقة)
+                  </h2>
+                  <p className="text-xs text-slate-500 mt-1">
+                    هذا لا يغيّر ساعات العمل الأساسية. فقط يضيف/ينقص أدوار
+                    إضافية في نهاية اليوم.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={loadingExtras || savingExtras}
+                    onClick={() => applyExtraSlotsChange(extraSlots - 1)}
+                    className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-900 font-bold disabled:opacity-60"
+                    title="(-1) ينقص آخر دور"
+                  >
+                    -1
+                  </button>
+
+                  <div className="min-w-[90px] text-center">
+                    <div className="text-xs text-slate-500">القيمة الحالية</div>
+                    <div className="text-xl font-extrabold text-slate-900">
+                      {loadingExtras
+                        ? "…"
+                        : extraSlots >= 0
+                        ? `+${extraSlots}`
+                        : `${extraSlots}`}
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={loadingExtras || savingExtras}
+                    onClick={() => applyExtraSlotsChange(extraSlots + 1)}
+                    className="px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-500 text-slate-900 font-extrabold disabled:opacity-60"
+                    title="(+1) يزيد دور واحد بعد آخر دور"
+                  >
+                    +1
+                  </button>
+                </div>
+              </div>
+
+              <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
+                  <label className="block text-xs font-bold text-slate-700 mb-2">
+                    نطاق التطبيق
+                  </label>
+                  <select
+                    value={applyMode}
+                    onChange={(e) => setApplyMode(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-gold"
+                  >
+                    <option value="THIS_DATE">هذا اليوم فقط</option>
+                    <option value="SAME_WEEKDAY_UNTIL">
+                      نفس يوم الأسبوع لحد تاريخ
+                    </option>
+                    <option value="EVERY_DAY_UNTIL">كل الأيام لحد تاريخ</option>
+                  </select>
+
+                  <div className="mt-2 text-[11px] text-slate-600 leading-relaxed">
+                    {applyMode === "THIS_DATE" && (
+                      <span>
+                        ✅ التعديل يُطبَّق فقط على هذا التاريخ:{" "}
+                        <b>{selectedDate}</b>
+                      </span>
+                    )}
+                    {applyMode === "SAME_WEEKDAY_UNTIL" && (
+                      <span>
+                        ✅ يطبَّق على <b>نفس يوم الأسبوع</b> من{" "}
+                        <b>{selectedDate}</b> حتى تاريخ النهاية.
+                      </span>
+                    )}
+                    {applyMode === "EVERY_DAY_UNTIL" && (
+                      <span>
+                        ✅ يطبَّق على <b>كل الأيام</b> من <b>{selectedDate}</b>{" "}
+                        حتى تاريخ النهاية.
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
+                  <label className="block text-xs font-bold text-slate-700 mb-2">
+                    تاريخ النهاية (إذا اخترت “لحد تاريخ”)
+                  </label>
+                  <input
+                    type="date"
+                    value={applyUntil}
+                    onChange={(e) => setApplyUntil(e.target.value)}
+                    disabled={applyMode === "THIS_DATE"}
+                    min={selectedDate || undefined}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-gold disabled:opacity-60"
+                  />
+
+                  <button
+                    type="button"
+                    disabled={loadingExtras || savingExtras}
+                    onClick={() => applyExtraSlotsChange(0)}
+                    className="mt-3 w-full px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-sm font-bold disabled:opacity-60"
+                    title="يرجع للوضع الطبيعي"
+                  >
+                    رجّع للوضع الطبيعي (0)
+                  </button>
+                </div>
+              </div>
+
+              <div className="mt-3 text-xs text-slate-600 bg-amber-50 border border-amber-200 rounded-xl p-3">
+                <b>معلومة مهمة:</b>
+                <br />
+                (+1) = يزيد <b>دور واحد</b> بعد آخر دور.
+                <br />
+                (-1) = ينقص <b>آخر دور</b>.
+                <br />
+                إذا كان هناك <b>حجز</b> على دور سيتم حذفه، النظام يمنع التقليل
+                حتى لا ينكسر شيء.
+              </div>
+            </div>
+          </div>
+        )}
+
+        {statusMessage && (
+          <div className="p-4 bg-green-100 border border-green-300 text-green-800 text-center font-medium">
+            {statusMessage}
+          </div>
+        )}
+      </div>
+
+      {/* أحدث الحجوزات */}
+      {recentBookings.length > 0 && (
+        <div className="max-w-3xl mx-auto mt-6 text-xs sm:text-sm">
+          <div className="bg-white rounded-2xl shadow-md border border-slate-200 p-4 sm:p-5 text-slate-900">
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">📅</span>
+                <div className="flex flex-col">
+                  <h2 className="font-semibold text-slate-900">
+                    أحدث الحجوزات (رقم موحّد)
+                  </h2>
+                  <span className="text-[11px] text-slate-500">
+                    آخر {recentBookings.length} حجوزات فعّالة
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-2 border-t border-slate-100 divide-y divide-slate-100">
+              {recentBookings.map((b, idx) => (
+                <div
+                  key={b.id}
+                  className="py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 hover:bg-slate-50 rounded-xl px-2"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="mt-1">
+                      <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-slate-100 text-[11px] text-slate-500">
+                        {idx + 1}
+                      </span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="font-semibold text-slate-900 text-sm sm:text-base">
+                        {b.fullName || "بدون اسم"}
+                      </span>
+                      <div className="mt-1 inline-flex flex-wrap items-center gap-2 text-[11px]">
+                        <span className="inline-flex items-center rounded-full bg-amber-50 px-3 py-0.5 border border-amber-200 text-amber-800">
+                          {b.selectedDate || "—"}
+                        </span>
+                        <span className="inline-flex items-center rounded-full bg-sky-50 px-3 py-0.5 border border-sky-200 text-sky-700">
+                          {b.selectedTime || "—"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 sm:justify-end sm:min-w-[150px] text-[11px] sm:text-xs">
+                    <span className="text-slate-500">الرقم الموحّد:</span>
+                    <span className="font-mono text-sm text-slate-900">
+                      {e164ToLocalPretty(b.phoneNumber)}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* إعداد حجز واحد لكل رقم/يوم */}
+      <div className="max-w-3xl mx-auto mt-6">
+        <div className="bg-white rounded-2xl shadow p-4 border border-gray-200 text-center">
+          <h2 className="text-sm font-semibold text-gray-800 mb-2">
+            وضع حجز واحد لكل رقم / يوم
+          </h2>
+
+          <div className="flex items-center justify-center gap-4 mb-2">
+            <span className="text-xs font-semibold text-gray-700">
+              {limitOnePerDay ? "مُفَعَّل" : "مُعَطَّل"}
+            </span>
+
+            <button
+              type="button"
+              onClick={handleToggleLimitOnePerDay}
+              disabled={loadingSettings || savingSettings}
+              className="disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              <div
+                className={`relative w-16 h-8 rounded-full transition-colors flex items-center ${
+                  limitOnePerDay ? "bg-emerald-500" : "bg-gray-300"
+                }`}
+              >
+                <div
+                  className={`absolute top-0.5 left-0.5 w-7 h-7 rounded-full bg-white shadow-md transition-transform ${
+                    limitOnePerDay ? "translate-x-8" : "translate-x-0"
+                  }`}
+                />
+              </div>
+            </button>
+          </div>
+
+          <p className="text-xs text-gray-500">
+            {limitOnePerDay
+              ? "مُفعَّل: لا يمكن لنفس الرقم حجز أكثر من موعد في نفس اليوم."
+              : "مُعطَّل: يمكن لنفس الرقم حجز أكثر من موعد في نفس اليوم."}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
 }
 </file>
 
@@ -6595,7 +7689,6 @@ import SuccessModal from "./parts/SuccessModal";
 import ServiceSelector from "./parts/ServiceSelector";
 import TimeSelector from "./parts/TimeSelector";
 import DateField from "./parts/DateField";
-import workingHours from "./workingHours";
 import SectionTitle from "../common/SectionTitle";
 import ProgressBar from "./parts/ProgressBar";
 import PhoneInput from "./parts/PhoneInput";
@@ -6606,6 +7699,9 @@ import useBookingSubmit from "../../hooks/useBookingSubmit";
 import { useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { getOpeningStatus } from "../../utils/dateTime";
+
+// ✅ workingHours موحّد (نفس الزبون + الحلاق)
+import workingHours from "./workingHours";
 
 // ✅ أدوات الهاتف الموحّدة
 import {
@@ -6850,7 +7946,6 @@ function BookingSection() {
                 <PhoneInput
                   value={form.phoneNumber}
                   onChange={(val) =>
-                    // نطبع فقط الأرقام الشرقية أثناء الكتابة – باقي التطبيع يتم عند التحقق/الإرسال
                     setForm((s) => ({
                       ...s,
                       phoneNumber: normalizeDigits(val),
