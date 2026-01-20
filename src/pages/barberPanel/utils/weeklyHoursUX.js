@@ -9,6 +9,9 @@ export const DAYS = [
   { key: "Friday", ar: "الجمعة" },
   { key: "Saturday", ar: "السبت" },
 ];
+export function isRtlLang() {
+  return true; // صفحة الحلاق كلها عربي، فخليها RTL دايمًا
+}
 
 export function deepEqual(a, b) {
   return JSON.stringify(a) === JSON.stringify(b);
