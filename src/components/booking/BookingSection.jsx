@@ -16,7 +16,8 @@ import { useTranslation } from "react-i18next";
 import { getOpeningStatus } from "../../utils/dateTime";
 
 // ✅ workingHours موحّد (نفس الزبون + الحلاق)
-import workingHours from "./workingHours";
+import fallbackWorkingHours from "../../constants/workingHours";
+import useWeeklyWorkingHours from "../../hooks/useWeeklyWorkingHours";
 
 // ✅ أدوات الهاتف الموحّدة
 import {
@@ -78,10 +79,17 @@ const initialTouched = Object.freeze({
 });
 
 function BookingSection() {
-  const status = getOpeningStatus(workingHours);
   const { t, i18n } = useTranslation();
   const isArabic = i18n.language === "ar";
   const fontClass = isArabic ? "font-ar" : "font-body";
+
+  const { weeklyHours } = useWeeklyWorkingHours({ live: true });
+
+  // ✅ مصدر واحد للحقيقة لكل الموقع
+  const workingHours = weeklyHours || fallbackWorkingHours;
+
+  // ✅ لازم تكون بعد تعريف workingHours
+  const status = getOpeningStatus(workingHours);
 
   // حالة النموذج كلها في كائن واحد
   const [form, setForm] = useState(initialForm);

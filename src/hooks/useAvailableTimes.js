@@ -19,7 +19,16 @@ export default function useAvailableTimes(selectedDate, workingHours) {
   const [loadingTimes, setLoadingTimes] = useState(false);
 
   useEffect(() => {
+    // ✅ لا تاريخ -> فاضي
     if (!selectedDate) {
+      setAvailableTimes([]);
+      setIsDayBlocked(false);
+      setLoadingTimes(false);
+      return;
+    }
+
+    // ✅ لو ساعات الأسبوع لسه مش جاهزة (Firestore لسه بجيبها)
+    if (!workingHours || typeof workingHours !== "object") {
       setAvailableTimes([]);
       setIsDayBlocked(false);
       setLoadingTimes(false);
@@ -41,6 +50,7 @@ export default function useAvailableTimes(selectedDate, workingHours) {
         const weekday = d.toLocaleDateString("en-US", { weekday: "long" });
         const hours = workingHours?.[weekday] || null;
 
+        // ✅ اليوم مغلق (يا إمّا محظور أو ما في ساعات)
         if (dayBlocked || !hours?.from || !hours?.to) {
           setIsDayBlocked(dayBlocked || !hours?.from || !hours?.to);
           setAvailableTimes([]);
@@ -54,7 +64,7 @@ export default function useAvailableTimes(selectedDate, workingHours) {
         const slots = applyExtraSlots(baseSlots, extraSlots);
 
         const now = new Date();
-        const todayStr = now.toLocaleDateString("sv-SE");
+        const todayStr = now.toLocaleDateString("sv-SE"); // YYYY-MM-DD
         const isToday = selectedDate === todayStr;
 
         const blockedSet = new Set(blockedTimesArr);
@@ -132,6 +142,7 @@ export default function useAvailableTimes(selectedDate, workingHours) {
       collection(db, "bookings"),
       where("selectedDate", "==", selectedDate)
     );
+
     const unsubBookings = onSnapshot(
       qBookings,
       (snap) => {

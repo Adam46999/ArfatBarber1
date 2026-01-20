@@ -1,15 +1,8 @@
-// src/components/BookingTracker.jsx
+// src/components/booking/BookingTracker.jsx
 import { useState } from "react";
 import { db } from "../../firebase";
 import SectionTitle from "../common/SectionTitle";
-import {
-  collection,
-  query,
-  where,
-  getDocs,
-  doc,
-  deleteDoc,
-} from "firebase/firestore";
+import { collection, query, where, getDocs } from "firebase/firestore";
 import { useTranslation } from "react-i18next";
 import {
   CalendarCheck,
@@ -24,6 +17,9 @@ import {
   e164ToLocalPretty,
   normalizeDigits,
 } from "../../utils/phone";
+
+// ✅ بدل deleteDoc: استخدم الإلغاء الصحيح اللي بنقص العداد الشهري
+import { cancelBooking } from "../../services/bookingService";
 
 const CANCELLATION_WINDOW_MIN = 50;
 
@@ -199,7 +195,9 @@ function BookingTracker() {
     }
 
     try {
-      await deleteDoc(doc(db, "bookings", booking.docId));
+      // ✅ الإلغاء الصحيح (بيحط cancelledAt وبيعمل decrement للعداد الشهري)
+      await cancelBooking(booking.docId);
+
       setResults((prev) => prev.filter((b) => b.docId !== booking.docId));
       setSuccessMessage("✅ تم إلغاء الحجز بنجاح");
     } catch (error) {
@@ -308,9 +306,8 @@ function BookingTracker() {
                     </span>
                   </div>
 
-                  {/* Grid المعلومات – ٣ كروت جنب بعض دائماً */}
+                  {/* Grid المعلومات */}
                   <div className="grid grid-cols-1 gap-3 mb-6">
-                    {" "}
                     <InfoRow
                       label={t("service", { defaultValue: "الخدمة" })}
                       value={serviceTitle}

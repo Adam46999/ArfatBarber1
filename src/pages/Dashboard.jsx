@@ -19,8 +19,16 @@ function addMonths(date, delta) {
 }
 
 function fmtMonthTitle(date) {
-  // عنوان بسيط للحلاق (عربي)
   return date.toLocaleDateString("ar-EG", { year: "numeric", month: "long" });
+}
+
+// ✅ قراءة موحّدة وآمنة لعداد الشهر
+function readMonthlyTotal(snap) {
+  if (!snap?.exists?.()) return 0;
+  const data = snap.data?.() || {};
+  const v = data.activeTotal ?? data.total ?? 0;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
 }
 
 export default function Dashboard() {
@@ -44,7 +52,6 @@ export default function Dashboard() {
   });
   const [totalBookings, setTotalBookings] = useState(0);
 
-  // ✅ تقرير شهري + مقارنة
   const [monthStats, setMonthStats] = useState({ title: "", total: 0 });
   const [prevMonthStats, setPrevMonthStats] = useState({ title: "", total: 0 });
 
@@ -56,7 +63,7 @@ export default function Dashboard() {
       // ===== blocked days (المستقبل فقط) =====
       const closedSnap = await getDocs(collection(db, "blockedDays"));
       const futureClosed = closedSnap.docs
-        .map((doc) => doc.id)
+        .map((d) => d.id)
         .filter((date) => date >= todayStr)
         .sort();
       setClosedDates(futureClosed);
@@ -76,7 +83,7 @@ export default function Dashboard() {
       // ===== bookings (active فقط) =====
       const bookingsSnap = await getDocs(collection(db, "bookings"));
       const bookings = bookingsSnap.docs
-        .map((docu) => docu.data())
+        .map((d) => d.data())
         .filter((b) => !b.cancelledAt);
 
       setTotalBookings(bookings.length);
@@ -104,6 +111,7 @@ export default function Dashboard() {
       // ===== الأسبوع (من الأحد للسبت) =====
       const day = now.getDay(); // 0 Sunday
       const diffToSunday = day === 0 ? 0 : day;
+
       const start = new Date(now);
       start.setDate(now.getDate() - diffToSunday);
       start.setHours(0, 0, 0, 0);
@@ -119,8 +127,9 @@ export default function Dashboard() {
         (b) => b.selectedDate >= fromStr && b.selectedDate <= toStr
       );
 
-      let weekPassed = 0,
-        weekUpcoming = 0;
+      let weekPassed = 0;
+      let weekUpcoming = 0;
+
       weekBookings.forEach((b) => {
         const bookingTime = new Date(`${b.selectedDate}T${b.selectedTime}:00`);
         if (bookingTime < now) weekPassed++;
@@ -135,20 +144,15 @@ export default function Dashboard() {
         to: toStr,
       });
 
-      // ===== ✅ الشهر الحالي + الشهر الماضي =====
-      // ===== ✅ الشهر الحالي + الشهر الماضي (COUNTERS ثابتة) =====
-      const curKey = ymd(now).slice(0, 7); // "YYYY-MM"
+      // ===== ✅ الشهر الحالي + الشهر الماضي (موحّد) =====
+      const curKey = ymd(now).slice(0, 7); // YYYY-MM
       const prevKey = ymd(addMonths(now, -1)).slice(0, 7);
 
       const curSnap = await getDoc(doc(db, "statsMonthly", curKey));
       const prevSnap = await getDoc(doc(db, "statsMonthly", prevKey));
 
-      const curTotal = curSnap.exists()
-        ? Number(curSnap.data()?.activeTotal || 0)
-        : 0;
-      const prevTotal = prevSnap.exists()
-        ? Number(prevSnap.data()?.total || 0)
-        : 0;
+      const curTotal = readMonthlyTotal(curSnap);
+      const prevTotal = readMonthlyTotal(prevSnap);
 
       setMonthStats({ title: fmtMonthTitle(now), total: curTotal });
       setPrevMonthStats({
@@ -168,7 +172,6 @@ export default function Dashboard() {
   };
 
   const monthDelta = useMemo(() => {
-    // مقارنة واضحة: فرق العدد الكلي + نسبة
     const a = monthStats.total;
     const b = prevMonthStats.total;
 
@@ -196,7 +199,7 @@ export default function Dashboard() {
           </button>
         </div>
 
-        {/* ✅ كرت التقرير الشهري (واضح ومقارنة) */}
+        {/* ✅ كرت التقرير الشهري */}
         <div className="mb-8">
           <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-md">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -228,7 +231,7 @@ export default function Dashboard() {
                   )
                 </div>
                 <div className="text-xs text-slate-500 mt-1">
-                  *النسبة تعتمد على عدد الحجوزات الكلي في الشهر الماضي.
+                  *النسبة تعتمد على عدد حجوزات الشهر الماضي.
                 </div>
               </div>
             </div>
@@ -263,7 +266,6 @@ export default function Dashboard() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* Weekly Stats */}
           <CardBox color="blue" title="إحصائيات الأسبوع">
             <p className="text-sm text-gray-500 mb-3">
               من {formatDate(weekStats.from)} إلى {formatDate(weekStats.to)}
@@ -295,7 +297,6 @@ export default function Dashboard() {
             </ul>
           </CardBox>
 
-          {/* Today Stats */}
           <CardBox color="green" title="إحصائيات اليوم">
             <ul className="space-y-2 text-sm text-gray-700">
               <li>
@@ -333,7 +334,6 @@ export default function Dashboard() {
             </ul>
           </CardBox>
 
-          {/* Blocked Times */}
           <CardBox color="red" title="الأوقات المحظورة">
             {Object.keys(blockedByDay).length === 0 && (
               <p className="text-sm text-gray-500">لا توجد أوقات محظورة.</p>
@@ -357,7 +357,6 @@ export default function Dashboard() {
             ))}
           </CardBox>
 
-          {/* Closed Days */}
           <CardBox color="yellow" title="الأيام المغلقة القادمة">
             <p className="text-sm text-gray-500 mb-2">
               عدد الأيام: {closedDates.length}

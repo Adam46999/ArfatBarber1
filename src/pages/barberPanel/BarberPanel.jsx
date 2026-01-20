@@ -1,10 +1,13 @@
 // src/pages/barberPanel/BarberPanel.jsx
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 
-// workingHours (نفس اللي عند الزبون)
-import workingHours from "../../components/booking/workingHours";
+// ✅ fallback workingHours — إذا ما في بيانات من Firestore
+import fallbackWorkingHours from "../../components/booking/workingHours";
+
+// ✅ Firestore weekly hours (SYNC بين الزبون والحلاق)
+import useWeeklyWorkingHours from "../../hooks/useWeeklyWorkingHours";
 
 // utils slots (مصدر واحد للحقيقة)
 import { generateSlots30Min, applyExtraSlots } from "../../utils/slots";
@@ -27,6 +30,7 @@ import LimitOnePerDayCard from "./components/LimitOnePerDayCard";
 export default function BarberPanel() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
 
   const isArabic = i18n.language === "ar";
   const fontClass = isArabic ? "font-ar" : "font-body";
@@ -37,6 +41,10 @@ export default function BarberPanel() {
   // نطاق تطبيق extraSlots
   const [applyMode, setApplyMode] = useState("THIS_DATE"); // THIS_DATE | SAME_WEEKDAY_UNTIL | EVERY_DAY_UNTIL
   const [applyUntil, setApplyUntil] = useState("");
+
+  // ✅ weekly hours live (SYNC)
+  const { weeklyHours, loadingWeekly } = useWeeklyWorkingHours({ live: true });
+  const workingHours = weeklyHours || fallbackWorkingHours;
 
   // bookings live
   const { bookings, activeBookings, recentBookings } = useBookingsLive();
@@ -66,11 +74,14 @@ export default function BarberPanel() {
 
     const resetTimer = () => {
       if (timer) clearTimeout(timer);
-      timer = setTimeout(() => {
-        localStorage.removeItem("barberUser");
-        alert("⚠️ تم تسجيل الخروج بسبب عدم النشاط لمدة ساعتين.");
-        navigate("/login");
-      }, 2 * 60 * 60 * 1000);
+      timer = setTimeout(
+        () => {
+          localStorage.removeItem("barberUser");
+          alert("⚠️ تم تسجيل الخروج بسبب عدم النشاط لمدة ساعتين.");
+          navigate("/login");
+        },
+        2 * 60 * 60 * 1000,
+      );
     };
 
     resetTimer();
@@ -86,7 +97,7 @@ export default function BarberPanel() {
     };
   }, [navigate]);
 
-  // ====== times grid: workingHours + extraSlots (مصدر واحد للحقيقة) ======
+  // ====== times grid: workingHours + extraSlots ======
   const timesForBarberGrid = useMemo(() => {
     if (!selectedDate) return [];
     const weekday = getWeekdayNameEN(selectedDate);
@@ -94,7 +105,7 @@ export default function BarberPanel() {
     if (!hours?.from || !hours?.to) return [];
     const base = generateSlots30Min(hours.from, hours.to);
     return applyExtraSlots(base, extraSlots);
-  }, [selectedDate, extraSlots]);
+  }, [selectedDate, extraSlots, workingHours]);
 
   const isToday = selectedDate && selectedDate === todayYMD();
 
@@ -103,7 +114,7 @@ export default function BarberPanel() {
     if (!isToday) return timesForBarberGrid;
     const now = new Date();
     return timesForBarberGrid.filter(
-      (time) => new Date(`${selectedDate}T${time}:00`) > now
+      (time) => new Date(`${selectedDate}T${time}:00`) > now,
     );
   }, [timesForBarberGrid, isToday, selectedDate]);
 
@@ -112,113 +123,198 @@ export default function BarberPanel() {
     const weekday = getWeekdayNameEN(selectedDate);
     const hours = workingHours?.[weekday] || null;
     return !hours?.from || !hours?.to;
-  }, [selectedDate]);
+  }, [selectedDate, workingHours]);
+
+  // ====== Header Buttons (موبايل-أول) ======
+  const isActive = (to) =>
+    pathname === to || (to !== "/" && pathname.startsWith(to + "/"));
+
+  const navBtnClass = (active, tone = "normal") => {
+    const base =
+      "px-4 py-2 rounded-full text-sm font-black transition border whitespace-nowrap";
+    if (tone === "danger") {
+      return [
+        base,
+        active
+          ? "bg-rose-600 text-white border-rose-600 shadow"
+          : "bg-white text-rose-700 border-rose-200 hover:bg-rose-50",
+      ].join(" ");
+    }
+    return [
+      base,
+      active
+        ? "bg-emerald-600 text-white border-emerald-600 shadow"
+        : "bg-white text-slate-800 border-slate-200 hover:bg-slate-50",
+    ].join(" ");
+  };
+
+  const handleLogout = () => {
+    if (window.confirm("هل أنت متأكد أنك تريد تسجيل الخروج؟")) {
+      localStorage.removeItem("barberUser");
+      navigate("/login");
+    }
+  };
 
   return (
-    <div className={`min-h-screen bg-gray-100 p-6 ${fontClass}`} dir="rtl">
-      <div className="h-16" />
+    <div
+      className={`min-h-screen bg-gray-100 p-4 sm:p-6 ${fontClass}`}
+      dir="rtl"
+    >
+      <div className="h-12 sm:h-16" />
 
       <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden">
         {/* Header */}
-        <div className="flex flex-col md:flex-row items-center justify-between bg-white px-8 py-6 border-b">
-          <h1 className="text-3xl font-semibold text-gray-800">
-            إدارة الساعات
-          </h1>
+        <div className="bg-white px-5 sm:px-8 py-5 border-b">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-black text-gray-800">
+                إدارة الساعات
+              </h1>
+              <p className="text-xs sm:text-sm text-gray-500 font-semibold mt-1">
+                كل شيء واضح وسريع — اختار تاريخ واشتغل مباشرة.
+              </p>
+            </div>
 
-          <div className="mt-4 md:mt-0 flex flex-wrap items-center gap-3 text-sm">
-            <button
-              onClick={() => navigate("/admin-bookings")}
-              className="text-blue-600 hover:underline transition-colors"
-            >
-              لوحة الحجوزات
-            </button>
+            {/* حالة سريعة (اختياري) */}
+            <div className="text-xs font-black text-gray-500">
+              {loadingWeekly ? "جاري مزامنة ساعات الأسبوع..." : " "}
+            </div>
+          </div>
 
-            <Link
-              to="/blocked-phones"
-              className="text-yellow-700 hover:underline transition-colors"
-            >
-              الأرقام المحظورة
-            </Link>
+          {/* أزرار الإدارة: سكرول أفقي للموبايل */}
+          <div className="mt-4 -mx-1 px-1">
+            <div className="flex items-center gap-2 overflow-x-auto pb-1">
+              <button
+                onClick={() => navigate("/admin-bookings")}
+                className={navBtnClass(isActive("/admin-bookings"))}
+              >
+                لوحة الحجوزات
+              </button>
 
-            <button
-              onClick={() => {
-                if (window.confirm("هل أنت متأكد أنك تريد تسجيل الخروج؟")) {
-                  localStorage.removeItem("barberUser");
-                  navigate("/login");
-                }
-              }}
-              className="text-red-600 hover:underline transition-colors"
-            >
-              تسجيل الخروج
-            </button>
+              <button
+                onClick={() => navigate("/barber/weekly-hours")}
+                className={navBtnClass(isActive("/barber/weekly-hours"))}
+              >
+                ساعات العمل الأسبوعية
+              </button>
 
-            <button
-              onClick={() => navigate("/dashboard")}
-              className="text-green-700 hover:underline transition-colors"
-            >
-              الإحصائيات
-            </button>
+              <Link
+                to="/blocked-phones"
+                className={navBtnClass(isActive("/blocked-phones"))}
+              >
+                الأرقام المحظورة
+              </Link>
+
+              <button
+                onClick={() => navigate("/dashboard")}
+                className={navBtnClass(isActive("/dashboard"))}
+              >
+                الإحصائيات
+              </button>
+
+              <button
+                onClick={handleLogout}
+                className={navBtnClass(false, "danger")}
+              >
+                تسجيل الخروج
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Date */}
-        <div className="p-8">
-          <label className="block mb-3 text-lg font-medium text-gray-700">
+        <div className="p-5 sm:p-8">
+          <label className="block mb-3 text-lg font-black text-gray-700">
             اختر التاريخ
           </label>
 
-          <DateDropdown
-            selectedDate={selectedDate}
-            onChange={setSelectedDate}
-          />
+          {/* خلي تجربة الاختيار سهلة للموبايل */}
+          <div className="space-y-3">
+            <DateDropdown
+              selectedDate={selectedDate}
+              onChange={setSelectedDate}
+            />
 
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            className="w-full border border-gray-300 rounded-xl px-4 py-3 bg-gray-50 text-gray-800 focus:outline-none focus:ring-2 focus:ring-gold transition mb-4"
-            min={new Date().toISOString().split("T")[0]}
-          />
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="w-full border border-gray-300 rounded-xl px-4 py-3 bg-gray-50 text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-300 transition"
+              min={new Date().toISOString().split("T")[0]}
+            />
+          </div>
 
+          {!selectedDate && (
+            <p className="mt-3 text-sm text-gray-500 font-semibold">
+              اختر تاريخ لتظهر لك ساعات اليوم وتعديلات الحظر والإضافات.
+            </p>
+          )}
+
+          {/* حالة اليوم */}
           {selectedDate && (
-            <div className="flex items-center justify-between mb-4">
-              <span>حالة اليوم:</span>
-              <button
-                onClick={toggleDay}
-                disabled={loadingBlock}
-                className={`px-4 py-2 rounded text-white font-semibold transition ${
-                  isDayBlocked
-                    ? "bg-red-500 hover:bg-red-600"
-                    : "bg-green-500 hover:bg-green-600"
-                }`}
-              >
-                {loadingBlock
-                  ? "جاري..."
-                  : isDayBlocked
-                  ? "تفعيل اليوم"
-                  : "تعطيل اليوم"}
-              </button>
+            <div className="mt-5 rounded-2xl border border-gray-200 bg-white p-4">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <div className="text-sm font-black text-gray-800">
+                    حالة اليوم
+                  </div>
+                  <div className="text-xs font-black mt-1">
+                    {dayIsClosedByHours ? (
+                      <span className="text-rose-600">
+                        مغلق حسب ساعات الأسبوع (عدّل من صفحة ساعات العمل
+                        الأسبوعية)
+                      </span>
+                    ) : isDayBlocked ? (
+                      <span className="text-rose-600">
+                        معطّل بالكامل (تم تعطيله يدويًا)
+                      </span>
+                    ) : (
+                      <span className="text-emerald-700">مفتوح</span>
+                    )}
+                  </div>
+                </div>
+
+                <button
+                  onClick={toggleDay}
+                  disabled={loadingBlock || dayIsClosedByHours}
+                  className={[
+                    "px-4 py-2 rounded-xl text-white font-black transition",
+                    dayIsClosedByHours
+                      ? "bg-gray-300 cursor-not-allowed"
+                      : isDayBlocked
+                        ? "bg-rose-600 hover:bg-rose-700"
+                        : "bg-emerald-600 hover:bg-emerald-700",
+                  ].join(" ")}
+                >
+                  {loadingBlock
+                    ? "جاري..."
+                    : dayIsClosedByHours
+                      ? "اليوم مغلق"
+                      : isDayBlocked
+                        ? "تفعيل اليوم"
+                        : "تعطيل اليوم"}
+                </button>
+              </div>
             </div>
           )}
 
-          {!selectedDate && (
-            <p className="mt-2 text-sm text-gray-500">
-              يمكنك استخدام القائمة أو التقويم لاختيار أي تاريخ.
-            </p>
-          )}
-
           {selectedDate && dayIsClosedByHours && (
-            <p className="mt-3 text-sm text-red-600 font-medium">
-              هذا اليوم مغلق
-            </p>
+            <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 p-4">
+              <div className="text-sm font-black text-rose-700">
+                هذا اليوم مغلق حسب ساعات الأسبوع.
+              </div>
+              <div className="text-xs font-black text-rose-700/80 mt-1">
+                إذا بدك تفتحه: روح على “ساعات العمل الأسبوعية” وعدّل هذا اليوم.
+              </div>
+            </div>
           )}
         </div>
 
         {/* Times */}
         {selectedDate && !dayIsClosedByHours && !isDayBlocked && (
-          <div className="p-8 pt-4 border-t bg-gray-50">
-            <h2 className="text-xl font-semibold text-gray-700 mb-4">
-              الأوقات (مطابقة للزبون):
+          <div className="p-5 sm:p-8 pt-4 border-t bg-gray-50">
+            <h2 className="text-xl font-black text-gray-800 mb-3">
+              الأوقات (مطابقة للزبون)
             </h2>
 
             <TimesGrid
@@ -230,24 +326,26 @@ export default function BarberPanel() {
               onToggleTime={handleToggleTime}
             />
 
-            {selectedTimes.length > 0 ? (
-              <button
-                onClick={handleApplyBlock}
-                className="w-full bg-red-600 text-white py-3 rounded-xl font-semibold hover:bg-red-700 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500"
-              >
-                {t("remove_selected_times") ||
-                  "تطبيق الحظر على الساعات المحددة"}
-              </button>
-            ) : (
-              <p className="text-sm text-gray-500">
-                اختر ساعة أو أكثر ثم اضغط لحظرها.
-              </p>
-            )}
+            <div className="mt-4">
+              {selectedTimes.length > 0 ? (
+                <button
+                  onClick={handleApplyBlock}
+                  className="w-full bg-rose-600 text-white py-3 rounded-xl font-black hover:bg-rose-700 transition-colors focus:outline-none focus:ring-2 focus:ring-rose-300"
+                >
+                  {t("remove_selected_times") ||
+                    "تطبيق الحظر على الساعات المحددة"}
+                </button>
+              ) : (
+                <p className="text-sm text-gray-500 font-semibold">
+                  اختر ساعة أو أكثر ثم اضغط لحظرها.
+                </p>
+              )}
+            </div>
           </div>
         )}
 
         {selectedDate && isDayBlocked && (
-          <div className="p-8 pt-4 border-t bg-yellow-50 text-center text-red-600 font-semibold text-lg">
+          <div className="p-5 sm:p-8 pt-4 border-t bg-yellow-50 text-center text-rose-700 font-black text-base">
             تم تعطيل هذا اليوم بالكامل. لا يمكن تعديل أو حظر الساعات حتى يتم
             تفعيله من جديد.
           </div>
@@ -255,7 +353,7 @@ export default function BarberPanel() {
 
         {/* Extra Slots */}
         {selectedDate && !dayIsClosedByHours && !isDayBlocked && (
-          <div className="px-8 pb-8">
+          <div className="px-5 sm:px-8 pb-8">
             <ExtraSlotsCard
               selectedDate={selectedDate}
               extraSlots={extraSlots}
@@ -279,7 +377,7 @@ export default function BarberPanel() {
         )}
 
         {statusMessage && (
-          <div className="p-4 bg-green-100 border border-green-300 text-green-800 text-center font-medium">
+          <div className="p-4 bg-emerald-100 border border-emerald-300 text-emerald-800 text-center font-black">
             {statusMessage}
           </div>
         )}

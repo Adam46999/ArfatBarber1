@@ -8,6 +8,7 @@ import BookingIntro from "./pages/BookingIntro";
 import NotFound from "./pages/NotFound";
 import Contact from "./pages/Contact";
 import BarberPanel from "./pages/barberPanel/BarberPanel";
+import WeeklyHoursPage from "./pages/barberPanel/WeeklyHoursPage"; // ✅ NEW
 import BookingForm from "./pages/BookingForm";
 import AdminBookings from "./pages/AdminBookings";
 import Login from "./pages/Login";
@@ -43,6 +44,7 @@ export default function AppRoutes() {
       <Route path="/booking-form" element={<BookingForm />} />
       <Route path="/contact" element={<Contact />} />
       <Route path="/login" element={<Login />} />
+
       <Route
         path="/dashboard"
         element={
@@ -51,6 +53,7 @@ export default function AppRoutes() {
           </PrivateRoute>
         }
       />
+
       <Route
         path="/admin-bookings-v2"
         element={
@@ -59,6 +62,7 @@ export default function AppRoutes() {
           </PrivateRoute>
         }
       />
+
       <Route
         path="/blocked-phones"
         element={
@@ -77,6 +81,17 @@ export default function AppRoutes() {
           </PrivateRoute>
         }
       />
+
+      {/* ✅ صفحة مستقلة لساعات الأسبوع */}
+      <Route
+        path="/barber/weekly-hours"
+        element={
+          <PrivateRoute>
+            <WeeklyHoursPage />
+          </PrivateRoute>
+        }
+      />
+
       <Route
         path="/admin-bookings"
         element={
