@@ -1,37 +1,14 @@
 /* eslint-env node */
 // scripts/notifications/runTestNotifications.js
-//
-// يقرأ طلبات testNotifications (pending) ويرسل FCM ثم يحدّث الحالة.
-// يُشغّل من GitHub Actions فقط (Node.js)
 
-import admin from "firebase-admin";
-
-let initialized = false;
-
-function initAdmin() {
-  if (initialized) return;
-
-  const raw = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-  if (!raw) {
-    throw new Error("Missing FIREBASE_SERVICE_ACCOUNT_JSON env var");
-  }
-
-  const serviceAccount = JSON.parse(raw);
-
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-  });
-
-  initialized = true;
-}
+import { getAdmin } from "./firebaseAdmin.js";
 
 export default async function runTestNotifications() {
-  initAdmin();
+  const admin = getAdmin();
 
   const db = admin.firestore();
   const messaging = admin.messaging();
 
-  // مهم: ما بنستخدم orderBy لتفادي فشل لو createdAt ناقص بدوك قديم
   const snap = await db
     .collection("testNotifications")
     .where("status", "==", "pending")
@@ -43,39 +20,53 @@ export default async function runTestNotifications() {
     return;
   }
 
-  for (const docSnap of snap.docs) {
-    const req = docSnap.data();
+  for (const doc of snap.docs) {
+    const t = doc.data();
+
+    // لازم يكون عندك token محفوظ من الويب
+    const token = t?.token;
+    if (!token) {
+      await doc.ref.set(
+        {
+          status: "failed",
+          error: "Missing token",
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        },
+        { merge: true },
+      );
+      continue;
+    }
+
+    const payload = {
+      notification: {
+        title: t?.title || "Test Notification ✅",
+        body: t?.body || "Push is working (sent from GitHub Actions).",
+      },
+      data: t?.data || {},
+      token,
+    };
 
     try {
-      if (!req?.token) throw new Error("Missing token");
-
-      const title = req?.notification?.title || "🧪 Test Notification";
-      const body =
-        req?.notification?.body ||
-        "If you received this, Notifications pipeline works ✅";
-
-      console.log("📤 Sending test notification:", docSnap.id);
-
-      await messaging.send({
-        token: req.token,
-        notification: { title, body },
-        data: req.data || {},
-      });
-
-      await docSnap.ref.update({
-        status: "sent",
-        sentAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
-
-      console.log("✅ Sent:", docSnap.id);
+      const res = await messaging.send(payload);
+      await doc.ref.set(
+        {
+          status: "sent",
+          messageId: res,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        },
+        { merge: true },
+      );
+      console.log("✅ Sent test notification:", doc.id, res);
     } catch (err) {
-      console.error("❌ Failed:", docSnap.id, err?.message || err);
-
-      await docSnap.ref.update({
-        status: "failed",
-        error: String(err?.message || err),
-        failedAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
+      await doc.ref.set(
+        {
+          status: "failed",
+          error: String(err?.message || err),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        },
+        { merge: true },
+      );
+      console.log("❌ Failed test notification:", doc.id, err);
     }
   }
 }
