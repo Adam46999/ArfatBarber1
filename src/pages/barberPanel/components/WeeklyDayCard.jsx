@@ -10,15 +10,31 @@ export default function WeeklyDayCard({
   onChange,
 }) {
   const open = value !== null;
-  const title = isArabic ? day.ar : day.en;
+  const title = isArabic ? day.ar : day.en || day.key;
+
+  // ✅ حماية: لو صار open بس value ناقص لأي سبب
+  const safeValue = open
+    ? {
+        from: value?.from ?? "09:00",
+        to: value?.to ?? "17:00",
+      }
+    : null;
 
   const timeText = !open
     ? isArabic
       ? "مغلق طوال اليوم"
       : "Closed all day"
     : isArabic
-      ? `من ${value.from} إلى ${value.to}`
-      : `${value.from} → ${value.to}`;
+      ? `من ${safeValue.from} إلى ${safeValue.to}`
+      : `${safeValue.from} → ${safeValue.to}`;
+
+  const statusChip = open
+    ? isArabic
+      ? "مفتوح"
+      : "Open"
+    : isArabic
+      ? "مغلق"
+      : "Closed";
 
   return (
     <div
@@ -27,7 +43,7 @@ export default function WeeklyDayCard({
         error ? "border-rose-300" : "border-slate-200",
       ].join(" ")}
     >
-      {/* Row */}
+      {/* Header Row (expand only) */}
       <button
         type="button"
         onClick={onExpand}
@@ -45,6 +61,8 @@ export default function WeeklyDayCard({
             <div className="text-sm font-bold text-slate-700 mt-1">
               {timeText}
             </div>
+
+            {/* error short */}
             {error ? (
               <div className="text-xs font-black text-rose-700 mt-1">
                 {error}
@@ -54,24 +72,27 @@ export default function WeeklyDayCard({
         </div>
 
         <div className="flex items-center gap-2">
-          {!open ? (
-            <span className="px-2.5 py-1 rounded-full text-xs font-black border bg-slate-100 text-slate-700 border-slate-200">
-              {isArabic ? "مغلق" : "Closed"}
-            </span>
-          ) : (
-            <span className="px-2.5 py-1 rounded-full text-xs font-black border bg-emerald-50 text-emerald-800 border-emerald-200">
-              {isArabic ? "مفتوح" : "Open"}
-            </span>
-          )}
+          <span
+            className={[
+              "px-2.5 py-1 rounded-full text-xs font-black border",
+              open
+                ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                : "bg-slate-100 text-slate-700 border-slate-200",
+            ].join(" ")}
+          >
+            {statusChip}
+          </span>
+
           <span className="text-slate-400 font-black text-lg leading-none">
             {expanded ? "▲" : "▼"}
           </span>
         </div>
       </button>
 
-      {/* Expand */}
+      {/* Expand Section */}
       {expanded ? (
         <div className="px-4 pb-4">
+          {/* Toggle Open/Closed */}
           <div className="flex items-center justify-between">
             <label className="inline-flex items-center gap-2 text-sm font-black text-slate-700">
               <input
@@ -81,8 +102,27 @@ export default function WeeklyDayCard({
               />
               {isArabic ? "مفتوح" : "Open"}
             </label>
+
+            {/* small hint */}
+            <div className="text-xs font-black text-slate-500">
+              {open
+                ? isArabic
+                  ? "اختر وقت البداية والنهاية"
+                  : "Set start and end time"
+                : isArabic
+                  ? "هذا اليوم مغلق ولن يظهر للحجز"
+                  : "This day is closed and won’t be bookable"}
+            </div>
           </div>
 
+          {/* Error banner inside edit */}
+          {error ? (
+            <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-black text-rose-800">
+              ⚠️ {error}
+            </div>
+          ) : null}
+
+          {/* Time Inputs */}
           <div className="mt-3 grid grid-cols-2 gap-3">
             <div>
               <div className="text-xs font-black text-slate-600 mb-1">
@@ -92,15 +132,15 @@ export default function WeeklyDayCard({
                 type="time"
                 step="1800"
                 disabled={!open}
-                value={open ? value.from : ""}
+                value={open ? safeValue.from : ""}
                 onChange={(e) => onChange({ from: e.target.value })}
                 className={[
-                  "w-full px-3 py-3 rounded-2xl border text-base font-black",
+                  "w-full px-3 py-3 rounded-2xl border text-base font-black outline-none transition",
                   !open
                     ? "bg-slate-100 border-slate-200 text-slate-400"
                     : error
-                      ? "bg-white border-rose-300 text-slate-900"
-                      : "bg-white border-slate-200 text-slate-900",
+                      ? "bg-white border-rose-300 text-slate-900 focus:ring-2 focus:ring-rose-200"
+                      : "bg-white border-slate-200 text-slate-900 focus:ring-2 focus:ring-slate-200",
                 ].join(" ")}
               />
             </div>
@@ -113,19 +153,28 @@ export default function WeeklyDayCard({
                 type="time"
                 step="1800"
                 disabled={!open}
-                value={open ? value.to : ""}
+                value={open ? safeValue.to : ""}
                 onChange={(e) => onChange({ to: e.target.value })}
                 className={[
-                  "w-full px-3 py-3 rounded-2xl border text-base font-black",
+                  "w-full px-3 py-3 rounded-2xl border text-base font-black outline-none transition",
                   !open
                     ? "bg-slate-100 border-slate-200 text-slate-400"
                     : error
-                      ? "bg-white border-rose-300 text-slate-900"
-                      : "bg-white border-slate-200 text-slate-900",
+                      ? "bg-white border-rose-300 text-slate-900 focus:ring-2 focus:ring-rose-200"
+                      : "bg-white border-slate-200 text-slate-900 focus:ring-2 focus:ring-slate-200",
                 ].join(" ")}
               />
             </div>
           </div>
+
+          {/* Closed helper */}
+          {!open ? (
+            <div className="mt-3 text-xs font-black text-slate-500 leading-5">
+              {isArabic
+                ? "لفتح اليوم فعّل (مفتوح) ثم عدّل الساعات."
+                : "To open this day, enable Open and set the hours."}
+            </div>
+          ) : null}
         </div>
       ) : null}
     </div>
