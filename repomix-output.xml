@@ -3796,82 +3796,6 @@ export default function RecentBookingsCard({ recentBookings }) {
 }
 </file>
 
-<file path="src/pages/barberPanel/components/StickySaveBar.jsx">
-// src/pages/barberPanel/components/StickySaveBar.jsx
-function Button({ children, className = "", ...props }) {
-  return (
-    <button
-      {...props}
-      className={
-        "h-12 rounded-2xl px-4 text-base font-black transition disabled:opacity-60 disabled:cursor-not-allowed " +
-        className
-      }
-    >
-      {children}
-    </button>
-  );
-}
-
-export default function StickySaveBar({
-  isArabic,
-  disabled,
-  saving,
-  dirty,
-  hasErrors,
-  onSave,
-  onReset,
-}) {
-  const hint = hasErrors
-    ? isArabic
-      ? "أصلح الأخطاء قبل الحفظ"
-      : "Fix errors before saving"
-    : dirty
-      ? isArabic
-        ? "تغييرات جاهزة للحفظ"
-        : "Changes ready to save"
-      : isArabic
-        ? "لا توجد تغييرات"
-        : "No changes";
-
-  return (
-    <div className="fixed left-0 right-0 bottom-0 z-20">
-      {/* push above floating buttons */}
-      <div className="mx-auto max-w-xl px-4 pb-5">
-        <div className="rounded-3xl bg-white border border-slate-200 shadow-xl p-3">
-          <div className="text-xs font-black text-slate-600 mb-2">{hint}</div>
-
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              onClick={onReset}
-              className="flex-1 bg-white border border-slate-200 text-slate-900 hover:bg-slate-50"
-              disabled={saving}
-            >
-              {isArabic ? "إرجاع" : "Reset"}
-            </Button>
-
-            <Button
-              type="button"
-              onClick={onSave}
-              className="flex-[1.4] bg-emerald-500 text-white hover:bg-emerald-600"
-              disabled={disabled}
-            >
-              {saving
-                ? isArabic
-                  ? "جاري الحفظ..."
-                  : "Saving..."
-                : isArabic
-                  ? "حفظ"
-                  : "Save"}
-            </Button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-</file>
-
 <file path="src/pages/barberPanel/components/TimesGrid.jsx">
 // src/pages/barberPanel/components/TimesGrid.jsx
 export default function TimesGrid({
@@ -3921,142 +3845,6 @@ export default function TimesGrid({
           </button>
         );
       })}
-    </div>
-  );
-}
-</file>
-
-<file path="src/pages/barberPanel/components/WeeklyDayCard.jsx">
-// src/pages/barberPanel/components/WeeklyDayCard.jsx
-export default function WeeklyDayCard({
-  day,
-  isArabic,
-  value,
-  error,
-  expanded,
-  onExpand,
-  onToggleOpen,
-  onChange,
-}) {
-  const open = value !== null;
-  const title = isArabic ? day.ar : day.en;
-
-  const timeText = !open
-    ? isArabic
-      ? "مغلق طوال اليوم"
-      : "Closed all day"
-    : isArabic
-      ? `من ${value.from} إلى ${value.to}`
-      : `${value.from} → ${value.to}`;
-
-  return (
-    <div
-      className={[
-        "rounded-2xl border bg-white shadow-sm overflow-hidden",
-        error ? "border-rose-300" : "border-slate-200",
-      ].join(" ")}
-    >
-      {/* Row */}
-      <button
-        type="button"
-        onClick={onExpand}
-        className="w-full px-4 py-4 flex items-center justify-between gap-3 hover:bg-slate-50 transition"
-      >
-        <div className="flex items-center gap-3">
-          <span
-            className={[
-              "w-2.5 h-2.5 rounded-full",
-              open ? "bg-emerald-500" : "bg-rose-500",
-            ].join(" ")}
-          />
-          <div className="flex flex-col items-start">
-            <div className="text-base font-black text-slate-900">{title}</div>
-            <div className="text-sm font-bold text-slate-700 mt-1">
-              {timeText}
-            </div>
-            {error ? (
-              <div className="text-xs font-black text-rose-700 mt-1">
-                {error}
-              </div>
-            ) : null}
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {!open ? (
-            <span className="px-2.5 py-1 rounded-full text-xs font-black border bg-slate-100 text-slate-700 border-slate-200">
-              {isArabic ? "مغلق" : "Closed"}
-            </span>
-          ) : (
-            <span className="px-2.5 py-1 rounded-full text-xs font-black border bg-emerald-50 text-emerald-800 border-emerald-200">
-              {isArabic ? "مفتوح" : "Open"}
-            </span>
-          )}
-          <span className="text-slate-400 font-black text-lg leading-none">
-            {expanded ? "▲" : "▼"}
-          </span>
-        </div>
-      </button>
-
-      {/* Expand */}
-      {expanded ? (
-        <div className="px-4 pb-4">
-          <div className="flex items-center justify-between">
-            <label className="inline-flex items-center gap-2 text-sm font-black text-slate-700">
-              <input
-                type="checkbox"
-                checked={open}
-                onChange={(e) => onToggleOpen(e.target.checked)}
-              />
-              {isArabic ? "مفتوح" : "Open"}
-            </label>
-          </div>
-
-          <div className="mt-3 grid grid-cols-2 gap-3">
-            <div>
-              <div className="text-xs font-black text-slate-600 mb-1">
-                {isArabic ? "من" : "From"}
-              </div>
-              <input
-                type="time"
-                step="1800"
-                disabled={!open}
-                value={open ? value.from : ""}
-                onChange={(e) => onChange({ from: e.target.value })}
-                className={[
-                  "w-full px-3 py-3 rounded-2xl border text-base font-black",
-                  !open
-                    ? "bg-slate-100 border-slate-200 text-slate-400"
-                    : error
-                      ? "bg-white border-rose-300 text-slate-900"
-                      : "bg-white border-slate-200 text-slate-900",
-                ].join(" ")}
-              />
-            </div>
-
-            <div>
-              <div className="text-xs font-black text-slate-600 mb-1">
-                {isArabic ? "إلى" : "To"}
-              </div>
-              <input
-                type="time"
-                step="1800"
-                disabled={!open}
-                value={open ? value.to : ""}
-                onChange={(e) => onChange({ to: e.target.value })}
-                className={[
-                  "w-full px-3 py-3 rounded-2xl border text-base font-black",
-                  !open
-                    ? "bg-slate-100 border-slate-200 text-slate-400"
-                    : error
-                      ? "bg-white border-rose-300 text-slate-900"
-                      : "bg-white border-slate-200 text-slate-900",
-                ].join(" ")}
-              />
-            </div>
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }
@@ -4644,419 +4432,6 @@ export default function WeeklyHoursEditor({
 }
 </file>
 
-<file path="src/pages/barberPanel/components/WeeklyHoursEditorMobile.jsx">
-import { useEffect, useMemo, useRef, useState } from "react";
-import WeeklyDayCard from "./WeeklyDayCard";
-import StickySaveBar from "./StickySaveBar";
-
-import {
-  DAYS,
-  deepEqual,
-  normalizeWeekly,
-  validateWeekly,
-} from "../utils/weeklyHours";
-import {
-  saveWeeklyHours,
-  resetWeeklyHoursToDefault,
-} from "../../../services/barberWeeklyHours";
-import defaultWorkingHours from "../../../constants/workingHours";
-
-function nowTime() {
-  return new Date().toLocaleTimeString();
-}
-
-export default function WeeklyHoursEditorMobile({
-  loading,
-  initialWeekly,
-  onDirtyChange,
-}) {
-  const [weekly, setWeekly] = useState(() => normalizeWeekly(initialWeekly));
-  const baseRef = useRef(normalizeWeekly(initialWeekly));
-
-  const [expanded, setExpanded] = useState(null);
-  const [saving, setSaving] = useState(false);
-  const [toast, setToast] = useState("");
-  const [lastSavedAt, setLastSavedAt] = useState(null);
-
-  useEffect(() => {
-    const n = normalizeWeekly(initialWeekly);
-    setWeekly(n);
-    baseRef.current = n;
-    setExpanded(null);
-    setLastSavedAt(null);
-  }, [initialWeekly]);
-
-  const errors = useMemo(() => validateWeekly(weekly), [weekly]);
-  const hasErrors = useMemo(() => Object.keys(errors).length > 0, [errors]);
-
-  const dirty = useMemo(() => !deepEqual(baseRef.current, weekly), [weekly]);
-  useEffect(() => onDirtyChange?.(dirty), [dirty, onDirtyChange]);
-
-  useEffect(() => {
-    const handler = (e) => {
-      if (!dirty) return;
-      e.preventDefault();
-      e.returnValue = "";
-    };
-    window.addEventListener("beforeunload", handler);
-    return () => window.removeEventListener("beforeunload", handler);
-  }, [dirty]);
-
-  const status = loading
-    ? { tone: "neutral", text: "جاري التحميل..." }
-    : hasErrors
-      ? { tone: "danger", text: "يوجد أخطاء لازم تتصلّح" }
-      : dirty
-        ? { tone: "warn", text: "تغييرات غير محفوظة" }
-        : { tone: "success", text: "محفوظ" };
-
-  const showToast = (t, ms = 2000) => {
-    setToast(t);
-    window.clearTimeout(showToast._t);
-    showToast._t = window.setTimeout(() => setToast(""), ms);
-  };
-
-  const onToggleDay = (dayKey, open) => {
-    setWeekly((p) => {
-      if (!open) return { ...p, [dayKey]: null };
-
-      // ✅ لما نفتح يوم مغلق: استخدم الافتراضي الرسمي لنفس اليوم
-      const def = defaultWorkingHours?.[dayKey] ?? {
-        from: "12:00",
-        to: "20:00",
-      };
-      return { ...p, [dayKey]: def };
-    });
-  };
-
-  const onChangeDay = (dayKey, patch) => {
-    setWeekly((p) => {
-      const cur = p[dayKey];
-      if (cur === null) return p;
-      return { ...p, [dayKey]: { ...cur, ...patch } };
-    });
-  };
-
-  const onSave = async () => {
-    if (loading || saving) return;
-    if (hasErrors) {
-      showToast("أصلح الأخطاء قبل الحفظ.", 2400);
-      return;
-    }
-    if (!dirty) return;
-
-    try {
-      setSaving(true);
-      await saveWeeklyHours(weekly);
-      baseRef.current = weekly;
-      setLastSavedAt(nowTime());
-      showToast("✅ تم الحفظ");
-    } catch (e) {
-      console.error(e);
-      showToast("❌ فشل الحفظ", 2400);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const onReset = async () => {
-    if (loading || saving) return;
-
-    const ok = window.confirm(
-      "راح نرجّع ساعات الأسبوع للوضع الافتراضي. متأكد؟",
-    );
-    if (!ok) return;
-
-    try {
-      setSaving(true);
-      await resetWeeklyHoursToDefault(defaultWorkingHours);
-      const n = normalizeWeekly(defaultWorkingHours);
-      setWeekly(n);
-      baseRef.current = n;
-      setLastSavedAt(nowTime());
-      showToast("✅ تم الإرجاع");
-    } catch (e) {
-      console.error(e);
-      showToast("❌ فشل الإرجاع", 2400);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div className="space-y-3">
-      <div
-        className={[
-          "rounded-2xl border px-4 py-3 text-sm font-extrabold flex items-center justify-between",
-          status.tone === "success"
-            ? "bg-emerald-50 border-emerald-200 text-emerald-800"
-            : status.tone === "warn"
-              ? "bg-amber-50 border-amber-200 text-amber-900"
-              : status.tone === "danger"
-                ? "bg-rose-50 border-rose-200 text-rose-800"
-                : "bg-white border-slate-200 text-slate-700",
-        ].join(" ")}
-      >
-        <span>{status.text}</span>
-        <span className="text-xs font-black text-slate-500">
-          {lastSavedAt ? `آخر حفظ: ${lastSavedAt}` : " "}
-        </span>
-      </div>
-
-      <div className="space-y-2 pb-20">
-        {DAYS.map((d) => (
-          <WeeklyDayCard
-            key={d.key}
-            day={d}
-            isArabic={true}
-            value={weekly[d.key]}
-            error={errors[d.key]}
-            expanded={expanded === d.key}
-            onExpand={() => setExpanded((x) => (x === d.key ? null : d.key))}
-            onToggleOpen={(open) => onToggleDay(d.key, open)}
-            onChange={(patch) => onChangeDay(d.key, patch)}
-          />
-        ))}
-      </div>
-
-      {toast ? (
-        <div className="fixed left-1/2 -translate-x-1/2 bottom-24 z-20">
-          <div className="rounded-2xl bg-slate-900 text-white px-4 py-2 text-sm font-extrabold shadow-xl">
-            {toast}
-          </div>
-        </div>
-      ) : null}
-
-      <StickySaveBar
-        isArabic={true}
-        disabled={loading || saving || !dirty || hasErrors}
-        saving={saving}
-        dirty={dirty}
-        hasErrors={hasErrors}
-        onSave={onSave}
-        onReset={onReset}
-      />
-    </div>
-  );
-}
-</file>
-
-<file path="src/pages/barberPanel/components/WeeklyHoursEditSheet.jsx">
-// src/pages/barberPanel/components/WeeklyHoursEditSheet.jsx
-import { useMemo, useState } from "react";
-import WeeklyHoursEditorMobile from "./WeeklyHoursEditorMobile";
-import { normalizeWeekly } from "../utils/weeklyHoursUX";
-
-export default function WeeklyHoursEditSheet({
-  isArabic,
-  initialWeekly,
-  onClose,
-}) {
-  const base = useMemo(() => normalizeWeekly(initialWeekly), [initialWeekly]);
-  const [dirty, setDirty] = useState(false);
-
-  const closeWithConfirm = () => {
-    if (dirty) {
-      const ok = window.confirm(
-        isArabic
-          ? "لديك تغييرات غير محفوظة. هل تريد الخروج بدون حفظ؟"
-          : "You have unsaved changes. Leave without saving?",
-      );
-      if (!ok) return;
-    }
-    onClose();
-  };
-
-  return (
-    <div className="fixed inset-0 z-30">
-      {/* Backdrop */}
-      <button
-        aria-label="close"
-        className="absolute inset-0 bg-black/40"
-        onClick={closeWithConfirm}
-      />
-
-      {/* Sheet */}
-      <div className="absolute left-0 right-0 bottom-0">
-        <div className="mx-auto max-w-xl">
-          <div className="bg-[#f8f8f8] rounded-t-3xl shadow-2xl border-t border-slate-200 max-h-[92vh] overflow-auto">
-            {/* Handle */}
-            <div className="pt-3 flex justify-center">
-              <div className="h-1.5 w-12 rounded-full bg-slate-300" />
-            </div>
-
-            {/* Header */}
-            <div className="px-4 pt-3 pb-4 border-b border-slate-200 bg-white rounded-t-3xl">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <div className="text-lg font-black text-slate-900">
-                    {isArabic ? "وضع التعديل" : "Edit mode"}
-                  </div>
-                  <div className="text-sm font-bold text-slate-600 mt-1 leading-5">
-                    {isArabic
-                      ? "عدّل الساعات ثم اضغط حفظ. اضغط إلغاء للرجوع بدون تغييرات."
-                      : "Edit then press Save. Cancel to discard changes."}
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={closeWithConfirm}
-                  className="h-10 px-4 rounded-2xl bg-white border border-slate-200 shadow-sm text-sm font-black hover:bg-slate-50"
-                >
-                  {isArabic ? "إلغاء" : "Cancel"}
-                </button>
-              </div>
-
-              {/* Safety line */}
-              <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-black text-slate-700">
-                ℹ️{" "}
-                {isArabic
-                  ? "لن يتم تطبيق أي تغيير إلا بعد الضغط على زر الحفظ."
-                  : "No change applies unless you press Save."}
-              </div>
-            </div>
-
-            {/* Content */}
-            <div className="px-4 pt-4 pb-24">
-              <WeeklyHoursEditorMobile
-                isArabic={isArabic}
-                loading={false}
-                initialWeekly={base}
-                onDirtyChange={setDirty}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-</file>
-
-<file path="src/pages/barberPanel/components/WeeklyHoursReadOnly.jsx">
-// src/pages/barberPanel/components/WeeklyHoursReadOnly.jsx
-import { DAYS, formatRangeArabic, getTodayKey } from "../utils/weeklyHoursUX";
-
-function Badge({ children }) {
-  return (
-    <span className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-black border bg-slate-100 text-slate-700 border-slate-200">
-      {children}
-    </span>
-  );
-}
-
-function DayRow({ dayName, isToday, rightText, closedAllDay }) {
-  return (
-    <div
-      className={[
-        "flex items-center justify-between gap-3 px-4 py-4 rounded-2xl border",
-        "border-slate-200 bg-white",
-        isToday ? "ring-1 ring-slate-200 bg-slate-50" : "",
-      ].join(" ")}
-    >
-      <div className="flex items-center gap-3">
-        {isToday ? (
-          <span className="w-1.5 h-8 rounded-full bg-slate-900" />
-        ) : (
-          <span className="w-1.5 h-8 rounded-full bg-transparent" />
-        )}
-
-        <div className="text-base font-black text-slate-900">{dayName}</div>
-
-        {isToday ? <Badge>اليوم</Badge> : null}
-      </div>
-
-      <div className="flex items-center gap-2">
-        {closedAllDay ? <Badge>مغلق</Badge> : null}
-        <div className="text-sm font-black text-slate-800">{rightText}</div>
-      </div>
-    </div>
-  );
-}
-
-export default function WeeklyHoursReadOnly({
-  weekly,
-  loading,
-  showHeader = true,
-  updatedText,
-  onEdit,
-  onResetToDefault,
-}) {
-  const todayKey = getTodayKey();
-
-  return (
-    <div className="bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden">
-      {showHeader ? (
-        <div className="px-5 py-4 border-b border-slate-200 bg-white flex items-start justify-between gap-4">
-          <div>
-            <div className="text-lg font-black text-slate-900">
-              ساعات العمل الأسبوعية
-            </div>
-            <div className="text-xs font-black text-slate-500 mt-1">
-              {updatedText
-                ? updatedText
-                : "عدّل ساعات وأيام العمل بشكل واضح ومقصود."}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {onResetToDefault ? (
-              <button
-                onClick={onResetToDefault}
-                className="px-4 py-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-800 text-sm font-black transition"
-              >
-                افتراضي
-              </button>
-            ) : null}
-
-            {onEdit ? (
-              <button
-                onClick={onEdit}
-                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-black transition"
-              >
-                تعديل
-              </button>
-            ) : null}
-          </div>
-        </div>
-      ) : null}
-
-      <div className="p-4 bg-white">
-        {loading ? (
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm font-black text-slate-600">
-            جاري التحميل...
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {DAYS.map((d) => {
-              const v = weekly?.[d.key] ?? null;
-              const isToday = d.key === todayKey;
-              return (
-                <DayRow
-                  key={d.key}
-                  dayName={d.ar}
-                  isToday={isToday}
-                  rightText={formatRangeArabic(v)}
-                  closedAllDay={!v}
-                />
-              );
-            })}
-          </div>
-        )}
-
-        <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-          <div className="text-xs font-black text-slate-700 leading-5">
-            ℹ️ التغييرات تؤثر فقط على الحجوزات الجديدة. الحجوزات المؤكدة لا
-            تتغير.
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-</file>
-
 <file path="src/pages/barberPanel/hooks/useBlockedDay.js">
 // src/pages/barberPanel/hooks/useBlockedDay.js
 import { useEffect, useState } from "react";
@@ -5600,192 +4975,6 @@ export function buildTargets({ applyMode, selectedDate, applyUntil }) {
 <file path="src/pages/barberPanel/utils/weeklyHours.js">
 // src/pages/barberPanel/utils/weeklyHours.js
 export * from "./weeklyHoursUX";
-</file>
-
-<file path="src/pages/barberPanel/WeeklyHoursPage.jsx">
-// src/pages/barberPanel/WeeklyHoursPage.jsx
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useTranslation } from "react-i18next";
-
-import barberDefaultWeeklyHours from "../../constants/barberDefaultWeeklyHours";
-import WeeklyHoursReadOnly from "./components/WeeklyHoursReadOnly";
-import WeeklyHoursEditSheet from "./components/WeeklyHoursEditSheet";
-import { isRtlLang, normalizeWeekly } from "./utils/weeklyHoursUX";
-
-import {
-  ensureDefaultWeeklyHours,
-  getWeeklyHoursDoc,
-  resetWeeklyHoursToDefault,
-} from "../../services/barberWeeklyHours";
-
-function formatUpdatedAt(updatedAt) {
-  if (!updatedAt) return null;
-  try {
-    const d = updatedAt.toDate ? updatedAt.toDate() : new Date(updatedAt);
-    return d.toLocaleString();
-  } catch {
-    return null;
-  }
-}
-
-export default function WeeklyHoursPage() {
-  const nav = useNavigate();
-  const { i18n } = useTranslation();
-
-  const isArabic = String(i18n.language || "")
-    .toLowerCase()
-    .startsWith("ar");
-  const rtl = isRtlLang(i18n.language);
-
-  const [loading, setLoading] = useState(true);
-  const [weekly, setWeekly] = useState(
-    normalizeWeekly(barberDefaultWeeklyHours),
-  );
-  const [updatedAt, setUpdatedAt] = useState(null);
-  const [editOpen, setEditOpen] = useState(false);
-
-  useEffect(() => {
-    let alive = true;
-
-    (async () => {
-      try {
-        setLoading(true);
-        const ensured = await ensureDefaultWeeklyHours(
-          barberDefaultWeeklyHours,
-        );
-        const docData = await getWeeklyHoursDoc();
-
-        if (!alive) return;
-
-        const srcWeekly =
-          docData?.weekly || ensured.weekly || barberDefaultWeeklyHours;
-
-        setWeekly(normalizeWeekly(srcWeekly));
-        setUpdatedAt(docData?.updatedAt || null);
-      } catch (e) {
-        console.error(e);
-        if (!alive) return;
-        setWeekly(normalizeWeekly(barberDefaultWeeklyHours));
-        setUpdatedAt(null);
-      } finally {
-        if (alive) setLoading(false);
-      }
-    })();
-
-    return () => {
-      alive = false;
-    };
-  }, []);
-
-  const updatedText = useMemo(() => formatUpdatedAt(updatedAt), [updatedAt]);
-
-  // ✅ زر الرجوع لصفحة الحلاق
-  const onBackToBarber = () => nav("/barber"); // عدّل المسار إذا عندك مختلف
-
-  const onResetToDefault = async () => {
-    const ok = window.confirm(
-      isArabic
-        ? "هل تريد إرجاع ساعات العمل للوضع الافتراضي؟"
-        : "Reset working hours to default?",
-    );
-    if (!ok) return;
-
-    try {
-      setLoading(true);
-      await resetWeeklyHoursToDefault(barberDefaultWeeklyHours);
-      const docData = await getWeeklyHoursDoc();
-      setWeekly(normalizeWeekly(docData?.weekly || barberDefaultWeeklyHours));
-      setUpdatedAt(docData?.updatedAt || null);
-    } catch (e) {
-      console.error(e);
-      alert(
-        isArabic ? "فشل الإرجاع. حاول مرة أخرى." : "Reset failed. Try again.",
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div
-      dir={rtl ? "rtl" : "ltr"}
-      className="min-h-screen bg-[#f8f8f8] px-4 pt-4 pb-6"
-    >
-      <div className="max-w-xl mx-auto pt-24">
-        {/* ✅ Premium Top Bar */}
-        <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-3">
-          <div className="flex items-center gap-3">
-            {/* Back */}
-            <button
-              onClick={onBackToBarber}
-              className="h-11 w-11 rounded-2xl bg-white border border-slate-200 hover:bg-slate-50 transition font-black"
-              aria-label={isArabic ? "رجوع" : "Back"}
-              title={isArabic ? "رجوع" : "Back"}
-            >
-              {rtl ? "→" : "←"}
-            </button>
-
-            {/* Title */}
-            <div className="flex-1">
-              <div className="text-lg font-black text-slate-900">
-                {isArabic ? "ساعات العمل" : "Working hours"}
-              </div>
-              <div className="text-xs font-black text-slate-500 mt-0.5">
-                {updatedText
-                  ? isArabic
-                    ? `آخر تعديل: ${updatedText}`
-                    : `Last edit: ${updatedText}`
-                  : isArabic
-                    ? "—"
-                    : "—"}
-              </div>
-            </div>
-
-            {/* Secondary: Default */}
-            <button
-              onClick={onResetToDefault}
-              disabled={loading}
-              className="h-11 px-4 rounded-2xl bg-white border border-slate-200 text-slate-900 text-sm font-black hover:bg-slate-50 transition disabled:opacity-60"
-            >
-              {isArabic ? "افتراضي" : "Default"}
-            </button>
-
-            {/* Primary: Edit */}
-            <button
-              onClick={() => setEditOpen(true)}
-              disabled={loading}
-              className="h-11 px-4 rounded-2xl bg-slate-900 text-white text-sm font-black hover:bg-slate-800 transition disabled:opacity-60"
-            >
-              {isArabic ? "تعديل" : "Edit"}
-            </button>
-          </div>
-        </div>
-
-        {/* Content */}
-        <div className="mt-10">
-          <WeeklyHoursReadOnly
-            weekly={weekly}
-            isArabic={isArabic}
-            loading={loading}
-            updatedText={updatedText}
-            onEdit={() => setEditOpen(true)}
-            onResetToDefault={onResetToDefault}
-            showHeader={false} // ✅ هي اللي بتحل التكرار
-          />
-        </div>
-      </div>
-
-      {editOpen ? (
-        <WeeklyHoursEditSheet
-          isArabic={isArabic}
-          initialWeekly={weekly}
-          onClose={() => setEditOpen(false)}
-        />
-      ) : null}
-    </div>
-  );
-}
 </file>
 
 <file path="src/pages/BookingForm.jsx">
@@ -7743,77 +6932,868 @@ export default function BarberPanel() {
 }
 </file>
 
-<file path="src/pages/barberPanel/utils/weeklyHoursUX.js">
-// src/pages/barberPanel/utils/weeklyHoursUX.js
+<file path="src/pages/barberPanel/components/StickySaveBar.jsx">
+// src/pages/barberPanel/components/StickySaveBar.jsx
+import React from "react";
 
-export const DAYS = [
-  { key: "Sunday", ar: "الأحد" },
-  { key: "Monday", ar: "الإثنين" },
-  { key: "Tuesday", ar: "الثلاثاء" },
-  { key: "Wednesday", ar: "الأربعاء" },
-  { key: "Thursday", ar: "الخميس" },
-  { key: "Friday", ar: "الجمعة" },
-  { key: "Saturday", ar: "السبت" },
-];
-export function isRtlLang() {
-  return true; // صفحة الحلاق كلها عربي، فخليها RTL دايمًا
-}
+export default function StickySaveBar({
+  isArabic = true,
+  disabled = false,
+  saving = false,
+  dirty = false,
+  hasErrors = false,
+  onSave,
+  onReset,
+}) {
+  const t = isArabic
+    ? {
+        save: "حفظ التغييرات",
+        saving: "جاري الحفظ...",
+        reset: "إرجاع افتراضي",
+        unsaved: "تغييرات غير محفوظة",
+        saved: "كل شيء محفوظ",
+        errors: "يوجد أخطاء",
+        tip: "لن يتم تطبيق أي تغيير إلا بعد الضغط على حفظ.",
+      }
+    : {
+        save: "Save changes",
+        saving: "Saving…",
+        reset: "Reset default",
+        unsaved: "Unsaved changes",
+        saved: "All saved",
+        errors: "Has errors",
+        tip: "Nothing applies unless you press Save.",
+      };
 
-export function deepEqual(a, b) {
-  return JSON.stringify(a) === JSON.stringify(b);
-}
-
-export function normalizeWeekly(weekly) {
-  const out = {};
-  for (const d of DAYS) out[d.key] = weekly?.[d.key] ?? null;
-  return out;
-}
-
-function isHHmm(v) {
-  return typeof v === "string" && /^\d{2}:\d{2}$/.test(v);
-}
-
-function toMinutes(hhmm) {
-  const [h, m] = String(hhmm)
-    .split(":")
-    .map((x) => parseInt(x, 10));
-  return h * 60 + m;
-}
-
-export function validateWeekly(weekly) {
-  const errors = {};
-  for (const d of DAYS) {
-    const v = weekly?.[d.key] ?? null;
-    if (v === null) continue;
-
-    if (!isHHmm(v.from) || !isHHmm(v.to)) {
-      errors[d.key] = "صيغة الوقت لازم تكون HH:mm";
-      continue;
+  const badge = () => {
+    if (hasErrors) {
+      return (
+        <span className="inline-flex items-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-black text-rose-800">
+          <span className="text-base leading-none">⚠️</span>
+          {t.errors}
+        </span>
+      );
     }
-    if (!(toMinutes(v.from) < toMinutes(v.to))) {
-      errors[d.key] = '"من" لازم تكون قبل "إلى"';
-      continue;
+    if (dirty) {
+      return (
+        <span className="inline-flex items-center gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-black text-amber-900">
+          <span className="text-base leading-none">✳️</span>
+          {t.unsaved}
+        </span>
+      );
     }
+    return (
+      <span className="inline-flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-800">
+        <span className="text-base leading-none">✅</span>
+        {t.saved}
+      </span>
+    );
+  };
+
+  return (
+    <div className="fixed left-0 right-0 bottom-0 z-30">
+      {/* Blur background */}
+      <div className="pointer-events-none absolute inset-0 bg-white/70 backdrop-blur-md border-t border-slate-200" />
+      <div className="relative max-w-xl mx-auto px-4 py-3">
+        <div className="rounded-3xl border border-slate-200 bg-white shadow-xl px-4 py-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex flex-col gap-2">
+              {badge()}
+              <div className="text-[11px] font-black text-slate-500 leading-4">
+                {t.tip}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {/* Reset */}
+              <button
+                type="button"
+                onClick={onReset}
+                disabled={saving}
+                className="h-11 px-4 rounded-2xl bg-white border border-slate-200 text-slate-900 text-sm font-black hover:bg-slate-50 transition disabled:opacity-60"
+              >
+                {t.reset}
+              </button>
+
+              {/* Save */}
+              <button
+                type="button"
+                onClick={onSave}
+                disabled={disabled || saving}
+                className={[
+                  "h-11 px-5 rounded-2xl text-sm font-black transition",
+                  disabled || saving
+                    ? "bg-slate-200 text-slate-500 cursor-not-allowed"
+                    : "bg-slate-900 text-white hover:bg-slate-800",
+                ].join(" ")}
+              >
+                {saving ? t.saving : t.save}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Safe spacing to avoid content hidden behind bar */}
+      <div className="h-20" />
+    </div>
+  );
+}
+</file>
+
+<file path="src/pages/barberPanel/components/WeeklyDayCard.jsx">
+// src/pages/barberPanel/components/WeeklyDayCard.jsx
+export default function WeeklyDayCard({
+  day,
+  isArabic,
+  value,
+  error,
+  expanded,
+  onExpand,
+  onToggleOpen,
+  onChange,
+}) {
+  const open = value !== null;
+  const title = isArabic ? day.ar : day.en || day.key;
+
+  // ✅ حماية: لو صار open بس value ناقص لأي سبب
+  const safeValue = open
+    ? {
+        from: value?.from ?? "09:00",
+        to: value?.to ?? "17:00",
+      }
+    : null;
+
+  const timeText = !open
+    ? isArabic
+      ? "مغلق طوال اليوم"
+      : "Closed all day"
+    : isArabic
+      ? `من ${safeValue.from} إلى ${safeValue.to}`
+      : `${safeValue.from} → ${safeValue.to}`;
+
+  const statusChip = open
+    ? isArabic
+      ? "مفتوح"
+      : "Open"
+    : isArabic
+      ? "مغلق"
+      : "Closed";
+
+  return (
+    <div
+      className={[
+        "rounded-2xl border bg-white shadow-sm overflow-hidden",
+        error ? "border-rose-300" : "border-slate-200",
+      ].join(" ")}
+    >
+      {/* Header Row (expand only) */}
+      <button
+        type="button"
+        onClick={onExpand}
+        className="w-full px-4 py-4 flex items-center justify-between gap-3 hover:bg-slate-50 transition"
+      >
+        <div className="flex items-center gap-3">
+          <span
+            className={[
+              "w-2.5 h-2.5 rounded-full",
+              open ? "bg-emerald-500" : "bg-rose-500",
+            ].join(" ")}
+          />
+          <div className="flex flex-col items-start">
+            <div className="text-base font-black text-slate-900">{title}</div>
+            <div className="text-sm font-bold text-slate-700 mt-1">
+              {timeText}
+            </div>
+
+            {/* error short */}
+            {error ? (
+              <div className="text-xs font-black text-rose-700 mt-1">
+                {error}
+              </div>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span
+            className={[
+              "px-2.5 py-1 rounded-full text-xs font-black border",
+              open
+                ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                : "bg-slate-100 text-slate-700 border-slate-200",
+            ].join(" ")}
+          >
+            {statusChip}
+          </span>
+
+          <span className="text-slate-400 font-black text-lg leading-none">
+            {expanded ? "▲" : "▼"}
+          </span>
+        </div>
+      </button>
+
+      {/* Expand Section */}
+      {expanded ? (
+        <div className="px-4 pb-4">
+          {/* Toggle Open/Closed */}
+          <div className="flex items-center justify-between">
+            <label className="inline-flex items-center gap-2 text-sm font-black text-slate-700">
+              <input
+                type="checkbox"
+                checked={open}
+                onChange={(e) => onToggleOpen(e.target.checked)}
+              />
+              {isArabic ? "مفتوح" : "Open"}
+            </label>
+
+            {/* small hint */}
+            <div className="text-xs font-black text-slate-500">
+              {open
+                ? isArabic
+                  ? "اختر وقت البداية والنهاية"
+                  : "Set start and end time"
+                : isArabic
+                  ? "هذا اليوم مغلق ولن يظهر للحجز"
+                  : "This day is closed and won’t be bookable"}
+            </div>
+          </div>
+
+          {/* Error banner inside edit */}
+          {error ? (
+            <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-black text-rose-800">
+              ⚠️ {error}
+            </div>
+          ) : null}
+
+          {/* Time Inputs */}
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            <div>
+              <div className="text-xs font-black text-slate-600 mb-1">
+                {isArabic ? "من" : "From"}
+              </div>
+              <input
+                type="time"
+                step="1800"
+                disabled={!open}
+                value={open ? safeValue.from : ""}
+                onChange={(e) => onChange({ from: e.target.value })}
+                className={[
+                  "w-full px-3 py-3 rounded-2xl border text-base font-black outline-none transition",
+                  !open
+                    ? "bg-slate-100 border-slate-200 text-slate-400"
+                    : error
+                      ? "bg-white border-rose-300 text-slate-900 focus:ring-2 focus:ring-rose-200"
+                      : "bg-white border-slate-200 text-slate-900 focus:ring-2 focus:ring-slate-200",
+                ].join(" ")}
+              />
+            </div>
+
+            <div>
+              <div className="text-xs font-black text-slate-600 mb-1">
+                {isArabic ? "إلى" : "To"}
+              </div>
+              <input
+                type="time"
+                step="1800"
+                disabled={!open}
+                value={open ? safeValue.to : ""}
+                onChange={(e) => onChange({ to: e.target.value })}
+                className={[
+                  "w-full px-3 py-3 rounded-2xl border text-base font-black outline-none transition",
+                  !open
+                    ? "bg-slate-100 border-slate-200 text-slate-400"
+                    : error
+                      ? "bg-white border-rose-300 text-slate-900 focus:ring-2 focus:ring-rose-200"
+                      : "bg-white border-slate-200 text-slate-900 focus:ring-2 focus:ring-slate-200",
+                ].join(" ")}
+              />
+            </div>
+          </div>
+
+          {/* Closed helper */}
+          {!open ? (
+            <div className="mt-3 text-xs font-black text-slate-500 leading-5">
+              {isArabic
+                ? "لفتح اليوم فعّل (مفتوح) ثم عدّل الساعات."
+                : "To open this day, enable Open and set the hours."}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+</file>
+
+<file path="src/pages/barberPanel/components/WeeklyHoursEditSheet.jsx">
+// src/pages/barberPanel/components/WeeklyHoursEditSheet.jsx
+import { useMemo, useState } from "react";
+import WeeklyHoursEditorMobile from "./WeeklyHoursEditorMobile";
+import { normalizeWeekly } from "../utils/weeklyHoursUX";
+
+/**
+ * ✅ DE-MODALIZED VERSION
+ * كان هذا الملف Sheet/Modal.
+ * هسا صار Inline wrapper (Card) عشان:
+ * - ما نستخدم مودالات
+ * - ما نخرب أي import موجود بالمشروع
+ * - يضل فيه Confirm إذا في تغييرات غير محفوظة
+ */
+export default function WeeklyHoursEditSheet({
+  isArabic,
+  initialWeekly,
+  onClose,
+}) {
+  const base = useMemo(() => normalizeWeekly(initialWeekly), [initialWeekly]);
+  const [dirty, setDirty] = useState(false);
+
+  const closeWithConfirm = () => {
+    if (dirty) {
+      const ok = window.confirm(
+        isArabic
+          ? "لديك تغييرات غير محفوظة. هل تريد الخروج بدون حفظ؟"
+          : "You have unsaved changes. Leave without saving?",
+      );
+      if (!ok) return;
+    }
+    onClose?.();
+  };
+
+  return (
+    <div className="bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden">
+      {/* Header */}
+      <div className="px-5 py-4 border-b border-slate-200 bg-white">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="text-lg font-black text-slate-900">
+              {isArabic ? "تعديل ساعات العمل الأسبوعية" : "Edit weekly hours"}
+            </div>
+            <div className="text-sm font-bold text-slate-600 mt-1 leading-5">
+              {isArabic
+                ? "عدّل الساعات ثم اضغط حفظ. يمكنك الإلغاء للرجوع بدون حفظ."
+                : "Edit then press Save. You can cancel to discard changes."}
+            </div>
+          </div>
+
+          {onClose ? (
+            <button
+              type="button"
+              onClick={closeWithConfirm}
+              className="h-10 px-4 rounded-2xl bg-white border border-slate-200 shadow-sm text-sm font-black hover:bg-slate-50"
+            >
+              {isArabic ? "إلغاء" : "Cancel"}
+            </button>
+          ) : null}
+        </div>
+
+        {/* Safety line */}
+        <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-black text-slate-700">
+          ℹ️{" "}
+          {isArabic
+            ? "لن يتم تطبيق أي تغيير إلا بعد الضغط على زر الحفظ."
+            : "No change applies unless you press Save."}
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="px-4 pt-4 pb-4">
+        <WeeklyHoursEditorMobile
+          isArabic={isArabic}
+          loading={false}
+          initialWeekly={base}
+          onDirtyChange={setDirty}
+        />
+      </div>
+    </div>
+  );
+}
+</file>
+
+<file path="src/pages/barberPanel/components/WeeklyHoursReadOnly.jsx">
+// src/pages/barberPanel/components/WeeklyHoursReadOnly.jsx
+import { DAYS, getTodayKey, formatRange } from "../utils/weeklyHoursUX";
+
+// ✅ Fallback لو في مشروعك لسا بيستخدم formatRangeArabic
+import { formatRangeArabic as _formatRangeArabic } from "../utils/weeklyHoursUX";
+
+function Badge({ tone = "neutral", children }) {
+  const cls =
+    tone === "success"
+      ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+      : tone === "danger"
+        ? "bg-rose-50 text-rose-800 border-rose-200"
+        : tone === "info"
+          ? "bg-sky-50 text-sky-800 border-sky-200"
+          : "bg-slate-100 text-slate-700 border-slate-200";
+
+  return (
+    <span
+      className={`inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-black border ${cls}`}
+    >
+      {children}
+    </span>
+  );
+}
+
+function DayRow({ dayName, isToday, rightText, open }) {
+  return (
+    <div
+      className={[
+        "rounded-2xl border border-slate-200 bg-white",
+        isToday ? "ring-1 ring-slate-200 bg-slate-50" : "",
+      ].join(" ")}
+    >
+      <div className="px-4 py-4">
+        {/* ✅ 3-column grid ثابت للموبايل */}
+        <div className="grid grid-cols-[auto,auto,1fr] items-center gap-3">
+          {/* Day name (right in RTL) */}
+          <div className="text-base font-black text-slate-900 whitespace-nowrap">
+            {dayName}
+          </div>
+
+          {/* Chips (fixed width-ish) */}
+          <div className="flex items-center gap-2 whitespace-nowrap">
+            {isToday ? (
+              <span className="px-2.5 py-1 rounded-full text-xs font-black border bg-sky-50 text-sky-800 border-sky-200">
+                اليوم
+              </span>
+            ) : null}
+
+            <span
+              className={[
+                "px-2.5 py-1 rounded-full text-xs font-black border",
+                open
+                  ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                  : "bg-rose-50 text-rose-800 border-rose-200",
+              ].join(" ")}
+            >
+              {open ? "مفتوح" : "مغلق"}
+            </span>
+          </div>
+
+          {/* Time (takes remaining space, no ugly wrap) */}
+          <div className="text-sm font-black text-slate-800 text-left truncate tabular-nums">
+            {rightText}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function WeeklyHoursReadOnly({
+  weekly,
+  loading,
+  showHeader = true,
+  updatedText,
+  onEdit,
+  onResetToDefault,
+  // ✅ اختياري (لا يكسر شي لو ما انبعت)
+  isArabic = true,
+}) {
+  const todayKey = getTodayKey();
+  const todayDay = DAYS.find((d) => d.key === todayKey);
+  const todayValue = weekly?.[todayKey] ?? null;
+
+  // ✅ استخدم formatRange الجديد لو موجود، وإلا fallback للعربي القديم
+  const rangeText = (v) => {
+    try {
+      if (typeof formatRange === "function") return formatRange(v, isArabic);
+      return _formatRangeArabic(v);
+    } catch {
+      return _formatRangeArabic(v);
+    }
+  };
+
+  const headerSubtitle = updatedText
+    ? isArabic
+      ? `آخر تعديل: ${updatedText}`
+      : `Last edit: ${updatedText}`
+    : isArabic
+      ? "عدّل ساعات وأيام العمل بشكل واضح ومقصود."
+      : "Set your weekly schedule clearly and intentionally.";
+
+  return (
+    <div className="bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden">
+      {showHeader ? (
+        <div className="px-5 py-4 border-b border-slate-200 bg-white flex items-start justify-between gap-4">
+          <div>
+            <div className="text-lg font-black text-slate-900">
+              {isArabic ? "ساعات العمل الأسبوعية" : "Weekly working hours"}
+            </div>
+            <div className="text-xs font-black text-slate-500 mt-1">
+              {headerSubtitle}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {onResetToDefault ? (
+              <button
+                onClick={onResetToDefault}
+                className="px-4 py-2 rounded-2xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-800 text-sm font-black transition"
+              >
+                {isArabic ? "افتراضي" : "Default"}
+              </button>
+            ) : null}
+
+            {onEdit ? (
+              <button
+                onClick={onEdit}
+                className="px-4 py-2 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white text-sm font-black transition"
+              >
+                {isArabic ? "تعديل" : "Edit"}
+              </button>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+
+      <div className="p-4 bg-white">
+        {loading ? (
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm font-black text-slate-600">
+            {isArabic ? "جاري التحميل..." : "Loading…"}
+          </div>
+        ) : (
+          <>
+            {/* ✅ Today Summary */}
+            <div className="rounded-3xl border border-slate-200 bg-slate-50 px-4 py-4 mb-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-sm font-black text-slate-900">
+                    {isArabic ? "ملخص اليوم" : "Today summary"}
+                  </div>
+                  <div className="text-xs font-black text-slate-600 mt-1">
+                    {isArabic
+                      ? `${todayDay?.ar ?? "اليوم"} • ${rangeText(todayValue)}`
+                      : `${todayDay?.en ?? "Today"} • ${rangeText(todayValue)}`}
+                  </div>
+                </div>
+
+                <Badge tone={todayValue ? "success" : "danger"}>
+                  {todayValue
+                    ? isArabic
+                      ? "مفتوح اليوم"
+                      : "Open today"
+                    : isArabic
+                      ? "مغلق اليوم"
+                      : "Closed today"}
+                </Badge>
+              </div>
+            </div>
+
+            {/* Days list */}
+            <div className="space-y-2">
+              {DAYS.map((d) => {
+                const v = weekly?.[d.key] ?? null;
+                const isToday = d.key === todayKey;
+                return (
+                  <DayRow
+                    key={d.key}
+                    dayName={d.ar}
+                    isToday={isToday}
+                    rightText={rangeText(v)}
+                    open={!!v}
+                  />
+                );
+              })}
+            </div>
+          </>
+        )}
+
+        <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+          <div className="text-xs font-black text-slate-700 leading-5">
+            ℹ️{" "}
+            {isArabic
+              ? "التغييرات تؤثر فقط على الحجوزات الجديدة. الحجوزات المؤكدة لا تتغير."
+              : "Changes affect new bookings only. Confirmed bookings do not change."}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+</file>
+
+<file path="src/pages/barberPanel/WeeklyHoursPage.jsx">
+// src/pages/barberPanel/WeeklyHoursPage.jsx
+import { useEffect, useMemo, useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+
+import barberDefaultWeeklyHours from "../../constants/barberDefaultWeeklyHours";
+import WeeklyHoursReadOnly from "./components/WeeklyHoursReadOnly";
+import WeeklyHoursEditorMobile from "./components/WeeklyHoursEditorMobile";
+import { isRtlLang, normalizeWeekly } from "./utils/weeklyHoursUX";
+
+import {
+  ensureDefaultWeeklyHours,
+  getWeeklyHoursDoc,
+  resetWeeklyHoursToDefault,
+} from "../../services/barberWeeklyHours";
+
+function formatUpdatedAt(updatedAt) {
+  if (!updatedAt) return null;
+  try {
+    const d = updatedAt.toDate ? updatedAt.toDate() : new Date(updatedAt);
+    return d.toLocaleString();
+  } catch {
+    return null;
   }
-  return errors;
 }
 
-export function formatRangeArabic(v) {
-  if (!v) return "مغلق طوال اليوم";
-  return `من ${v.from} إلى ${v.to}`;
-}
+export default function WeeklyHoursPage() {
+  const nav = useNavigate();
+  const { i18n } = useTranslation();
 
-export function getTodayKey() {
-  const map = [
-    "Sunday",
-    "Monday",
-    "Tuesday",
-    "Wednesday",
-    "Thursday",
-    "Friday",
-    "Saturday",
-  ];
-  return map[new Date().getDay()];
+  const isArabic = String(i18n.language || "")
+    .toLowerCase()
+    .startsWith("ar");
+  const rtl = isRtlLang(i18n.language);
+
+  const [loading, setLoading] = useState(true);
+  const [weekly, setWeekly] = useState(
+    normalizeWeekly(barberDefaultWeeklyHours),
+  );
+  const [updatedAt, setUpdatedAt] = useState(null);
+
+  // ✅ Inline Edit mode (بدون مودال)
+  const [editMode, setEditMode] = useState(false);
+  const [dirty, setDirty] = useState(false);
+
+  const reloadFromServer = useCallback(async () => {
+    try {
+      setLoading(true);
+      const ensured = await ensureDefaultWeeklyHours(barberDefaultWeeklyHours);
+      const docData = await getWeeklyHoursDoc();
+
+      const srcWeekly =
+        docData?.weekly || ensured?.weekly || barberDefaultWeeklyHours;
+
+      setWeekly(normalizeWeekly(srcWeekly));
+      setUpdatedAt(docData?.updatedAt || null);
+    } catch (e) {
+      console.error(e);
+      setWeekly(normalizeWeekly(barberDefaultWeeklyHours));
+      setUpdatedAt(null);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    let alive = true;
+
+    (async () => {
+      try {
+        setLoading(true);
+        const ensured = await ensureDefaultWeeklyHours(
+          barberDefaultWeeklyHours,
+        );
+        const docData = await getWeeklyHoursDoc();
+
+        if (!alive) return;
+
+        const srcWeekly =
+          docData?.weekly || ensured?.weekly || barberDefaultWeeklyHours;
+
+        setWeekly(normalizeWeekly(srcWeekly));
+        setUpdatedAt(docData?.updatedAt || null);
+      } catch (e) {
+        console.error(e);
+        if (!alive) return;
+        setWeekly(normalizeWeekly(barberDefaultWeeklyHours));
+        setUpdatedAt(null);
+      } finally {
+        if (alive) setLoading(false);
+      }
+    })();
+
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const updatedText = useMemo(() => formatUpdatedAt(updatedAt), [updatedAt]);
+
+  // ✅ زر الرجوع لصفحة الحلاق
+  const onBackToBarber = async () => {
+    if (editMode && dirty) {
+      const ok = window.confirm(
+        isArabic
+          ? "لديك تغييرات غير محفوظة. هل تريد الخروج بدون حفظ؟"
+          : "You have unsaved changes. Leave without saving?",
+      );
+      if (!ok) return;
+    }
+    nav("/barber"); // عدّل المسار إذا عندك مختلف
+  };
+
+  const onResetToDefault = async () => {
+    const ok = window.confirm(
+      isArabic
+        ? "هل تريد إرجاع ساعات العمل للوضع الافتراضي؟"
+        : "Reset working hours to default?",
+    );
+    if (!ok) return;
+
+    try {
+      setLoading(true);
+      await resetWeeklyHoursToDefault(barberDefaultWeeklyHours);
+      const docData = await getWeeklyHoursDoc();
+      setWeekly(normalizeWeekly(docData?.weekly || barberDefaultWeeklyHours));
+      setUpdatedAt(docData?.updatedAt || null);
+    } catch (e) {
+      console.error(e);
+      alert(
+        isArabic ? "فشل الإرجاع. حاول مرة أخرى." : "Reset failed. Try again.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onToggleEditMode = async () => {
+    // entering edit
+    if (!editMode) {
+      setEditMode(true);
+      setDirty(false);
+      return;
+    }
+
+    // leaving edit
+    if (dirty) {
+      const ok = window.confirm(
+        isArabic
+          ? "لديك تغييرات غير محفوظة. هل تريد الخروج بدون حفظ؟"
+          : "You have unsaved changes. Leave without saving?",
+      );
+      if (!ok) return;
+    }
+
+    setEditMode(false);
+    setDirty(false);
+
+    // ✅ Refresh بعد الخروج حتى يتحدث updatedAt + weekly في حال تم حفظ من داخل المحرر
+    await reloadFromServer();
+  };
+
+  return (
+    <div
+      dir={rtl ? "rtl" : "ltr"}
+      className="min-h-screen bg-[#f8f8f8] px-4 pt-4 pb-6"
+    >
+      <div className="max-w-xl mx-auto pt-24">
+        {/* ✅ Premium Top Bar */}
+        <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-3">
+          <div className="flex items-center gap-3">
+            {/* Back */}
+            <button
+              onClick={onBackToBarber}
+              className="h-11 w-11 rounded-2xl bg-white border border-slate-200 hover:bg-slate-50 transition font-black"
+              aria-label={isArabic ? "رجوع" : "Back"}
+              title={isArabic ? "رجوع" : "Back"}
+            >
+              {rtl ? "→" : "←"}
+            </button>
+
+            {/* Title */}
+            <div className="flex-1">
+              <div className="text-lg font-black text-slate-900">
+                {isArabic ? "ساعات العمل" : "Working hours"}
+              </div>
+              <div className="text-xs font-black text-slate-500 mt-0.5">
+                {updatedText
+                  ? isArabic
+                    ? `آخر تعديل: ${updatedText}`
+                    : `Last edit: ${updatedText}`
+                  : "—"}
+              </div>
+            </div>
+
+            {/* Secondary: Default */}
+            <button
+              onClick={onResetToDefault}
+              disabled={loading}
+              className="h-11 px-4 rounded-2xl bg-white border border-slate-200 text-slate-900 text-sm font-black hover:bg-slate-50 transition disabled:opacity-60"
+            >
+              {isArabic ? "افتراضي" : "Default"}
+            </button>
+
+            {/* Primary: Edit / Done */}
+            <button
+              onClick={onToggleEditMode}
+              disabled={loading}
+              className={[
+                "h-11 px-4 rounded-2xl text-sm font-black transition disabled:opacity-60",
+                editMode
+                  ? "bg-white border border-slate-200 text-slate-900 hover:bg-slate-50"
+                  : "bg-slate-900 text-white hover:bg-slate-800",
+              ].join(" ")}
+            >
+              {editMode
+                ? isArabic
+                  ? "تم"
+                  : "Done"
+                : isArabic
+                  ? "تعديل"
+                  : "Edit"}
+            </button>
+          </div>
+
+          {/* Tiny helper line */}
+          <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-black text-slate-700 leading-5">
+            ℹ️{" "}
+            {isArabic
+              ? editMode
+                ? "التعديل يتم داخل نفس الصفحة. لن يُطبّق أي شيء إلا بعد الضغط على حفظ."
+                : "عرض ساعات الأسبوع. اضغط تعديل للتغيير."
+              : editMode
+                ? "Editing inline. Nothing applies unless you press Save."
+                : "Viewing weekly hours. Press Edit to change."}
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="mt-10">
+          {!editMode ? (
+            <WeeklyHoursReadOnly
+              weekly={weekly}
+              isArabic={isArabic}
+              loading={loading}
+              updatedText={updatedText}
+              onEdit={() => setEditMode(true)}
+              onResetToDefault={onResetToDefault}
+              showHeader={false} // ✅ لا تكرار للهيدر
+            />
+          ) : (
+            <div className="bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden">
+              <div className="px-5 py-4 border-b border-slate-200 bg-white">
+                <div className="text-lg font-black text-slate-900">
+                  {isArabic
+                    ? "تعديل ساعات العمل الأسبوعية"
+                    : "Edit weekly hours"}
+                </div>
+                <div className="text-xs font-black text-slate-500 mt-1">
+                  {isArabic
+                    ? "افتح/أغلق الأيام وعدّل From/To. احفظ من الشريط السفلي."
+                    : "Open/close days and adjust From/To. Save from the bottom bar."}
+                </div>
+              </div>
+
+              <div className="p-4">
+                <WeeklyHoursEditorMobile
+                  loading={loading}
+                  initialWeekly={weekly}
+                  onDirtyChange={setDirty}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
 </file>
 
@@ -8556,6 +8536,371 @@ i18n.on('languageChanged', (lng) => {
 });
 
 export default i18n;
+</file>
+
+<file path="src/pages/barberPanel/components/WeeklyHoursEditorMobile.jsx">
+// src/pages/barberPanel/components/WeeklyHoursEditorMobile.jsx
+import { useEffect, useMemo, useRef, useState } from "react";
+import WeeklyDayCard from "./WeeklyDayCard";
+import StickySaveBar from "./StickySaveBar";
+
+import {
+  DAYS,
+  deepEqual,
+  normalizeWeekly,
+  validateWeekly,
+} from "../utils/weeklyHours";
+import {
+  saveWeeklyHours,
+  resetWeeklyHoursToDefault,
+} from "../../../services/barberWeeklyHours";
+import defaultWorkingHours from "../../../constants/workingHours";
+
+function nowTime() {
+  try {
+    return new Date().toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return new Date().toLocaleTimeString();
+  }
+}
+
+function clone(obj) {
+  return JSON.parse(JSON.stringify(obj));
+}
+
+export default function WeeklyHoursEditorMobile({
+  loading = false,
+  initialWeekly,
+  onDirtyChange,
+  isArabic = true, // صفحة الحلاق غالباً عربي، لكن صار قابل للتغيير
+}) {
+  const [weekly, setWeekly] = useState(() => normalizeWeekly(initialWeekly));
+  const baseRef = useRef(normalizeWeekly(initialWeekly));
+
+  const [expanded, setExpanded] = useState(null);
+  const [saving, setSaving] = useState(false);
+
+  const [toast, setToast] = useState("");
+  const toastTimerRef = useRef(null);
+
+  const [lastSavedAt, setLastSavedAt] = useState(null);
+
+  // ✅ لما تتغير initialWeekly (مثلاً دخول/خروج edit mode)
+  useEffect(() => {
+    const n = normalizeWeekly(initialWeekly);
+    setWeekly(n);
+    baseRef.current = n;
+    setExpanded(null);
+    setLastSavedAt(null);
+  }, [initialWeekly]);
+
+  const errors = useMemo(
+    () => validateWeekly(weekly, isArabic),
+    [weekly, isArabic],
+  );
+  const hasErrors = useMemo(() => Object.keys(errors).length > 0, [errors]);
+
+  const dirty = useMemo(() => !deepEqual(baseRef.current, weekly), [weekly]);
+
+  useEffect(() => {
+    onDirtyChange?.(dirty);
+  }, [dirty, onDirtyChange]);
+
+  // ✅ تحذير عند إغلاق التبويب وفيه تغييرات غير محفوظة
+  useEffect(() => {
+    const handler = (e) => {
+      if (!dirty) return;
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [dirty]);
+
+  const t = useMemo(() => {
+    const ar = {
+      loading: "جاري التحميل...",
+      hasErrors: "يوجد أخطاء لازم تتصلّح قبل الحفظ",
+      dirty: "تغييرات غير محفوظة",
+      saved: "محفوظ",
+      lastSaved: "آخر حفظ",
+      fixErrors: "أصلح الأخطاء قبل الحفظ.",
+      savedOk: "✅ تم الحفظ",
+      saveFail: "❌ فشل الحفظ",
+      resetConfirm: "راح نرجّع ساعات الأسبوع للوضع الافتراضي. متأكد؟",
+      resetOk: "✅ تم الإرجاع",
+      resetFail: "❌ فشل الإرجاع",
+    };
+    const en = {
+      loading: "Loading…",
+      hasErrors: "Fix errors before saving",
+      dirty: "Unsaved changes",
+      saved: "Saved",
+      lastSaved: "Last saved",
+      fixErrors: "Fix errors before saving.",
+      savedOk: "✅ Saved",
+      saveFail: "❌ Save failed",
+      resetConfirm: "Reset weekly hours to default. Continue?",
+      resetOk: "✅ Reset done",
+      resetFail: "❌ Reset failed",
+    };
+    return isArabic ? ar : en;
+  }, [isArabic]);
+
+  const showToast = (msg, ms = 2200) => {
+    setToast(msg);
+    if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = window.setTimeout(() => setToast(""), ms);
+  };
+
+  const status = useMemo(() => {
+    if (loading) return { tone: "neutral", text: t.loading };
+    if (hasErrors) return { tone: "danger", text: t.hasErrors };
+    if (dirty) return { tone: "warn", text: t.dirty };
+    return { tone: "success", text: t.saved };
+  }, [loading, hasErrors, dirty, t]);
+
+  const onToggleDay = (dayKey, open) => {
+    setWeekly((p) => {
+      if (!open) return { ...p, [dayKey]: null };
+
+      // ✅ لما نفتح يوم مغلق: استخدم الافتراضي الرسمي لنفس اليوم (أو fallback)
+      const def = defaultWorkingHours?.[dayKey] ?? {
+        from: "12:00",
+        to: "20:00",
+      };
+      return { ...p, [dayKey]: def };
+    });
+  };
+
+  const onChangeDay = (dayKey, patch) => {
+    setWeekly((p) => {
+      const cur = p[dayKey];
+      if (cur === null) return p;
+      return { ...p, [dayKey]: { ...cur, ...patch } };
+    });
+  };
+
+  const onSave = async () => {
+    if (loading || saving) return;
+    if (hasErrors) {
+      showToast(t.fixErrors, 2400);
+      return;
+    }
+    if (!dirty) return;
+
+    try {
+      setSaving(true);
+      await saveWeeklyHours(weekly);
+
+      // ✅ ثبّت baseline كنسخة (مش نفس المرجع)
+      const n = normalizeWeekly(clone(weekly));
+      baseRef.current = n;
+
+      setLastSavedAt(nowTime());
+      showToast(t.savedOk);
+    } catch (e) {
+      console.error(e);
+      showToast(t.saveFail, 2400);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const onReset = async () => {
+    if (loading || saving) return;
+
+    const ok = window.confirm(t.resetConfirm);
+    if (!ok) return;
+
+    try {
+      setSaving(true);
+
+      // ✅ يرجّع Firestore للافتراضي الرسمي
+      await resetWeeklyHoursToDefault(defaultWorkingHours);
+
+      const n = normalizeWeekly(defaultWorkingHours);
+      setWeekly(n);
+      baseRef.current = n;
+
+      setLastSavedAt(nowTime());
+      showToast(t.resetOk);
+    } catch (e) {
+      console.error(e);
+      showToast(t.resetFail, 2400);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      {/* Status */}
+      <div
+        className={[
+          "rounded-2xl border px-4 py-3 text-sm font-extrabold flex items-center justify-between",
+          status.tone === "success"
+            ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+            : status.tone === "warn"
+              ? "bg-amber-50 border-amber-200 text-amber-900"
+              : status.tone === "danger"
+                ? "bg-rose-50 border-rose-200 text-rose-800"
+                : "bg-white border-slate-200 text-slate-700",
+        ].join(" ")}
+      >
+        <span>{status.text}</span>
+        <span className="text-xs font-black text-slate-500">
+          {lastSavedAt ? `${t.lastSaved}: ${lastSavedAt}` : " "}
+        </span>
+      </div>
+
+      {/* Days */}
+      <div className="space-y-2 pb-60">
+        {DAYS.map((d) => (
+          <WeeklyDayCard
+            key={d.key}
+            day={{
+              ...d,
+              // ✅ لو بدك إنجليزي، وفره هنا بدون ما نكسر الكود القديم
+              en: d.en || d.key,
+            }}
+            isArabic={isArabic}
+            value={weekly[d.key]}
+            error={errors[d.key]}
+            expanded={expanded === d.key}
+            onExpand={() => setExpanded((x) => (x === d.key ? null : d.key))}
+            onToggleOpen={(open) => onToggleDay(d.key, open)}
+            onChange={(patch) => onChangeDay(d.key, patch)}
+          />
+        ))}
+      </div>
+
+      {/* Toast */}
+      {toast ? (
+        <div className="fixed left-1/2 -translate-x-1/2 bottom-24 z-20">
+          <div className="rounded-2xl bg-slate-900 text-white px-4 py-2 text-sm font-extrabold shadow-xl">
+            {toast}
+          </div>
+        </div>
+      ) : null}
+
+      {/* Sticky Save */}
+      <StickySaveBar
+        isArabic={isArabic}
+        disabled={loading || saving || !dirty || hasErrors}
+        saving={saving}
+        dirty={dirty}
+        hasErrors={hasErrors}
+        onSave={onSave}
+        onReset={onReset}
+      />
+    </div>
+  );
+}
+</file>
+
+<file path="src/pages/barberPanel/utils/weeklyHoursUX.js">
+// src/pages/barberPanel/utils/weeklyHoursUX.js
+
+export const DAYS = [
+  { key: "Sunday", ar: "الأحد", en: "Sunday" },
+  { key: "Monday", ar: "الإثنين", en: "Monday" },
+  { key: "Tuesday", ar: "الثلاثاء", en: "Tuesday" },
+  { key: "Wednesday", ar: "الأربعاء", en: "Wednesday" },
+  { key: "Thursday", ar: "الخميس", en: "Thursday" },
+  { key: "Friday", ar: "الجمعة", en: "Friday" },
+  { key: "Saturday", ar: "السبت", en: "Saturday" },
+];
+
+// ✅ RTL حسب اللغة، مش ثابت
+export function isRtlLang(lang = "") {
+  const l = String(lang || "").toLowerCase();
+  return (
+    l.startsWith("ar") ||
+    l.startsWith("he") ||
+    l.startsWith("fa") ||
+    l.startsWith("ur")
+  );
+}
+
+export function deepEqual(a, b) {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
+export function normalizeWeekly(weekly) {
+  const out = {};
+  for (const d of DAYS) out[d.key] = weekly?.[d.key] ?? null;
+  return out;
+}
+
+function isHHmm(v) {
+  return typeof v === "string" && /^\d{2}:\d{2}$/.test(v);
+}
+
+function toMinutes(hhmm) {
+  const [h, m] = String(hhmm)
+    .split(":")
+    .map((x) => parseInt(x, 10));
+  return h * 60 + m;
+}
+
+function msg(isArabic, ar, en) {
+  return isArabic ? ar : en;
+}
+
+// ✅ bilingual validate
+export function validateWeekly(weekly, isArabic = true) {
+  const errors = {};
+  for (const d of DAYS) {
+    const v = weekly?.[d.key] ?? null;
+    if (v === null) continue;
+
+    if (!isHHmm(v.from) || !isHHmm(v.to)) {
+      errors[d.key] = msg(
+        isArabic,
+        "صيغة الوقت لازم تكون HH:mm",
+        "Time format must be HH:mm",
+      );
+      continue;
+    }
+    if (!(toMinutes(v.from) < toMinutes(v.to))) {
+      errors[d.key] = msg(
+        isArabic,
+        '"من" لازم تكون قبل "إلى"',
+        '"From" must be before "To"',
+      );
+      continue;
+    }
+  }
+  return errors;
+}
+
+// ✅ range format (general)
+export function formatRange(v, isArabic = true) {
+  if (!v) return msg(isArabic, "مغلق طوال اليوم", "Closed all day");
+  return isArabic ? `من ${v.from} إلى ${v.to}` : `${v.from} → ${v.to}`;
+}
+
+// backward compatibility
+export function formatRangeArabic(v) {
+  return formatRange(v, true);
+}
+
+export function getTodayKey() {
+  const map = [
+    "Sunday",
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+  ];
+  return map[new Date().getDay()];
+}
 </file>
 
 <file path="src/pages/BlockedPhones.jsx">

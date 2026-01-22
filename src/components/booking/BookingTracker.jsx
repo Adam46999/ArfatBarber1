@@ -135,7 +135,7 @@ function BookingTracker() {
       if (hasValidE164) {
         const q1 = query(
           collection(db, "bookings"),
-          where("phoneNumber", "==", phoneE164)
+          where("phoneNumber", "==", phoneE164),
         );
         const snap1 = await getDocs(q1);
         snap1.forEach((d) => {
@@ -146,7 +146,7 @@ function BookingTracker() {
       if (localNumber) {
         const q2 = query(
           collection(db, "bookings"),
-          where("phoneNumber", "==", localNumber)
+          where("phoneNumber", "==", localNumber),
         );
         const snap2 = await getDocs(q2);
         snap2.forEach((d) => {
@@ -207,7 +207,12 @@ function BookingTracker() {
   };
 
   return (
-    <section dir="rtl" className="bg-white py-14 px-4 text-primary font-body">
+    <section
+      id="check-booking"
+      dir="rtl"
+      className="bg-white py-14 px-4 text-primary font-body scroll-mt-28 md:scroll-mt-32"
+      style={{ scrollMarginTop: 120 }} // ✅ دقّة أعلى لو عندك هيدر sticky
+    >
       {/* العنوان */}
       <SectionTitle
         icon={

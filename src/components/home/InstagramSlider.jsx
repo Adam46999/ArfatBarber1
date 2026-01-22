@@ -15,6 +15,10 @@ const images = [
   "/cuts/p4.jpg",
   "/cuts/p5.jpg",
   "/cuts/p6.jpg",
+  "/cuts/p8.jpg",
+  "/cuts/p9.jpg",
+  "/cuts/p10.jpg",
+  "/cuts/p11.jpg",
 ];
 
 function InstagramSlider() {
@@ -25,9 +29,6 @@ function InstagramSlider() {
     <section className="bg-gray-50 py-20 px-4 md:px-16 text-center">
       <div className="max-w-5xl mx-auto bg-white rounded-2xl shadow-xl p-8 md:p-12">
         <SectionTitle>{t("slider_title") || "قصّات من لمساتنا"}</SectionTitle>
-
-
-
 
         <div className="rounded-xl overflow-hidden shadow-md">
           <Swiper
