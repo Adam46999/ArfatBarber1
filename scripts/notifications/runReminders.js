@@ -1,5 +1,3 @@
-// scripts/notifications/runReminders.js
-
 /* eslint-disable no-undef */
 /* eslint-disable no-unused-vars */
 
@@ -21,6 +19,9 @@ import {
 } from "./firestoreBookings.js";
 import { buildOnCreatePayload, buildReminderPayload } from "./templates.js";
 import { sendToTokens } from "./sendFcm.js";
+
+// ✅ NEW: test notifications runner
+import runTestNotifications from "./runTestNotifications.js";
 
 // إزالة التكرار
 function unique(arr) {
@@ -112,6 +113,10 @@ async function processReminders() {
   try {
     await processOnCreate();
     await processReminders();
+
+    // ✅ NEW: process pending test notifications (Barber/Admin)
+    await runTestNotifications();
+
     console.log("✅ reminders run completed");
   } catch (err) {
     console.error("❌ reminders run failed:", err);
