@@ -42,6 +42,7 @@ The content is organized as follows:
 <directory_structure>
 .firebase/hosting.ZGlzdA.cache
 .firebaserc
+.github/workflows/booking-reminders.yml
 .gitignore
 eslint.config.js
 et --hard a2865d4
@@ -68,6 +69,13 @@ public/cuts/p9.jpg
 public/firebase-messaging-sw.js
 public/vite.svg
 README.md
+scripts/notifications/config.js
+scripts/notifications/firebaseAdmin.js
+scripts/notifications/firestoreBookings.js
+scripts/notifications/runReminders.js
+scripts/notifications/sendFcm.js
+scripts/notifications/sendTestNotification.js
+scripts/notifications/templates.js
 src/App.css
 src/App.jsx
 src/assets/arfatblacklogo.png
@@ -177,6 +185,10 @@ vite.config.js
 <files>
 This section contains the contents of the repository's files.
 
+<file path="scripts/notifications/sendTestNotification.js">
+
+</file>
+
 <file path=".firebase/hosting.ZGlzdA.cache">
 vite.svg,1747330434585,699a02e0e68a579f687d364bbbe7633161244f35af068220aee37b1b33dfb3c7
 index.html,1751098345638,2cbbe115efbe89db527d62aebac1c9781f1a7b7366433488f7fc786a744365ba
@@ -234,6 +246,42 @@ assets/arfatblacklogo-DCre-YlQ.png,1751098345638,774221960419f415f84d04d3f6b7fd7
     "default": "arfatbarber"
   }
 }
+</file>
+
+<file path=".github/workflows/booking-reminders.yml">
+name: Booking Reminders (FCM)
+
+on:
+  schedule:
+    - cron: "*/5 * * * *" # كل 5 دقائق
+  workflow_dispatch: {}
+
+concurrency:
+  group: booking-reminders
+  cancel-in-progress: true
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Run reminders
+        env:
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+        run: node scripts/notifications/runReminders.js
 </file>
 
 <file path="eslint.config.js">
@@ -391,6 +439,436 @@ Currently, two official plugins are available:
 ## Expanding the ESLint configuration
 
 If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+</file>
+
+<file path="scripts/notifications/config.js">
+// scripts/notifications/config.js
+
+/**
+ * إعدادات نظام الإشعارات
+ * هذا الملف فقط إعدادات — بدون منطق
+ * أي تعديل مستقبلي (توقيت/إلغاء/إضافة تذكير) يتم من هنا
+ */
+
+export const CONFIG = {
+  // اسم collection الحجوزات في Firestore
+  COLLECTION: "bookings",
+
+  /**
+   * GitHub Action يعمل كل 5 دقائق
+   * WINDOW_MIN = نافذة أمان (± دقائق)
+   * عشان ما نضيّع إشعار إذا صار تأخير بسيط
+   */
+  WINDOW_MIN: 6,
+
+  /**
+   * إشعار "عند الحجز"
+   * نبحث عن حجوزات جديدة خلال آخر X دقائق
+   */
+  LOOKBACK_CREATE_MIN: 45,
+
+  /**
+   * التذكيرات قبل الموعد
+   * minutesBefore = كم دقيقة قبل الدور
+   * key = الحقل الذي نعلّم فيه أن الإشعار انبعت
+   */
+  REMINDERS: [
+    { key: "r24hSentAt", minutesBefore: 24 * 60 }, // قبل 24 ساعة
+    { key: "r2hSentAt", minutesBefore: 2 * 60 }, // قبل ساعتين
+    { key: "r30mSentAt", minutesBefore: 30 }, // قبل 30 دقيقة
+  ],
+};
+</file>
+
+<file path="scripts/notifications/firebaseAdmin.js">
+// scripts/notifications/firebaseAdmin.js
+
+/* eslint-disable no-undef */
+/* eslint-disable no-unused-vars */
+
+/**
+ * هذا الملف يُستخدم فقط في بيئة Node.js (GitHub Actions)
+ * وليس داخل المتصفح
+ */
+
+import admin from "firebase-admin";
+
+let initialized = false;
+
+export function getAdmin() {
+  // إذا تهيّأ قبل، رجّعه مباشرة
+  if (initialized) {
+    return admin;
+  }
+
+  const json = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+  if (!json) {
+    throw new Error(
+      "FIREBASE_SERVICE_ACCOUNT_JSON is missing. Add it to GitHub Secrets.",
+    );
+  }
+
+  let serviceAccount;
+  try {
+    serviceAccount = JSON.parse(json);
+  } catch {
+    // ما نستخدم err عشان ESLint
+    throw new Error("Invalid FIREBASE_SERVICE_ACCOUNT_JSON (not valid JSON)");
+  }
+
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+  });
+
+  initialized = true;
+  return admin;
+}
+</file>
+
+<file path="scripts/notifications/firestoreBookings.js">
+// scripts/notifications/firestoreBookings.js
+
+/**
+ * هذا الملف مسؤول عن:
+ * - قراءة الحجوزات من Firestore
+ * - تحديد أي حجوزات لازم ينبعت لها إشعار الآن
+ * - تحديث flags داخل الحجز بعد الإرسال
+ *
+ * لا يوجد FCM هنا
+ * لا يوجد Templates
+ * فقط Firestore logic
+ */
+
+import { getAdmin } from "./firebaseAdmin.js";
+import { CONFIG } from "./config.js";
+
+// الوقت الحالي بالـ ms
+function nowMs() {
+  return Date.now();
+}
+
+/**
+ * الحجوزات الجديدة لإشعار "عند الحجز"
+ * نبحث عن حجوزات:
+ * - انشأت خلال آخر LOOKBACK_CREATE_MIN
+ * - notify.onCreateSentAt == null
+ */
+export async function getNewBookingsForOnCreate() {
+  const admin = getAdmin();
+  const db = admin.firestore();
+
+  const fromMs = nowMs() - CONFIG.LOOKBACK_CREATE_MIN * 60 * 1000;
+
+  const snap = await db
+    .collection(CONFIG.COLLECTION)
+    .where("createdAtMs", ">=", fromMs)
+    .where("notify.onCreateSentAt", "==", null)
+    .get();
+
+  return snap.docs.map((d) => ({
+    id: d.id,
+    ...d.data(),
+  }));
+}
+
+/**
+ * الحجوزات التي تحتاج تذكير
+ * minutesBefore = 24h / 2h / 30m
+ */
+export async function getBookingsForReminder(minutesBefore) {
+  const admin = getAdmin();
+  const db = admin.firestore();
+
+  const windowMs = CONFIG.WINDOW_MIN * 60 * 1000;
+  const targetMs = nowMs() + minutesBefore * 60 * 1000;
+
+  const fromMs = targetMs - windowMs;
+  const toMs = targetMs + windowMs;
+
+  // تحديد أي flag نستخدم
+  let flagField = "notify.r30mSentAt";
+  if (minutesBefore === 24 * 60) flagField = "notify.r24hSentAt";
+  if (minutesBefore === 2 * 60) flagField = "notify.r2hSentAt";
+
+  const snap = await db
+    .collection(CONFIG.COLLECTION)
+    .where("timestamp", ">=", fromMs)
+    .where("timestamp", "<=", toMs)
+    .where(flagField, "==", null)
+    .get();
+
+  return {
+    flagField,
+    bookings: snap.docs.map((d) => ({
+      id: d.id,
+      ...d.data(),
+    })),
+  };
+}
+
+/**
+ * تحديث الحجز بعد الإرسال
+ * updates مثال:
+ * { "notify.r30mSentAt": Date.now() }
+ */
+export async function markBookingUpdated(bookingId, updates) {
+  const admin = getAdmin();
+  const db = admin.firestore();
+
+  await db.collection(CONFIG.COLLECTION).doc(bookingId).update(updates);
+}
+</file>
+
+<file path="scripts/notifications/runReminders.js">
+// scripts/notifications/runReminders.js
+
+/* eslint-disable no-undef */
+/* eslint-disable no-unused-vars */
+
+/**
+ * هذا هو الملف الرئيسي:
+ * - يقرأ الحجوزات من Firestore
+ * - يحدد أي إشعار لازم ينرسل
+ * - يبعث الإشعارات عبر FCM
+ * - يحدّث flags لمنع التكرار
+ *
+ * يُشغّل من GitHub Actions فقط (Node.js)
+ */
+
+import { CONFIG } from "./config.js";
+import {
+  getNewBookingsForOnCreate,
+  getBookingsForReminder,
+  markBookingUpdated,
+} from "./firestoreBookings.js";
+import { buildOnCreatePayload, buildReminderPayload } from "./templates.js";
+import { sendToTokens } from "./sendFcm.js";
+
+// إزالة التكرار
+function unique(arr) {
+  return Array.from(new Set(arr || []));
+}
+
+// استخراج كل الـ tokens
+function extractTokens(booking) {
+  const arr = Array.isArray(booking.fcmTokens) ? booking.fcmTokens : [];
+  const legacy = booking.fcmToken ? [booking.fcmToken] : [];
+  return unique([...arr, ...legacy]);
+}
+
+// إشعار "عند الحجز"
+async function processOnCreate() {
+  const bookings = await getNewBookingsForOnCreate();
+  let totalSent = 0;
+
+  for (const booking of bookings) {
+    const tokens = extractTokens(booking);
+
+    if (tokens.length === 0) {
+      await markBookingUpdated(booking.id, {
+        "notify.onCreateSentAt": Date.now(),
+      });
+      continue;
+    }
+
+    const payload = buildOnCreatePayload(booking);
+    const { sent, invalid } = await sendToTokens(tokens, payload);
+
+    totalSent += sent;
+
+    await markBookingUpdated(booking.id, {
+      "notify.onCreateSentAt": Date.now(),
+      ...(invalid.length
+        ? {
+            fcmTokens: tokens.filter((t) => !invalid.includes(t)),
+          }
+        : {}),
+    });
+  }
+
+  console.log(`[onCreate] processed=${bookings.length} sent=${totalSent}`);
+}
+
+// إشعارات التذكير
+async function processReminders() {
+  for (const r of CONFIG.REMINDERS) {
+    const { bookings, flagField } = await getBookingsForReminder(
+      r.minutesBefore,
+    );
+
+    let totalSent = 0;
+
+    for (const booking of bookings) {
+      const tokens = extractTokens(booking);
+
+      if (tokens.length === 0) {
+        await markBookingUpdated(booking.id, {
+          [flagField]: Date.now(),
+        });
+        continue;
+      }
+
+      const payload = buildReminderPayload(booking, r.minutesBefore);
+      const { sent, invalid } = await sendToTokens(tokens, payload);
+
+      totalSent += sent;
+
+      await markBookingUpdated(booking.id, {
+        [flagField]: Date.now(),
+        ...(invalid.length
+          ? {
+              fcmTokens: tokens.filter((t) => !invalid.includes(t)),
+            }
+          : {}),
+      });
+    }
+
+    console.log(
+      `[reminder ${r.minutesBefore}m] processed=${bookings.length} sent=${totalSent}`,
+    );
+  }
+}
+
+// التشغيل
+(async function main() {
+  try {
+    await processOnCreate();
+    await processReminders();
+    console.log("✅ reminders run completed");
+  } catch (err) {
+    console.error("❌ reminders run failed:", err);
+    process.exit(1); // Node.js فقط
+  }
+})();
+</file>
+
+<file path="scripts/notifications/sendFcm.js">
+// scripts/notifications/sendFcm.js
+
+/**
+ * هذا الملف مسؤول فقط عن:
+ * - إرسال إشعارات FCM
+ * - دعم إرسال متعدد (multicast)
+ * - تنظيف tokens غير الصالحة
+ *
+ * لا يوجد Firestore هنا
+ * لا يوجد Templates
+ */
+
+import { getAdmin } from "./firebaseAdmin.js";
+
+/**
+ * إرسال إشعار لمجموعة tokens
+ * @param {string[]} tokens
+ * @param {{ title: string, body: string, data?: Record<string,string> }} payload
+ */
+export async function sendToTokens(tokens, payload) {
+  if (!Array.isArray(tokens) || tokens.length === 0) {
+    return { sent: 0, invalid: [] };
+  }
+
+  const admin = getAdmin();
+  const messaging = admin.messaging();
+
+  // FCM يسمح بحد أقصى 500 token في الإرسال الواحد
+  const chunks = [];
+  for (let i = 0; i < tokens.length; i += 500) {
+    chunks.push(tokens.slice(i, i + 500));
+  }
+
+  let sent = 0;
+  const invalid = [];
+
+  for (const chunk of chunks) {
+    const res = await messaging.sendEachForMulticast({
+      tokens: chunk,
+      notification: {
+        title: payload.title,
+        body: payload.body,
+      },
+      data: payload.data || {},
+    });
+
+    sent += res.successCount;
+
+    // جمع الـ tokens غير الصالحة
+    res.responses.forEach((r, idx) => {
+      if (!r.success) {
+        const code = r.error?.code || "";
+        if (
+          code.includes("registration-token-not-registered") ||
+          code.includes("invalid-argument")
+        ) {
+          invalid.push(chunk[idx]);
+        }
+      }
+    });
+  }
+
+  return { sent, invalid };
+}
+</file>
+
+<file path="scripts/notifications/templates.js">
+// scripts/notifications/templates.js
+
+/**
+ * هذا الملف مسؤول فقط عن:
+ * - نصوص الإشعارات
+ * - شكل الرسالة
+ *
+ * لا يوجد Firestore
+ * لا يوجد إرسال
+ * فقط Templates
+ */
+
+// تنسيق الوقت للعرض
+function prettyTime(time) {
+  return time || "";
+}
+
+/**
+ * إشعار "عند الحجز"
+ */
+export function buildOnCreatePayload(booking) {
+  const code = booking.bookingCode || "";
+  const title = "✅ تم تأكيد الحجز";
+  const body = `كود الحجز: ${code} • ${booking.selectedDate} ${prettyTime(
+    booking.selectedTime,
+  )} • ${booking.selectedService || ""}`;
+
+  return {
+    title,
+    body,
+    data: {
+      type: "BOOKING_CREATED",
+      bookingId: booking.id || "",
+      bookingCode: code,
+    },
+  };
+}
+
+/**
+ * إشعار تذكير قبل الموعد
+ */
+export function buildReminderPayload(booking, minutesBefore) {
+  const code = booking.bookingCode || "";
+  const title = "⏰ تذكير بالموعد";
+  const body = `بعد ${minutesBefore} دقيقة • ${booking.selectedDate} ${prettyTime(
+    booking.selectedTime,
+  )} • ${booking.selectedService || ""} • كود: ${code}`;
+
+  return {
+    title,
+    body,
+    data: {
+      type: "BOOKING_REMINDER",
+      bookingId: booking.id || "",
+      bookingCode: code,
+      minutesBefore: String(minutesBefore),
+    },
+  };
+}
 </file>
 
 <file path="src/App.css">
@@ -7826,147 +8304,6 @@ function NotFound() {
 export default NotFound;
 </file>
 
-<file path="src/services/bookingService.js">
-// src/services/bookingService.js
-import { db } from "../firebase";
-import {
-  doc,
-  getDoc,
-  collection,
-  addDoc,
-  serverTimestamp,
-  query,
-  where,
-  getDocs,
-  setDoc,
-  increment,
-  runTransaction,
-} from "firebase/firestore";
-
-import { toILPhoneE164 } from "../utils/phone";
-
-// يوم محجوب بالكامل؟
-export async function fetchBlockedDay(dateYMD) {
-  const snap = await getDoc(doc(db, "blockedDays", dateYMD));
-  return snap.exists();
-}
-
-// أوقات محجوبة لليوم
-export async function fetchBlockedTimes(dateYMD) {
-  const snap = await getDoc(doc(db, "blockedTimes", dateYMD));
-  return snap.exists() ? snap.data().times || [] : [];
-}
-
-// حجوزات فعّالة لليوم
-export async function fetchActiveBookingsByDate(dateYMD) {
-  const q = query(
-    collection(db, "bookings"),
-    where("selectedDate", "==", dateYMD)
-  );
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => d.data()).filter((b) => !b.cancelledAt);
-}
-
-// رقم محظور؟ (E.164)
-export async function isPhoneBlocked(inputPhone) {
-  const phoneE164 = toILPhoneE164(inputPhone);
-  const snap = await getDoc(doc(db, "blockedPhones", phoneE164));
-  return snap.exists();
-}
-
-// هل له حجوزات سابقة؟ (E.164)
-export async function hasExistingBookings(inputPhone) {
-  const phoneE164 = toILPhoneE164(inputPhone);
-  const q = query(
-    collection(db, "bookings"),
-    where("phoneNumber", "==", phoneE164)
-  );
-  const snap = await getDocs(q);
-  return !snap.empty;
-}
-
-// تضارب على نفس التاريخ/الوقت؟
-export async function hasActiveConflict(dateYMD, hhmm) {
-  const q = query(
-    collection(db, "bookings"),
-    where("selectedDate", "==", dateYMD),
-    where("selectedTime", "==", hhmm)
-  );
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => d.data()).some((b) => !b.cancelledAt);
-}
-
-// إنشاء الحجز + محاولة تحديث عدّاد الشهر (بدون ما نخرب الحجز لو فشل العداد)
-export async function createBooking(payload) {
-  // 1) احفظ الحجز (هذا هو الأهم)
-  await addDoc(collection(db, "bookings"), {
-    ...payload,
-    cancelledAt: payload?.cancelledAt ?? null, // تأكيد وجوده
-    createdAt: serverTimestamp(),
-  });
-
-  // 2) حاول حدّث العداد (إذا فشل ما نوقف المستخدم)
-  try {
-    const monthKey = String(payload?.selectedDate || "").slice(0, 7); // YYYY-MM
-    if (!monthKey || monthKey.length !== 7) return;
-
-    const ref = doc(db, "statsMonthly", monthKey);
-
-    // total = عدد الحجوزات الفعّالة للشهر (Active)
-    await setDoc(
-      ref,
-      { total: increment(1), updatedAt: serverTimestamp() },
-      { merge: true }
-    );
-  } catch (err) {
-    console.warn("statsMonthly increment failed (ignored):", err);
-  }
-}
-
-/**
- * إلغاء حجز: ينقص العداد فقط إذا الحجز كان فعّال (مش ملغي).
- * لازم تمرّر bookingId (doc id).
- */
-export async function cancelBooking(bookingId) {
-  const bookingRef = doc(db, "bookings", bookingId);
-
-  try {
-    await runTransaction(db, async (tx) => {
-      const snap = await tx.get(bookingRef);
-      if (!snap.exists()) throw new Error("Booking not found");
-
-      const b = snap.data();
-
-      // إذا ملغي أصلاً: لا تعمل شي (عشان ما ينقص مرتين)
-      if (b.cancelledAt) return;
-
-      const monthKey = String(b.selectedDate || "").slice(0, 7); // YYYY-MM
-      if (!monthKey || monthKey.length !== 7) {
-        // نلغي الحجز بدون ما نلمس العداد إذا الداتا ناقصة
-        tx.update(bookingRef, { cancelledAt: serverTimestamp() });
-        return;
-      }
-
-      const monthRef = doc(db, "statsMonthly", monthKey);
-
-      // 1) علّم الحجز كملغي
-      tx.update(bookingRef, { cancelledAt: serverTimestamp() });
-
-      // 2) أنقص العداد الفعّال
-      tx.set(
-        monthRef,
-        { total: increment(-1), updatedAt: serverTimestamp() },
-        { merge: true }
-      );
-    });
-  } catch (err) {
-    // مهم: لو فشل الترانزاكشن، لا تسكت… لأنه ممكن يضل العداد غلط
-    console.error("cancelBooking failed:", err);
-    throw err;
-  }
-}
-</file>
-
 <file path="src/utils/dateTime.js">
 // src/utils/dateTime.js
 export function localYMD(d = new Date()) {
@@ -9131,6 +9468,155 @@ export default function Login() {
 }
 </file>
 
+<file path="src/services/bookingService.js">
+// src/services/bookingService.js
+import { db } from "../firebase";
+import {
+  doc,
+  getDoc,
+  collection,
+  addDoc,
+  serverTimestamp,
+  query,
+  where,
+  getDocs,
+  setDoc,
+  increment,
+  runTransaction,
+} from "firebase/firestore";
+
+import { toILPhoneE164 } from "../utils/phone";
+
+// يوم محجوب بالكامل؟
+export async function fetchBlockedDay(dateYMD) {
+  const snap = await getDoc(doc(db, "blockedDays", dateYMD));
+  return snap.exists();
+}
+
+// أوقات محجوبة لليوم
+export async function fetchBlockedTimes(dateYMD) {
+  const snap = await getDoc(doc(db, "blockedTimes", dateYMD));
+  return snap.exists() ? snap.data().times || [] : [];
+}
+
+// حجوزات فعّالة لليوم
+export async function fetchActiveBookingsByDate(dateYMD) {
+  const q = query(
+    collection(db, "bookings"),
+    where("selectedDate", "==", dateYMD),
+  );
+  const snap = await getDocs(q);
+
+  // ✅ تعديل آمن: رجّع id كمان (مفيد للإدارة/الإشعارات لاحقًا)
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .filter((b) => !b.cancelledAt);
+}
+
+// رقم محظور؟ (E.164)
+export async function isPhoneBlocked(inputPhone) {
+  const phoneE164 = toILPhoneE164(inputPhone);
+  const snap = await getDoc(doc(db, "blockedPhones", phoneE164));
+  return snap.exists();
+}
+
+// هل له حجوزات سابقة؟ (E.164)
+export async function hasExistingBookings(inputPhone) {
+  const phoneE164 = toILPhoneE164(inputPhone);
+  const q = query(
+    collection(db, "bookings"),
+    where("phoneNumber", "==", phoneE164),
+  );
+  const snap = await getDocs(q);
+  return !snap.empty;
+}
+
+// تضارب على نفس التاريخ/الوقت؟
+export async function hasActiveConflict(dateYMD, hhmm) {
+  const q = query(
+    collection(db, "bookings"),
+    where("selectedDate", "==", dateYMD),
+    where("selectedTime", "==", hhmm),
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => d.data()).some((b) => !b.cancelledAt);
+}
+
+// إنشاء الحجز + محاولة تحديث عدّاد الشهر (بدون ما نخرب الحجز لو فشل العداد)
+export async function createBooking(payload) {
+  // 1) احفظ الحجز (هذا هو الأهم)
+  const ref = await addDoc(collection(db, "bookings"), {
+    ...payload,
+    cancelledAt: payload?.cancelledAt ?? null, // تأكيد وجوده
+    createdAt: serverTimestamp(),
+  });
+
+  // 2) حاول حدّث العداد (إذا فشل ما نوقف المستخدم)
+  try {
+    const monthKey = String(payload?.selectedDate || "").slice(0, 7); // YYYY-MM
+    if (!monthKey || monthKey.length !== 7) return ref.id;
+
+    const monthRef = doc(db, "statsMonthly", monthKey);
+
+    // total = عدد الحجوزات الفعّالة للشهر (Active)
+    await setDoc(
+      monthRef,
+      { total: increment(1), updatedAt: serverTimestamp() },
+      { merge: true },
+    );
+  } catch (err) {
+    console.warn("statsMonthly increment failed (ignored):", err);
+    // لا نرمي خطأ عشان ما نخرب تجربة الحجز
+  }
+
+  // ✅ جديد: رجّع bookingId (مفيد للإشعارات/الإدارة لاحقًا)
+  return ref.id;
+}
+
+/**
+ * إلغاء حجز: ينقص العداد فقط إذا الحجز كان فعّال (مش ملغي).
+ * لازم تمرّر bookingId (doc id).
+ */
+export async function cancelBooking(bookingId) {
+  const bookingRef = doc(db, "bookings", bookingId);
+
+  try {
+    await runTransaction(db, async (tx) => {
+      const snap = await tx.get(bookingRef);
+      if (!snap.exists()) throw new Error("Booking not found");
+
+      const b = snap.data();
+
+      // إذا ملغي أصلاً: لا تعمل شي (عشان ما ينقص مرتين)
+      if (b.cancelledAt) return;
+
+      const monthKey = String(b.selectedDate || "").slice(0, 7); // YYYY-MM
+      if (!monthKey || monthKey.length !== 7) {
+        // نلغي الحجز بدون ما نلمس العداد إذا الداتا ناقصة
+        tx.update(bookingRef, { cancelledAt: serverTimestamp() });
+        return;
+      }
+
+      const monthRef = doc(db, "statsMonthly", monthKey);
+
+      // 1) علّم الحجز كملغي
+      tx.update(bookingRef, { cancelledAt: serverTimestamp() });
+
+      // 2) أنقص العداد الفعّال
+      tx.set(
+        monthRef,
+        { total: increment(-1), updatedAt: serverTimestamp() },
+        { merge: true },
+      );
+    });
+  } catch (err) {
+    // مهم: لو فشل الترانزاكشن، لا تسكت… لأنه ممكن يضل العداد غلط
+    console.error("cancelBooking failed:", err);
+    throw err;
+  }
+}
+</file>
+
 <file path="tailwind.config.js">
 /** @type {import('tailwindcss').Config} */
 export default {
@@ -9856,57 +10342,6 @@ export default function useAvailableTimes(selectedDate, workingHours) {
 }
 </file>
 
-<file path="package.json">
-{
-  "name": "my-app",
-  "private": true,
-  "version": "0.0.0",
-  "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "lint": "eslint .",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "@fontsource/cairo": "^5.2.5",
-    "@fontsource/inter": "^5.2.5",
-    "@fontsource/playfair-display": "^5.2.5",
-    "@fontsource/poppins": "^5.2.6",
-    "aos": "^2.3.4",
-    "date-fns": "^4.1.0",
-    "firebase": "^11.8.1",
-    "framer-motion": "^12.23.12",
-    "i18next": "^25.1.3",
-    "i18next-browser-languagedetector": "^8.1.0",
-    "lucide-react": "^0.540.0",
-    "react": "^19.1.0",
-    "react-calendar": "^6.0.0",
-    "react-datepicker": "^8.3.0",
-    "react-dom": "^19.1.0",
-    "react-i18next": "^15.5.1",
-    "react-icons": "^5.5.0",
-    "react-router-dom": "^7.6.0",
-    "swiper": "^11.2.6",
-    "xlsx": "^0.18.5"
-  },
-  "devDependencies": {
-    "@eslint/js": "^9.25.0",
-    "@types/react": "^19.1.2",
-    "@types/react-dom": "^19.1.2",
-    "@vitejs/plugin-react": "^4.4.1",
-    "autoprefixer": "^10.4.14",
-    "eslint": "^9.25.0",
-    "eslint-plugin-react-hooks": "^5.2.0",
-    "eslint-plugin-react-refresh": "^0.4.19",
-    "globals": "^16.0.0",
-    "postcss": "^8.4.21",
-    "tailwindcss": "^3.3.2",
-    "vite": "^6.3.5"
-  }
-}
-</file>
-
 <file path="src/App.jsx">
 // ✅ App.jsx بعد تعديل حماية FCM
 import Header from "./components/layout/Header";
@@ -10341,6 +10776,58 @@ function Header() {
 }
 
 export default Header;
+</file>
+
+<file path="package.json">
+{
+  "name": "my-app",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "lint": "eslint .",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@fontsource/cairo": "^5.2.5",
+    "@fontsource/inter": "^5.2.5",
+    "@fontsource/playfair-display": "^5.2.5",
+    "@fontsource/poppins": "^5.2.6",
+    "aos": "^2.3.4",
+    "date-fns": "^4.1.0",
+    "firebase": "^11.8.1",
+    "firebase-admin": "^13.6.0",
+    "framer-motion": "^12.23.12",
+    "i18next": "^25.1.3",
+    "i18next-browser-languagedetector": "^8.1.0",
+    "lucide-react": "^0.540.0",
+    "react": "^19.1.0",
+    "react-calendar": "^6.0.0",
+    "react-datepicker": "^8.3.0",
+    "react-dom": "^19.1.0",
+    "react-i18next": "^15.5.1",
+    "react-icons": "^5.5.0",
+    "react-router-dom": "^7.6.0",
+    "swiper": "^11.2.6",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.25.0",
+    "@types/react": "^19.1.2",
+    "@types/react-dom": "^19.1.2",
+    "@vitejs/plugin-react": "^4.4.1",
+    "autoprefixer": "^10.4.14",
+    "eslint": "^9.25.0",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.4.19",
+    "globals": "^16.0.0",
+    "postcss": "^8.4.21",
+    "tailwindcss": "^3.3.2",
+    "vite": "^6.3.5"
+  }
+}
 </file>
 
 <file path="src/pages/Dashboard.jsx">

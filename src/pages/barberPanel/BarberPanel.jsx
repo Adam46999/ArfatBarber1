@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, Link, useLocation } from "react-router-dom";
+import NotificationTestCard from "./components/NotificationTestCard";
 
 // ✅ fallback workingHours — إذا ما في بيانات من Firestore
 import fallbackWorkingHours from "../../components/booking/workingHours";
@@ -221,7 +222,10 @@ export default function BarberPanel() {
             </div>
           </div>
         </div>
-
+        {/* 🔔 Notification Test (Barber) */}
+        <div className="px-5 sm:px-8 py-6 border-b bg-gray-50">
+          <NotificationTestCard />
+        </div>
         {/* Date */}
         <div className="p-5 sm:p-8">
           <label className="block mb-3 text-lg font-black text-gray-700">
