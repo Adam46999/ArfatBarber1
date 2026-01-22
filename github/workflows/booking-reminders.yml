@@ -1,0 +1,33 @@
+name: Booking Reminders (FCM)
+
+on:
+  schedule:
+    - cron: "*/5 * * * *" # كل 5 دقائق
+  workflow_dispatch: {}
+
+concurrency:
+  group: booking-reminders
+  cancel-in-progress: true
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Run reminders
+        env:
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+        run: node scripts/notifications/runReminders.js

@@ -32,10 +32,14 @@ export async function fetchBlockedTimes(dateYMD) {
 export async function fetchActiveBookingsByDate(dateYMD) {
   const q = query(
     collection(db, "bookings"),
-    where("selectedDate", "==", dateYMD)
+    where("selectedDate", "==", dateYMD),
   );
   const snap = await getDocs(q);
-  return snap.docs.map((d) => d.data()).filter((b) => !b.cancelledAt);
+
+  // ✅ تعديل آمن: رجّع id كمان (مفيد للإدارة/الإشعارات لاحقًا)
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .filter((b) => !b.cancelledAt);
 }
 
 // رقم محظور؟ (E.164)
@@ -50,7 +54,7 @@ export async function hasExistingBookings(inputPhone) {
   const phoneE164 = toILPhoneE164(inputPhone);
   const q = query(
     collection(db, "bookings"),
-    where("phoneNumber", "==", phoneE164)
+    where("phoneNumber", "==", phoneE164),
   );
   const snap = await getDocs(q);
   return !snap.empty;
@@ -61,7 +65,7 @@ export async function hasActiveConflict(dateYMD, hhmm) {
   const q = query(
     collection(db, "bookings"),
     where("selectedDate", "==", dateYMD),
-    where("selectedTime", "==", hhmm)
+    where("selectedTime", "==", hhmm),
   );
   const snap = await getDocs(q);
   return snap.docs.map((d) => d.data()).some((b) => !b.cancelledAt);
@@ -70,7 +74,7 @@ export async function hasActiveConflict(dateYMD, hhmm) {
 // إنشاء الحجز + محاولة تحديث عدّاد الشهر (بدون ما نخرب الحجز لو فشل العداد)
 export async function createBooking(payload) {
   // 1) احفظ الحجز (هذا هو الأهم)
-  await addDoc(collection(db, "bookings"), {
+  const ref = await addDoc(collection(db, "bookings"), {
     ...payload,
     cancelledAt: payload?.cancelledAt ?? null, // تأكيد وجوده
     createdAt: serverTimestamp(),
@@ -79,19 +83,23 @@ export async function createBooking(payload) {
   // 2) حاول حدّث العداد (إذا فشل ما نوقف المستخدم)
   try {
     const monthKey = String(payload?.selectedDate || "").slice(0, 7); // YYYY-MM
-    if (!monthKey || monthKey.length !== 7) return;
+    if (!monthKey || monthKey.length !== 7) return ref.id;
 
-    const ref = doc(db, "statsMonthly", monthKey);
+    const monthRef = doc(db, "statsMonthly", monthKey);
 
     // total = عدد الحجوزات الفعّالة للشهر (Active)
     await setDoc(
-      ref,
+      monthRef,
       { total: increment(1), updatedAt: serverTimestamp() },
-      { merge: true }
+      { merge: true },
     );
   } catch (err) {
     console.warn("statsMonthly increment failed (ignored):", err);
+    // لا نرمي خطأ عشان ما نخرب تجربة الحجز
   }
+
+  // ✅ جديد: رجّع bookingId (مفيد للإشعارات/الإدارة لاحقًا)
+  return ref.id;
 }
 
 /**
@@ -127,7 +135,7 @@ export async function cancelBooking(bookingId) {
       tx.set(
         monthRef,
         { total: increment(-1), updatedAt: serverTimestamp() },
-        { merge: true }
+        { merge: true },
       );
     });
   } catch (err) {

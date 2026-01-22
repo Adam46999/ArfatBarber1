@@ -56,11 +56,15 @@ postcss.config.cjs
 public/barber-hero.jpg
 public/barber-logo.png
 public/cuts/p1.jpg
+public/cuts/p10.jpg
+public/cuts/p11.jpg
 public/cuts/p2.jpg
 public/cuts/p3.jpg
 public/cuts/p4.jpg
 public/cuts/p5.jpg
 public/cuts/p6.jpg
+public/cuts/p8.jpg
+public/cuts/p9.jpg
 public/firebase-messaging-sw.js
 public/vite.svg
 README.md
@@ -8454,58 +8458,6 @@ export default function ServiceSelector({ selectedService, onSelect, rtl }) {
 }
 </file>
 
-<file path="src/components/home/HeroSection.jsx">
-import { useTranslation } from "react-i18next";
-import { Link } from "react-router-dom";
-import { useEffect } from "react";
-import AOS from "aos";
-import "aos/dist/aos.css";
-
-function HeroSection() {
-  const { t } = useTranslation();
-
-  useEffect(() => {
-    AOS.init({ duration: 1000 });
-  }, []);
-
-  return (
-    <section className="relative w-full h-screen overflow-hidden flex items-center justify-center">
-      {/* الصورة الكاملة */}
-     <img
-  src="/barber-hero.jpg"
-  alt="Barber Hero"
-  className="absolute inset-0 w-full h-full object-cover object-center z-0"
-/>
-
-
-
-      {/* طبقة تعتيم */}
-      <div className="absolute inset-0 bg-black bg-opacity-60 z-10"></div>
-
-      {/* النص */}
-      <div className="relative z-20 text-center px-4 max-w-2xl" data-aos="fade-up">
-        <h1 className="font-notokufi text-5xl md:text-6xl font-extrabold mb-4 leading-tight tracking-tight text-gold">
-  {t("hero_title") || "أسلوب يليق بك، بكل بساطة"}
-</h1>
-<p className="text-lg md:text-xl mb-6 font-tajawal text-beige max-w-xl mx-auto">
-  {t("hero_subtitle") || "لمحة مُظهرك، يناسبك ويعبر عنك"}
-</p>
-
-        <a
-  href="#booking"
-  className="bg-gold hover:bg-yellow-400 text-primary font-semibold px-6 py-3 rounded shadow-md transition"
->
-  {t("book_now") || "Book Now"}
-</a>
-
-      </div>
-    </section>
-  );
-}
-
-export default HeroSection;
-</file>
-
 <file path="src/i18n.js">
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
@@ -9367,6 +9319,91 @@ function Footer() {
 export default Footer;
 </file>
 
+<file path="src/components/home/HeroSection.jsx">
+import { useTranslation } from "react-i18next";
+import { useEffect } from "react";
+import AOS from "aos";
+import "aos/dist/aos.css";
+
+function HeroSection() {
+  const { t } = useTranslation();
+
+  useEffect(() => {
+    AOS.init({ duration: 1000 });
+  }, []);
+
+  const smoothScrollTo = (id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const onCheckClick = (e) => {
+    e.preventDefault();
+    smoothScrollTo("check-booking");
+  };
+
+  const onBookClick = (e) => {
+    e.preventDefault();
+    smoothScrollTo("booking");
+  };
+
+  return (
+    <section className="relative w-full h-screen overflow-hidden flex items-center justify-center">
+      {/* الصورة الكاملة */}
+      <img
+        src="/barber-hero.jpg"
+        alt="Barber Hero"
+        className="absolute inset-0 w-full h-full object-cover object-center z-0"
+      />
+
+      {/* طبقة تعتيم */}
+      <div className="absolute inset-0 bg-black bg-opacity-60 z-10"></div>
+
+      {/* النص */}
+      <div
+        className="relative z-20 text-center px-4 max-w-2xl"
+        data-aos="fade-up"
+      >
+        <h1 className="font-notokufi text-5xl md:text-6xl font-extrabold mb-4 leading-tight tracking-tight text-gold">
+          {t("hero_title") || "أسلوب يليق بك، بكل بساطة"}
+        </h1>
+
+        <p className="text-lg md:text-xl mb-6 font-tajawal text-beige max-w-xl mx-auto">
+          {t("hero_subtitle") || "لمحة مُظهرك، يناسبك ويعبر عنك"}
+        </p>
+
+        {/* Primary CTA */}
+        <a
+          href="#booking"
+          onClick={onBookClick}
+          className="inline-flex items-center justify-center bg-gold hover:bg-yellow-400 text-primary font-semibold px-6 py-3 rounded shadow-md transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gold"
+        >
+          {t("book_now") || "Book Now"}
+        </a>
+
+        {/* Secondary CTA (Perfect: lightweight + doesn’t compete) */}
+        <div className="mt-3">
+          <a
+            href="#check-booking"
+            onClick={onCheckClick}
+            className="inline-flex items-center gap-2 text-sm font-tajawal font-semibold text-beige/90 hover:text-gold transition underline underline-offset-4 decoration-white/30 hover:decoration-gold/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gold rounded"
+            aria-label={t("check_booking") || "تحقق من الحجز"}
+          >
+            <span aria-hidden="true">↓</span>
+            <span>{t("check_booking") || "تحقق من الحجز"}</span>
+          </a>
+
+          {/* سطر ثقة صغير (اختياري، بس حلو جدًا للموبايل) */}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+export default HeroSection;
+</file>
+
 <file path="src/firebase.js">
 // ✅ firebase.js
 
@@ -9635,87 +9672,6 @@ function CheckReservation() {
 }
 
 export default CheckReservation;
-</file>
-
-<file path="src/components/home/InstagramSlider.jsx">
-import { useTranslation } from "react-i18next";
-import { useState } from "react";
-import { Swiper, SwiperSlide } from "swiper/react";
-import { Autoplay, Thumbs } from "swiper/modules";
-import SectionTitle from "../common/SectionTitle"; // إذا المكون في مجلد common
-
-import "swiper/css";
-import "swiper/css/thumbs";
-import "swiper/css/autoplay";
-
-const images = [
-  "/cuts/p1.jpg",
-  "/cuts/p2.jpg",
-  "/cuts/p3.jpg",
-  "/cuts/p4.jpg",
-  "/cuts/p5.jpg",
-  "/cuts/p6.jpg",
-];
-
-function InstagramSlider() {
-  const [thumbsSwiper, setThumbsSwiper] = useState(null);
-  const { t } = useTranslation();
-
-  return (
-    <section className="bg-gray-50 py-20 px-4 md:px-16 text-center">
-      <div className="max-w-5xl mx-auto bg-white rounded-2xl shadow-xl p-8 md:p-12">
-        <SectionTitle>{t("slider_title") || "قصّات من لمساتنا"}</SectionTitle>
-
-
-
-
-        <div className="rounded-xl overflow-hidden shadow-md">
-          <Swiper
-            modules={[Autoplay, Thumbs]}
-            thumbs={{ swiper: thumbsSwiper }}
-            autoplay={{ delay: 3000, disableOnInteraction: false }}
-            loop={true}
-            spaceBetween={10}
-            speed={1200}
-            grabCursor={true}
-          >
-            {images.map((src, i) => (
-              <SwiperSlide key={i}>
-                <img
-                  src={src}
-                  alt={`cut-${i}`}
-                  className="w-full h-[450px] object-cover transition-transform duration-700 ease-in-out hover:scale-105 rounded-xl"
-                />
-              </SwiperSlide>
-            ))}
-          </Swiper>
-        </div>
-
-        <div className="mt-6">
-          <Swiper
-            modules={[Thumbs]}
-            onSwiper={setThumbsSwiper}
-            slidesPerView={5}
-            spaceBetween={10}
-            watchSlidesProgress
-          >
-            {images.map((src, i) => (
-              <SwiperSlide key={i}>
-                <img
-                  src={src}
-                  alt={`thumb-${i}`}
-                  className="w-full h-20 object-cover rounded-md border hover:border-gold transition-all duration-300 cursor-pointer"
-                />
-              </SwiperSlide>
-            ))}
-          </Swiper>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-export default InstagramSlider;
 </file>
 
 <file path="src/hooks/useAvailableTimes.js">
@@ -10011,6 +9967,88 @@ function App() {
 }
 
 export default App;
+</file>
+
+<file path="src/components/home/InstagramSlider.jsx">
+import { useTranslation } from "react-i18next";
+import { useState } from "react";
+import { Swiper, SwiperSlide } from "swiper/react";
+import { Autoplay, Thumbs } from "swiper/modules";
+import SectionTitle from "../common/SectionTitle"; // إذا المكون في مجلد common
+
+import "swiper/css";
+import "swiper/css/thumbs";
+import "swiper/css/autoplay";
+
+const images = [
+  "/cuts/p1.jpg",
+  "/cuts/p2.jpg",
+  "/cuts/p3.jpg",
+  "/cuts/p4.jpg",
+  "/cuts/p5.jpg",
+  "/cuts/p6.jpg",
+  "/cuts/p8.jpg",
+  "/cuts/p9.jpg",
+  "/cuts/p10.jpg",
+  "/cuts/p11.jpg",
+];
+
+function InstagramSlider() {
+  const [thumbsSwiper, setThumbsSwiper] = useState(null);
+  const { t } = useTranslation();
+
+  return (
+    <section className="bg-gray-50 py-20 px-4 md:px-16 text-center">
+      <div className="max-w-5xl mx-auto bg-white rounded-2xl shadow-xl p-8 md:p-12">
+        <SectionTitle>{t("slider_title") || "قصّات من لمساتنا"}</SectionTitle>
+
+        <div className="rounded-xl overflow-hidden shadow-md">
+          <Swiper
+            modules={[Autoplay, Thumbs]}
+            thumbs={{ swiper: thumbsSwiper }}
+            autoplay={{ delay: 3000, disableOnInteraction: false }}
+            loop={true}
+            spaceBetween={10}
+            speed={1200}
+            grabCursor={true}
+          >
+            {images.map((src, i) => (
+              <SwiperSlide key={i}>
+                <img
+                  src={src}
+                  alt={`cut-${i}`}
+                  className="w-full h-[450px] object-cover transition-transform duration-700 ease-in-out hover:scale-105 rounded-xl"
+                />
+              </SwiperSlide>
+            ))}
+          </Swiper>
+        </div>
+
+        <div className="mt-6">
+          <Swiper
+            modules={[Thumbs]}
+            onSwiper={setThumbsSwiper}
+            slidesPerView={5}
+            spaceBetween={10}
+            watchSlidesProgress
+          >
+            {images.map((src, i) => (
+              <SwiperSlide key={i}>
+                <img
+                  src={src}
+                  alt={`thumb-${i}`}
+                  className="w-full h-20 object-cover rounded-md border hover:border-gold transition-all duration-300 cursor-pointer"
+                />
+              </SwiperSlide>
+            ))}
+          </Swiper>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+export default InstagramSlider;
 </file>
 
 <file path="src/components/layout/Footer.jsx">
@@ -10826,6 +10864,48 @@ export default function AppRoutes() {
 }
 </file>
 
+<file path="src/pages/Home.jsx">
+import { useEffect } from "react";
+import { useLocation } from "react-router-dom";
+
+import HeroSection from "../components/home/HeroSection";
+import ContactSection from "../components/home/ContactSection";
+import InstagramSlider from "../components/home/InstagramSlider";
+import BookingSection from "../components/booking/BookingSection";
+import BookingTracker from "../components/booking/BookingTracker";
+import Footer from "../components/layout/Footer"; // ✅ استدعاء الفوتر الجديد
+import BackToTopButton from "../components/BackToTopButton";
+function Home() {
+  const location = useLocation();
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const targetId = params.get("scrollTo");
+    if (targetId) {
+      const element = document.getElementById(targetId);
+      if (element) {
+        setTimeout(() => {
+          element.scrollIntoView({ behavior: "smooth" });
+        }, 100); // تأخير بسيط بعد تحميل الصفحة
+      }
+    }
+  }, [location]);
+
+  return (
+    <main>
+      <HeroSection />
+      <InstagramSlider />
+      <BookingSection />
+      <BookingTracker />
+      <Footer /> {/* ✅ هذا هو المكان الصحيح للفوتر والزر بداخله */}
+    <BackToTopButton />
+    </main>
+  );
+}
+
+export default Home;
+</file>
+
 <file path="src/components/booking/BookingTracker.jsx">
 // src/components/booking/BookingTracker.jsx
 import { useState } from "react";
@@ -10964,7 +11044,7 @@ function BookingTracker() {
       if (hasValidE164) {
         const q1 = query(
           collection(db, "bookings"),
-          where("phoneNumber", "==", phoneE164)
+          where("phoneNumber", "==", phoneE164),
         );
         const snap1 = await getDocs(q1);
         snap1.forEach((d) => {
@@ -10975,7 +11055,7 @@ function BookingTracker() {
       if (localNumber) {
         const q2 = query(
           collection(db, "bookings"),
-          where("phoneNumber", "==", localNumber)
+          where("phoneNumber", "==", localNumber),
         );
         const snap2 = await getDocs(q2);
         snap2.forEach((d) => {
@@ -11036,7 +11116,12 @@ function BookingTracker() {
   };
 
   return (
-    <section dir="rtl" className="bg-white py-14 px-4 text-primary font-body">
+    <section
+      id="check-booking"
+      dir="rtl"
+      className="bg-white py-14 px-4 text-primary font-body scroll-mt-28 md:scroll-mt-32"
+      style={{ scrollMarginTop: 120 }} // ✅ دقّة أعلى لو عندك هيدر sticky
+    >
       {/* العنوان */}
       <SectionTitle
         icon={
@@ -11222,48 +11307,6 @@ function InfoRow({ label, value, icon }) {
 }
 
 export default BookingTracker;
-</file>
-
-<file path="src/pages/Home.jsx">
-import { useEffect } from "react";
-import { useLocation } from "react-router-dom";
-
-import HeroSection from "../components/home/HeroSection";
-import ContactSection from "../components/home/ContactSection";
-import InstagramSlider from "../components/home/InstagramSlider";
-import BookingSection from "../components/booking/BookingSection";
-import BookingTracker from "../components/booking/BookingTracker";
-import Footer from "../components/layout/Footer"; // ✅ استدعاء الفوتر الجديد
-import BackToTopButton from "../components/BackToTopButton";
-function Home() {
-  const location = useLocation();
-
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const targetId = params.get("scrollTo");
-    if (targetId) {
-      const element = document.getElementById(targetId);
-      if (element) {
-        setTimeout(() => {
-          element.scrollIntoView({ behavior: "smooth" });
-        }, 100); // تأخير بسيط بعد تحميل الصفحة
-      }
-    }
-  }, [location]);
-
-  return (
-    <main>
-      <HeroSection />
-      <InstagramSlider />
-      <BookingSection />
-      <BookingTracker />
-      <Footer /> {/* ✅ هذا هو المكان الصحيح للفوتر والزر بداخله */}
-    <BackToTopButton />
-    </main>
-  );
-}
-
-export default Home;
 </file>
 
 <file path="src/pages/AdminBookings.jsx">
