@@ -6,8 +6,12 @@ import ContactSection from "../components/home/ContactSection";
 import InstagramSlider from "../components/home/InstagramSlider";
 import BookingSection from "../components/booking/BookingSection";
 import BookingTracker from "../components/booking/BookingTracker";
-import Footer from "../components/layout/Footer"; // ✅ استدعاء الفوتر الجديد
+import Footer from "../components/layout/Footer";
 import BackToTopButton from "../components/BackToTopButton";
+
+// ✅ جديد
+import BarberRatingSection from "../components/reviews/BarberRatingSection";
+
 function Home() {
   const location = useLocation();
 
@@ -17,9 +21,7 @@ function Home() {
     if (targetId) {
       const element = document.getElementById(targetId);
       if (element) {
-        setTimeout(() => {
-          element.scrollIntoView({ behavior: "smooth" });
-        }, 100); // تأخير بسيط بعد تحميل الصفحة
+        setTimeout(() => element.scrollIntoView({ behavior: "smooth" }), 100);
       }
     }
   }, [location]);
@@ -29,9 +31,13 @@ function Home() {
       <HeroSection />
       <InstagramSlider />
       <BookingSection />
+
+      {/* ✅ هنا بالزبط */}
+      <BarberRatingSection />
+
       <BookingTracker />
-      <Footer /> {/* ✅ هذا هو المكان الصحيح للفوتر والزر بداخله */}
-    <BackToTopButton />
+      <Footer />
+      <BackToTopButton />
     </main>
   );
 }

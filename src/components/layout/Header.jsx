@@ -23,10 +23,14 @@ function Header() {
   // قفل تمرير الصفحة + Esc + ضغط خارج القائمة
   useEffect(() => {
     const prevOverflow = document.body.style.overflow;
+
     if (menuOpen) document.body.style.overflow = "hidden";
     else document.body.style.overflow = prevOverflow || "";
 
-    const onKeyDown = (e) => e.key === "Escape" && setMenuOpen(false);
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") setMenuOpen(false);
+    };
+
     const onClickOutside = (e) => {
       if (!menuRef.current) return;
       const isInsideMenu = menuRef.current.contains(e.target);
@@ -36,6 +40,7 @@ function Header() {
 
     document.addEventListener("keydown", onKeyDown);
     document.addEventListener("click", onClickOutside);
+
     return () => {
       document.removeEventListener("keydown", onKeyDown);
       document.removeEventListener("click", onClickOutside);
@@ -72,7 +77,7 @@ function Header() {
             alt="Arfat Barber Logo"
             className="w-10 h-10 md:w-12 md:h-12 object-contain rounded-full"
             loading="eager"
-            fetchpriority="high"
+            fetchPriority="high"
           />
           Arfat Barber
         </Link>
@@ -85,7 +90,9 @@ function Header() {
           <Link to="/" className={linkClass("/")}>
             {t("home")}
           </Link>
+
           {/* <a href="#services" className="hover:text-gold transition">{t("services")}</a> */}
+
           <Link to="/contact" className={linkClass("/contact")}>
             {t("contact")}
           </Link>
@@ -105,6 +112,7 @@ function Header() {
         {/* يمين الموبايل: اللغات ظاهرة دائمًا + زر القائمة */}
         <div className="md:hidden flex items-center gap-3">
           <LanguageSwitcher />
+
           {/* ← تبقى ظاهرة حتى لو القائمة مسكّرة */}
           <button
             ref={buttonRef}
@@ -116,8 +124,8 @@ function Header() {
                   ? "إغلاق القائمة"
                   : "Close menu"
                 : isArabic
-                ? "فتح القائمة"
-                : "Open menu"
+                  ? "فتح القائمة"
+                  : "Open menu"
             }
             aria-expanded={menuOpen}
             aria-controls="mobile-menu"
@@ -171,8 +179,6 @@ function Header() {
         >
           {t("about")}
         </Link>
-
-        {/* <a href="#services" className="block hover:text-gold" onClick={() => setMenuOpen(false)}>{t("services")}</a> */}
 
         <Link
           to="/contact"

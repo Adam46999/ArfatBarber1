@@ -198,6 +198,12 @@ export default function BarberPanel() {
               >
                 ساعات العمل الأسبوعية
               </button>
+              <button
+                onClick={() => navigate("/barber/reviews")}
+                className={navBtnClass(isActive("/barber/reviews"))}
+              >
+                إدارة التقييمات
+              </button>
 
               <Link
                 to="/blocked-phones"

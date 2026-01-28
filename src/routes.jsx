@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import React, { useEffect, useState } from "react";
 import Dashboard from "./pages/Dashboard";
 import BlockedPhones from "./pages/BlockedPhones";
+import ReviewsManagerPage from "./pages/barberPanel/ReviewsManagerPage";
 
 import Home from "./pages/Home";
 import BookingIntro from "./pages/BookingIntro";
@@ -88,6 +89,14 @@ export default function AppRoutes() {
         element={
           <PrivateRoute>
             <WeeklyHoursPage />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/barber/reviews"
+        element={
+          <PrivateRoute>
+            <ReviewsManagerPage />
           </PrivateRoute>
         }
       />
