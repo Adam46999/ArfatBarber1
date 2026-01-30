@@ -1,10 +1,11 @@
 // src/pages/barberPanel/ReviewsManagerPage.jsx
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { db } from "../../firebase";
 import {
   collection,
   deleteDoc,
   doc,
+  getDoc,
   getDocs,
   limit,
   orderBy,
@@ -17,6 +18,7 @@ import {
 
 const BARBER_ID = "arfat";
 const ARCHIVE_KEEP_DAYS = 14; // ✅ مدة بقاء التقييم بعد "حذفه" (مثل الأدوار الملغاة)
+const UNDO_MS = 7000; // ✅ مدة التراجع بعد الحذف المؤقت
 
 function addDaysTimestamp(days) {
   const d = new Date();
@@ -28,8 +30,19 @@ function starsLabel(n) {
   const v = Math.max(0, Math.min(5, Number(n || 0)));
   return "★".repeat(v) + "☆".repeat(5 - v);
 }
+
 function safeLower(v) {
   return (v || "").toString().toLowerCase();
+}
+
+function prettyName(name) {
+  const s = String(name || "").trim();
+  if (!s) return "زبون";
+  const parts = s.split(/\s+/).filter(Boolean);
+  if (parts.length <= 1) return parts[0];
+  const first = parts[0];
+  const lastInitial = parts[parts.length - 1][0] || "";
+  return `${first} ${lastInitial}.`;
 }
 
 export default function ReviewsManagerPage() {
@@ -45,16 +58,46 @@ export default function ReviewsManagerPage() {
   const [archived, setArchived] = useState([]);
   const [loadingArchived, setLoadingArchived] = useState(false);
 
-  // Search/filter
+  // Search/filter/sort
   const [qText, setQText] = useState("");
   const [stars, setStars] = useState("all");
+  const [sortBy, setSortBy] = useState("newest"); // newest | highest | lowest
 
   // Blocked
   const [blocked, setBlocked] = useState([]);
   const [loadingBlocked, setLoadingBlocked] = useState(false);
 
+  // Summary (stats)
+  const [summary, setSummary] = useState({
+    count: 0,
+    sum: 0,
+    byStar: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+    tagCounts: {},
+  });
+  const [loadingSummary, setLoadingSummary] = useState(false);
+
+  // Undo toast for archive
+  const [undo, setUndo] = useState(null); // { id, name }
+  const undoTimerRef = useRef(null);
+
   const reviewsCol = collection(db, "barbers", BARBER_ID, "reviews");
   const summaryRef = doc(db, "barbers", BARBER_ID, "meta", "reviewsSummary");
+
+  const count = Number(summary.count || 0);
+  const avg = count > 0 ? summary.sum / count : 0;
+
+  const fetchSummary = async () => {
+    if (loadingSummary) return;
+    setLoadingSummary(true);
+    try {
+      const ss = await getDoc(summaryRef);
+      if (ss.exists()) setSummary((p) => ({ ...p, ...ss.data() }));
+    } catch (e) {
+      console.error("fetchSummary error:", e);
+    } finally {
+      setLoadingSummary(false);
+    }
+  };
 
   // ===== Fetch ACTIVE Reviews =====
   const fetchReviews = async ({ reset = false } = {}) => {
@@ -76,7 +119,7 @@ export default function ReviewsManagerPage() {
       const snap = await getDocs(qBase);
       const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 
-      // ✅ هاي السطرين هم الحل
+      // ✅ فقط active
       const onlyActive = docs.filter(
         (r) => (r.status || "active") === "active",
       );
@@ -105,6 +148,7 @@ export default function ReviewsManagerPage() {
       setLoadingBlocked(false);
     }
   };
+
   // ===== Fetch ARCHIVED Reviews (Prototype بدون Index) =====
   const fetchArchived = async () => {
     if (loadingArchived) return;
@@ -114,7 +158,6 @@ export default function ReviewsManagerPage() {
       const snap = await getDocs(qAll);
       const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 
-      // ✅ فلترة محلية
       const onlyArchived = docs.filter((r) => r.status === "archived");
       setArchived(onlyArchived);
     } catch (e) {
@@ -128,6 +171,7 @@ export default function ReviewsManagerPage() {
     fetchReviews({ reset: true });
     fetchBlocked();
     fetchArchived();
+    fetchSummary();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -146,7 +190,6 @@ export default function ReviewsManagerPage() {
       },
     );
 
-    // ✅ هذا اللي يخليه يظهر في صفحة /blocked-phones
     await setDoc(doc(db, "blockedPhones", String(phoneKey)), {
       phoneKey: String(phoneKey),
       from: "reviews",
@@ -193,6 +236,7 @@ export default function ReviewsManagerPage() {
 
     if (r >= 1 && r <= 5)
       next.byStar[r] = Math.max(0, Number(next.byStar[r] || 0) - 1);
+
     (Array.isArray(tags) ? tags : []).forEach((k) => {
       next.tagCounts[k] = Math.max(0, Number(next.tagCounts[k] || 0) - 1);
       if (next.tagCounts[k] === 0) delete next.tagCounts[k];
@@ -212,6 +256,7 @@ export default function ReviewsManagerPage() {
     };
 
     if (r >= 1 && r <= 5) next.byStar[r] = Number(next.byStar[r] || 0) + 1;
+
     (Array.isArray(tags) ? tags : []).forEach((k) => {
       next.tagCounts[k] = Number(next.tagCounts[k] || 0) + 1;
     });
@@ -219,9 +264,15 @@ export default function ReviewsManagerPage() {
     return next;
   }
 
-  // ===== Archive Review (instead of delete) =====
+  // ===== Archive Review (instead of delete) + UNDO =====
   const archiveReview = async (reviewId) => {
     if (!reviewId) return;
+
+    // اسم للـUndo (لو موجود)
+    const rLocal = reviews.find((x) => x.id === reviewId);
+    const nameForUndo = prettyName(
+      rLocal?.customerName || rLocal?.userName || rLocal?.displayName,
+    );
 
     await runTransaction(db, async (tx) => {
       const reviewRef = doc(db, "barbers", BARBER_ID, "reviews", reviewId);
@@ -261,8 +312,18 @@ export default function ReviewsManagerPage() {
       );
     });
 
+    // UI update
     setReviews((p) => p.filter((x) => x.id !== reviewId));
     await fetchArchived();
+    await fetchSummary();
+
+    // UNDO toast
+    setUndo({ id: reviewId, name: nameForUndo });
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    undoTimerRef.current = setTimeout(() => {
+      setUndo(null);
+      undoTimerRef.current = null;
+    }, UNDO_MS);
   };
 
   // ===== Restore Review =====
@@ -309,6 +370,16 @@ export default function ReviewsManagerPage() {
 
     await fetchReviews({ reset: true });
     await fetchArchived();
+    await fetchSummary();
+  };
+
+  const undoArchive = async () => {
+    if (!undo?.id) return;
+    const id = undo.id;
+    setUndo(null);
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    undoTimerRef.current = null;
+    await restoreReview(id);
   };
 
   // ===== Hard delete archived (manual) =====
@@ -321,16 +392,41 @@ export default function ReviewsManagerPage() {
   // ===== Filtered ACTIVE Reviews (client-side) =====
   const filteredReviews = useMemo(() => {
     const t = safeLower(qText).trim();
-    return reviews.filter((r) => {
+
+    let rows = reviews.filter((r) => {
       const rStars = Number(r.rating || r.stars || 0);
+
       const phone = r.phoneKey || r.phoneE164 || r.phone || "";
       const msg = r.comment || r.message || r.text || "";
+      const name = r.customerName || r.userName || r.displayName || "";
+
       const matchStars = stars === "all" ? true : rStars === Number(stars);
       const matchText =
-        !t || safeLower(phone).includes(t) || safeLower(msg).includes(t);
+        !t ||
+        safeLower(phone).includes(t) ||
+        safeLower(msg).includes(t) ||
+        safeLower(name).includes(t);
+
       return matchStars && matchText;
     });
-  }, [reviews, qText, stars]);
+
+    // ✅ sort
+    if (sortBy === "highest") {
+      rows = [...rows].sort(
+        (a, b) =>
+          Number(b.rating || b.stars || 0) - Number(a.rating || a.stars || 0),
+      );
+    } else if (sortBy === "lowest") {
+      rows = [...rows].sort(
+        (a, b) =>
+          Number(a.rating || a.stars || 0) - Number(b.rating || b.stars || 0),
+      );
+    } else {
+      // newest: خليه زي ما هو (createdAt desc أصلاً)
+    }
+
+    return rows;
+  }, [reviews, qText, stars, sortBy]);
 
   return (
     <div className="w-full max-w-4xl mx-auto p-4">
@@ -365,28 +461,89 @@ export default function ReviewsManagerPage() {
         </div>
       </div>
 
+      {/* ✅ Stats (تبويب reviews فقط) */}
+      {tab === "reviews" && (
+        <div className="bg-white border rounded-xl p-4 mb-4">
+          <div className="flex flex-col md:flex-row gap-4 md:items-center md:justify-between">
+            <div className="text-right">
+              <div className="text-3xl font-black">
+                {count ? avg.toFixed(1) : "—"}
+              </div>
+              <div className="text-sm opacity-80">{count} تقييم</div>
+            </div>
+
+            <div className="flex-1">
+              <div className="text-sm font-black mb-2">توزيع النجوم</div>
+              <div className="space-y-1">
+                {[5, 4, 3, 2, 1].map((s) => {
+                  const n = Number(summary.byStar?.[s] || 0);
+                  const pct = count ? Math.round((n / count) * 100) : 0;
+                  return (
+                    <div key={s} className="flex items-center gap-2">
+                      <div className="w-10 text-sm font-black">{s}★</div>
+                      <div className="flex-1 h-2 rounded-full bg-gray-100 overflow-hidden">
+                        <div
+                          className="h-2 bg-black"
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                      <div className="w-16 text-xs opacity-80 text-left">
+                        {n} ({pct}%)
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <button
+              className="px-3 py-2 rounded-lg border text-sm font-black"
+              onClick={fetchSummary}
+              disabled={loadingSummary}
+              title="تحديث الإحصائيات"
+            >
+              {loadingSummary ? "..." : "تحديث"}
+            </button>
+          </div>
+        </div>
+      )}
+
       {tab === "reviews" && (
         <>
           <div className="bg-white border rounded-xl p-3 mb-4">
             <div className="flex flex-col md:flex-row gap-2 md:items-center md:justify-between">
               <input
                 className="border rounded-lg px-3 py-2 w-full md:w-1/2"
-                placeholder="بحث (رقم / نص التقييم)"
+                placeholder="بحث (اسم / رقم / نص التقييم)"
                 value={qText}
                 onChange={(e) => setQText(e.target.value)}
               />
-              <select
-                className="border rounded-lg px-3 py-2 w-full md:w-48"
-                value={stars}
-                onChange={(e) => setStars(e.target.value)}
-              >
-                <option value="all">كل النجوم</option>
-                <option value="5">5 نجوم</option>
-                <option value="4">4 نجوم</option>
-                <option value="3">3 نجوم</option>
-                <option value="2">2 نجوم</option>
-                <option value="1">1 نجمة</option>
-              </select>
+
+              <div className="flex gap-2 w-full md:w-auto">
+                <select
+                  className="border rounded-lg px-3 py-2 w-full md:w-48"
+                  value={stars}
+                  onChange={(e) => setStars(e.target.value)}
+                >
+                  <option value="all">كل النجوم</option>
+                  <option value="5">5 نجوم</option>
+                  <option value="4">4 نجوم</option>
+                  <option value="3">3 نجوم</option>
+                  <option value="2">2 نجوم</option>
+                  <option value="1">1 نجمة</option>
+                </select>
+
+                <select
+                  className="border rounded-lg px-3 py-2 w-full md:w-48"
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  title="ترتيب"
+                >
+                  <option value="newest">الأحدث</option>
+                  <option value="highest">الأعلى تقييمًا</option>
+                  <option value="lowest">الأقل تقييمًا</option>
+                </select>
+              </div>
             </div>
           </div>
 
@@ -395,6 +552,12 @@ export default function ReviewsManagerPage() {
               const phoneKey = r.phoneKey || r.phoneE164 || r.phone || null;
               const rStars = Number(r.rating || r.stars || 0);
               const msg = r.comment || r.message || r.text || "";
+
+              // ✅ الاسم من البيانات
+              const displayName = prettyName(
+                r.customerName || r.userName || r.displayName,
+              );
+
               const isBlocked = !!blocked.find(
                 (b) => b.id === String(phoneKey),
               );
@@ -403,10 +566,13 @@ export default function ReviewsManagerPage() {
                 <div key={r.id} className="bg-white border rounded-xl p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="font-black truncate">زبون</div>
+                      {/* ✅ بدل "زبون" */}
+                      <div className="font-black truncate">{displayName}</div>
+
                       <div className="text-sm opacity-80">
                         {starsLabel(rStars)}
                       </div>
+
                       {phoneKey ? (
                         <div className="text-xs opacity-70 mt-1">
                           {String(phoneKey)}
@@ -540,11 +706,17 @@ export default function ReviewsManagerPage() {
                 const phoneKey = r.phoneKey || r.phoneE164 || r.phone || "";
                 const rStars = Number(r.rating || r.stars || 0);
                 const msg = r.comment || r.message || r.text || "";
+                const displayName = prettyName(
+                  r.customerName || r.userName || r.displayName,
+                );
+
                 return (
                   <div key={r.id} className="border rounded-xl p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <div className="font-black">زبون</div>
+                        {/* ✅ بدل "زبون" */}
+                        <div className="font-black">{displayName}</div>
+
                         <div className="text-sm opacity-80">
                           {starsLabel(rStars)}
                         </div>
@@ -586,6 +758,23 @@ export default function ReviewsManagerPage() {
               })}
             </div>
           )}
+        </div>
+      )}
+
+      {/* ✅ Undo Toast */}
+      {undo?.id && (
+        <div className="fixed bottom-4 left-4 right-4 max-w-4xl mx-auto">
+          <div className="bg-black text-white rounded-xl p-4 flex items-center justify-between gap-3">
+            <div className="text-sm font-bold">
+              تم حذف تقييم ({undo.name}) مؤقتًا. تراجع؟
+            </div>
+            <button
+              className="px-3 py-2 rounded-lg border border-white text-sm font-black"
+              onClick={undoArchive}
+            >
+              تراجع
+            </button>
+          </div>
         </div>
       )}
     </div>

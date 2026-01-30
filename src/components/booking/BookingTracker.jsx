@@ -210,9 +210,14 @@ function BookingTracker() {
     <section
       id="check-booking"
       dir="rtl"
-      className="bg-white py-14 px-4 text-primary font-body scroll-mt-28 md:scroll-mt-32"
+      className="relative bg-[#f8f6f1] py-20 px-4 text-primary font-body scroll-mt-28 md:scroll-mt-32 overflow-hidden"
       style={{ scrollMarginTop: 120 }} // ✅ دقّة أعلى لو عندك هيدر sticky
     >
+      {/* ديكور خفيف جداً (شكل فقط) */}
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute -bottom-24 left-10 w-72 h-72 rounded-full bg-gold/10 blur-3xl" />
+      </div>
+
       {/* العنوان */}
       <SectionTitle
         icon={
@@ -227,7 +232,7 @@ function BookingTracker() {
       </SectionTitle>
 
       {/* الصندوق الرئيسي */}
-      <div className="max-w-xl mx-auto bg-[#fcfaf7] border border-gold/20 rounded-3xl shadow-lg p-6 md:p-8 mt-6 backdrop-blur-sm">
+      <div className="max-w-xl mx-auto bg-[#fcfaf7] border border-gold/20 rounded-3xl shadow-lg p-6 md:p-8 mt-6 backdrop-blur-sm ring-1 ring-black/5 transition-transform duration-300 hover:-translate-y-1">
         {/* إدخال الرقم + زر التحقق */}
         <div className="flex flex-row-reverse gap-3 items-center">
           <input

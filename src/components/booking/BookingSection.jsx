@@ -103,7 +103,7 @@ function BookingSection() {
 
   const { availableTimes, isDayBlocked, loadingTimes } = useAvailableTimes(
     form.selectedDate,
-    workingHours
+    workingHours,
   );
 
   const {
@@ -160,7 +160,7 @@ function BookingSection() {
       service: isServiceValid(form.selectedService),
       confirm: submitted && Object.keys(validateForm(form)).length === 0,
     }),
-    [form, submitted]
+    [form, submitted],
   );
 
   const scrollToFirstError = (errs) => {
@@ -237,8 +237,8 @@ function BookingSection() {
                       isInvalid
                         ? "border-red-500 focus:ring-red-300"
                         : isValid
-                        ? "border-emerald-500 focus:ring-emerald-300"
-                        : "border-gray-300 focus:border-gold focus:ring-2 focus:ring-gold/40"
+                          ? "border-emerald-500 focus:ring-emerald-300"
+                          : "border-gray-300 focus:border-gold focus:ring-2 focus:ring-gold/40"
                     }`}
                     value={form.fullName}
                     onChange={(e) =>

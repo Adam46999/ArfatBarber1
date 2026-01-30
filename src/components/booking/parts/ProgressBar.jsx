@@ -20,7 +20,7 @@ export default function ProgressBar({ step = 1, completed = {}, labels }) {
 
   const Icons = useMemo(
     () => [FaUser, FaPhone, FaCalendarAlt, FaClock, FaCut, FaCheck],
-    []
+    [],
   );
   const keys = ["name", "phone", "date", "time", "service", "confirm"];
   const total = Icons.length;
@@ -57,8 +57,8 @@ export default function ProgressBar({ step = 1, completed = {}, labels }) {
                         isActive
                           ? "border-amber-400 bg-amber-50"
                           : isDone
-                          ? "border-blue-500 bg-blue-50"
-                          : "border-slate-300 bg-slate-50"
+                            ? "border-blue-500 bg-blue-50"
+                            : "border-slate-300 bg-slate-50"
                       }`}
                     aria-current={isActive ? "step" : undefined}
                   >
@@ -67,8 +67,8 @@ export default function ProgressBar({ step = 1, completed = {}, labels }) {
                         isActive
                           ? "text-[#1F2937]"
                           : isDone
-                          ? "text-blue-600"
-                          : "text-slate-500"
+                            ? "text-blue-600"
+                            : "text-slate-500"
                       } text-lg`}
                       aria-hidden
                     />

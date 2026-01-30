@@ -27,14 +27,11 @@ function Home() {
   }, [location]);
 
   return (
-    <main>
+    <main id="main">
       <HeroSection />
       <InstagramSlider />
       <BookingSection />
-
-      {/* ✅ هنا بالزبط */}
       <BarberRatingSection />
-
       <BookingTracker />
       <Footer />
       <BackToTopButton />
