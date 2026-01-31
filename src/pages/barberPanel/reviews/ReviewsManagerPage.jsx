@@ -9,8 +9,11 @@ import UndoToast from "./UndoToast";
 
 import { useMemo } from "react";
 import { useReviewsManager } from "./useReviewsManager";
+import { useNavigate } from "react-router-dom";
 
 export default function ReviewsManagerPage() {
+  const navigate = useNavigate();
+
   const {
     tab,
     setTab,
@@ -76,7 +79,6 @@ export default function ReviewsManagerPage() {
   }, [blocked]);
 
   const onRefresh = async () => {
-    // تحديث شامل مرتب
     await Promise.all([
       fetchReviews({ reset: true }),
       fetchBlocked(),
@@ -85,82 +87,102 @@ export default function ReviewsManagerPage() {
     ]);
   };
 
+  const anyLoading =
+    loadingReviews || loadingBlocked || loadingArchived || loadingSummary;
+
   return (
-    <div className="w-full max-w-4xl mx-auto p-4">
-      {/* Header */}
-      <div className="mb-4">
-        <div className="text-right">
-          <div className="text-2xl font-black text-gray-900">
-            إدارة التقييمات
+    <div
+      className="min-h-screen bg-gray-100 px-4"
+      dir="rtl"
+      style={{
+        paddingTop: "calc(var(--header-h, 96px) + 16px)",
+        paddingBottom: "24px",
+      }}
+    >
+      <div className="w-full max-w-4xl mx-auto">
+        {/* Card */}
+        <div className="bg-white shadow-xl rounded-2xl border border-gray-200 p-5 md:p-8">
+          {/* Title + Back */}
+          <div className="flex flex-row-reverse items-center justify-between mb-6">
+            <button
+              onClick={() => navigate(-1)}
+              className="text-sm flex items-center gap-1 text-gray-600 hover:text-gray-800 transition"
+              aria-label="رجوع"
+              title="رجوع"
+            >
+              <span className="text-lg">←</span> الرجوع
+            </button>
+
+            <div className="text-right">
+              <div className="text-2xl font-black text-gray-900">
+                إدارة التقييمات
+              </div>
+              <div className="text-sm text-gray-500 mt-1">
+                أرشف تقييمات، احظر/فك حظر أرقام، وراجع الأرشيف — بشكل منظم
+                وواضح.
+              </div>
+            </div>
           </div>
-          <div className="text-sm text-gray-500 mt-1">
-            أرشف تقييمات، احظر/فك حظر أرقام، وراجع الأرشيف — بشكل منظم وواضح.
-          </div>
-        </div>
-      </div>
 
-      {/* Tabs */}
-      <div className="mb-3">
-        <TabsBar tab={tab} setTab={setTab} counts={counts} />
-      </div>
-
-      {/* Summary (بس بالتقييمات) */}
-      {tab === "reviews" ? (
-        <div className="mb-3">
-          <SummaryCards count={count} avg={avg} byStar={summary?.byStar} />
-        </div>
-      ) : null}
-
-      {/* Content */}
-      {tab === "reviews" ? (
-        <>
+          {/* Tabs */}
           <div className="mb-3">
-            <FiltersBar
-              qText={qText}
-              setQText={setQText}
-              stars={stars}
-              setStars={setStars}
-              sortBy={sortBy}
-              setSortBy={setSortBy}
-              onRefresh={onRefresh}
-              loading={
-                loadingReviews ||
-                loadingBlocked ||
-                loadingArchived ||
-                loadingSummary
-              }
-            />
+            <TabsBar tab={tab} setTab={setTab} counts={counts} />
           </div>
 
-          <ReviewsList
-            items={filteredReviews}
-            loading={loadingReviews}
-            hasMore={hasMore}
-            onLoadMore={() => fetchReviews({ reset: false })}
-            blockedSet={blockedSet}
-            onArchive={archiveReview}
-            onBlock={blockPhoneEverywhere}
-            onUnblock={unblockPhoneEverywhere}
-          />
-        </>
-      ) : null}
+          {/* Summary (بس بالتقييمات) */}
+          {tab === "reviews" ? (
+            <div className="mb-3">
+              <SummaryCards count={count} avg={avg} byStar={summary?.byStar} />
+            </div>
+          ) : null}
 
-      {tab === "blocked" ? (
-        <BlockedPhonesPanel
-          blocked={blocked}
-          loading={loadingBlocked}
-          onUnblock={unblockPhoneEverywhere}
-        />
-      ) : null}
+          {/* Content */}
+          {tab === "reviews" ? (
+            <>
+              <div className="mb-3">
+                <FiltersBar
+                  qText={qText}
+                  setQText={setQText}
+                  stars={stars}
+                  setStars={setStars}
+                  sortBy={sortBy}
+                  setSortBy={setSortBy}
+                  onRefresh={onRefresh}
+                  loading={anyLoading}
+                />
+              </div>
 
-      {tab === "archived" ? (
-        <ArchivedPanel
-          items={archived}
-          loading={loadingArchived}
-          onRestore={restoreReview}
-          onDeleteForever={deleteArchivedPermanently}
-        />
-      ) : null}
+              <ReviewsList
+                items={filteredReviews}
+                loading={loadingReviews}
+                hasMore={hasMore}
+                onLoadMore={() => fetchReviews({ reset: false })}
+                blockedSet={blockedSet}
+                onArchive={archiveReview}
+                onBlock={blockPhoneEverywhere}
+                onUnblock={unblockPhoneEverywhere}
+              />
+            </>
+          ) : null}
+
+          {tab === "blocked" ? (
+            <BlockedPhonesPanel
+              blocked={blocked}
+              loading={loadingBlocked}
+              onUnblock={unblockPhoneEverywhere}
+            />
+          ) : null}
+
+          {tab === "archived" ? (
+            <ArchivedPanel
+              items={archived}
+              loading={loadingArchived}
+              onRestore={restoreReview}
+              onDeleteForever={deleteArchivedPermanently}
+            />
+          ) : null}
+        </div>
+      </div>
 
       {/* Undo Toast */}
       <UndoToast

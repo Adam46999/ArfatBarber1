@@ -204,1329 +204,6 @@ vite.config.js
 <files>
 This section contains the contents of the repository's files.
 
-<file path="src/components/reviews/AllReviewsModal.jsx">
-// src/components/reviews/AllReviewsModal.jsx
-import { useEffect, useMemo, useState } from "react";
-import { fetchReviewsPage } from "./reviewsApi";
-
-// ✅ ملاحظة: أنا ما بفرض ستايل.
-// كل الستايلات جوا props.classes عشان تنسخها من صفحة الزبون الحالية.
-export default function AllReviewsModal({
-  open,
-  onClose,
-  db,
-  barberId,
-  classes,
-  title = "كل التقييمات",
-  pageSize = 10,
-}) {
-  const [items, setItems] = useState([]);
-  const [lastDoc, setLastDoc] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
-
-  const canLoadMore = useMemo(() => !!lastDoc, [lastDoc]);
-
-  useEffect(() => {
-    if (!open) return;
-
-    let alive = true;
-    (async () => {
-      setLoading(true);
-      try {
-        const res = await fetchReviewsPage({
-          db,
-          barberId,
-          pageSize,
-          afterDoc: null,
-        });
-        if (!alive) return;
-        setItems(res.items);
-        setLastDoc(res.lastDoc);
-      } finally {
-        if (alive) setLoading(false);
-      }
-    })();
-
-    return () => {
-      alive = false;
-    };
-  }, [open, db, barberId, pageSize]);
-
-  const loadMore = async () => {
-    if (!lastDoc || loadingMore) return;
-    setLoadingMore(true);
-    try {
-      const res = await fetchReviewsPage({
-        db,
-        barberId,
-        pageSize,
-        afterDoc: lastDoc,
-      });
-      setItems((p) => [...p, ...res.items]);
-      setLastDoc(res.lastDoc);
-    } finally {
-      setLoadingMore(false);
-    }
-  };
-
-  if (!open) return null;
-
-  return (
-    <div className={classes.modalOverlay} onClick={onClose}>
-      <div className={classes.modalCard} onClick={(e) => e.stopPropagation()}>
-        <div className={classes.modalHeader}>
-          <div className={classes.modalTitle}>{title}</div>
-          <button className={classes.modalCloseBtn} onClick={onClose}>
-            ✕
-          </button>
-        </div>
-
-        <div className={classes.modalBody}>
-          {loading ? (
-            <div className={classes.loading}>جارٍ التحميل...</div>
-          ) : items.length === 0 ? (
-            <div className={classes.emptyState}>
-              لا يوجد تقييمات لعرضها حاليًا
-            </div>
-          ) : (
-            <div className={classes.list}>
-              {items.map((r) => (
-                <ReviewRow key={r.id} r={r} classes={classes} />
-              ))}
-            </div>
-          )}
-
-          {canLoadMore && !loading && (
-            <button
-              className={classes.loadMoreBtn}
-              onClick={loadMore}
-              disabled={loadingMore}
-            >
-              {loadingMore ? "جارٍ تحميل المزيد..." : "تحميل المزيد"}
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ReviewRow({ r, classes }) {
-  const [expanded, setExpanded] = useState(false);
-
-  const name = prettyName(r.userName);
-  const stars = clampStars(r.rating);
-
-  return (
-    <div className={classes.reviewCard}>
-      <div className={classes.reviewTopRow}>
-        <div className={classes.starsRow}>
-          <Stars value={stars} classes={classes} />
-        </div>
-
-        {/* ✅ اسم الزبون */}
-        <div className={classes.userName}>{name}</div>
-      </div>
-
-      {!!r.comment && (
-        <div className={classes.commentWrap}>
-          <div
-            className={expanded ? classes.commentFull : classes.commentClamp}
-          >
-            {r.comment}
-          </div>
-
-          {String(r.comment).length > 140 && (
-            <button
-              className={classes.moreBtn}
-              onClick={() => setExpanded((p) => !p)}
-            >
-              {expanded ? "إخفاء" : "عرض المزيد"}
-            </button>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function Stars({ value, classes }) {
-  // رسم نجوم بسيط بدون فرض ألوان جديدة — استخدم كلاس مشروعك
-  const v = clampStars(value);
-  return (
-    <div className={classes.starsInner}>
-      {Array.from({ length: 5 }).map((_, i) => (
-        <span key={i} className={i < v ? classes.starOn : classes.starOff}>
-          ★
-        </span>
-      ))}
-    </div>
-  );
-}
-
-function clampStars(x) {
-  const n = Number(x || 0);
-  if (Number.isNaN(n)) return 0;
-  return Math.max(0, Math.min(5, Math.round(n)));
-}
-
-function prettyName(name) {
-  const s = String(name || "").trim();
-  if (!s) return "زبون";
-  // Ahmad S. style (بدون ما نكسر أسماء عربية)
-  const parts = s.split(/\s+/).filter(Boolean);
-  if (parts.length <= 1) return parts[0];
-  const first = parts[0];
-  const lastInitial = parts[parts.length - 1][0] || "";
-  return `${first} ${lastInitial}.`;
-}
-</file>
-
-<file path="src/components/reviews/CustomerRatingSection.jsx">
-// src/components/reviews/CustomerRatingSection.jsx
-import { useEffect, useState } from "react";
-import AllReviewsModal from "./AllReviewsModal";
-import { fetchLatestReviews } from "./reviewsApi";
-
-export default function CustomerRatingSection({
-  db,
-  barberId,
-  title = "التقييمات",
-  classes,
-  previewCount = 3,
-}) {
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [openAll, setOpenAll] = useState(false);
-
-  useEffect(() => {
-    let alive = true;
-
-    (async () => {
-      if (!barberId) {
-        setItems([]);
-        return;
-      }
-
-      setLoading(true);
-      try {
-        const res = await fetchLatestReviews({
-          db,
-          barberId,
-          pageSize: previewCount,
-        });
-
-        if (!alive) return;
-        setItems(res.items);
-      } finally {
-        if (alive) setLoading(false);
-      }
-    })();
-
-    return () => {
-      alive = false;
-    };
-  }, [db, barberId, previewCount]);
-
-  return (
-    <div className={classes.sectionWrap}>
-      <div className={classes.sectionTitle}>{title}</div>
-
-      {loading ? (
-        <div className={classes.loading}>جارٍ التحميل...</div>
-      ) : items.length === 0 ? (
-        <div className={classes.emptyState}>لا يوجد تقييمات بعد</div>
-      ) : (
-        <>
-          <div className={classes.list}>
-            {items.map((r) => (
-              <PreviewReviewCard key={r.id} r={r} classes={classes} />
-            ))}
-          </div>
-
-          <div className={classes.viewAllRow}>
-            <button
-              className={classes.viewAllBtn}
-              onClick={() => setOpenAll(true)}
-            >
-              عرض كل التقييمات
-            </button>
-          </div>
-        </>
-      )}
-
-      <AllReviewsModal
-        open={openAll}
-        onClose={() => setOpenAll(false)}
-        db={db}
-        barberId={barberId}
-        classes={classes}
-        title="كل التقييمات"
-      />
-    </div>
-  );
-}
-
-function PreviewReviewCard({ r, classes }) {
-  const [expanded, setExpanded] = useState(false);
-
-  const name = prettyName(r.userName);
-  const stars = clampStars(r.rating);
-
-  return (
-    <div className={classes.reviewCard}>
-      <div className={classes.reviewTopRow}>
-        <div className={classes.starsRow}>
-          <Stars value={stars} classes={classes} />
-        </div>
-
-        {/* ✅ اسم الزبون */}
-        <div className={classes.userName}>{name}</div>
-      </div>
-
-      {!!r.comment && (
-        <div className={classes.commentWrap}>
-          <div
-            className={expanded ? classes.commentFull : classes.commentClamp}
-          >
-            {r.comment}
-          </div>
-
-          {String(r.comment).length > 140 && (
-            <button
-              className={classes.moreBtn}
-              onClick={() => setExpanded((p) => !p)}
-            >
-              {expanded ? "إخفاء" : "عرض المزيد"}
-            </button>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function Stars({ value, classes }) {
-  const v = clampStars(value);
-  return (
-    <div className={classes.starsInner}>
-      {Array.from({ length: 5 }).map((_, i) => (
-        <span key={i} className={i < v ? classes.starOn : classes.starOff}>
-          ★
-        </span>
-      ))}
-    </div>
-  );
-}
-
-function clampStars(x) {
-  const n = Number(x || 0);
-  if (Number.isNaN(n)) return 0;
-  return Math.max(0, Math.min(5, Math.round(n)));
-}
-
-function prettyName(name) {
-  const s = String(name || "").trim();
-  if (!s) return "زبون";
-  const parts = s.split(/\s+/).filter(Boolean);
-  if (parts.length <= 1) return parts[0];
-  const first = parts[0];
-  const lastInitial = parts[parts.length - 1][0] || "";
-  return `${first} ${lastInitial}.`;
-}
-</file>
-
-<file path="src/components/reviews/reviewsApi.js">
-// src/components/reviews/reviewsApi.js
-import {
-  collection,
-  getDocs,
-  limit,
-  orderBy,
-  query,
-  startAfter,
-  where,
-} from "firebase/firestore";
-
-/**
- * حاولنا نخلي أسماء الحقول مرنة (لأنه مرات المشاريع بتختلف):
- * - barberId
- * - rating
- * - comment / text / message
- * - createdAt
- * - userName / customerName / displayName
- */
-
-function normalizeReview(docSnap) {
-  const d = docSnap.data() || {};
-  return {
-    id: docSnap.id,
-    barberId: d.barberId,
-    rating: Number(d.rating ?? d.stars ?? 0),
-    comment: d.comment ?? d.text ?? d.message ?? "",
-    createdAt: d.createdAt ?? d.timestamp ?? null,
-    userName: d.userName ?? d.customerName ?? d.displayName ?? d.name ?? "",
-    userId: d.userId ?? d.customerId ?? null,
-    visible: d.visible ?? true,
-    raw: d,
-  };
-}
-
-export async function fetchLatestReviews({
-  db,
-  barberId,
-  pageSize = 3,
-  includeHidden = false,
-}) {
-  if (!barberId) return { items: [], lastDoc: null };
-
-  // لو عندك فلترة visible بالمشروع، خليك consistent بين الزبون والحلاق
-  const base = [
-    collection(db, "reviews"),
-    where("barberId", "==", barberId),
-    orderBy("createdAt", "desc"),
-    limit(pageSize),
-  ];
-
-  // ما بنحط where("visible"==true) افتراضيًا عشان ما “يختفي” اشي عند طرف ويظهر عند طرف
-  // انت إذا بدك تفعّلها، فعّلها بالطرفين معًا.
-  const q = query(...base);
-
-  const snap = await getDocs(q);
-  const docs = snap.docs;
-  const items = docs
-    .map(normalizeReview)
-    .filter((r) => (includeHidden ? true : r.visible !== false));
-
-  return { items, lastDoc: docs.length ? docs[docs.length - 1] : null };
-}
-
-export async function fetchReviewsPage({
-  db,
-  barberId,
-  pageSize = 10,
-  afterDoc = null,
-  includeHidden = false,
-}) {
-  if (!barberId) return { items: [], lastDoc: null };
-
-  const parts = [
-    collection(db, "reviews"),
-    where("barberId", "==", barberId),
-    orderBy("createdAt", "desc"),
-    limit(pageSize),
-  ];
-
-  const q = afterDoc ? query(...parts, startAfter(afterDoc)) : query(...parts);
-
-  const snap = await getDocs(q);
-  const docs = snap.docs;
-
-  const items = docs
-    .map(normalizeReview)
-    .filter((r) => (includeHidden ? true : r.visible !== false));
-
-  return { items, lastDoc: docs.length ? docs[docs.length - 1] : null };
-}
-</file>
-
-<file path="src/pages/barberPanel/reviews/ArchivedPanel.jsx">
-// src/pages/barberPanel/reviews/ArchivedPanel.jsx
-function starsLabel(n) {
-  const v = Math.max(0, Math.min(5, Number(n || 0)));
-  return "★".repeat(v) + "☆".repeat(5 - v);
-}
-
-export default function ArchivedPanel({
-  items,
-  loading,
-  onRestore,
-  onDeleteForever,
-}) {
-  if (loading && (!items || items.length === 0)) {
-    return (
-      <div className="bg-white border border-gray-200 rounded-2xl p-6 text-center shadow-sm">
-        جارٍ تحميل الأرشيف...
-      </div>
-    );
-  }
-
-  if (!items || items.length === 0) {
-    return (
-      <div className="bg-white border border-gray-200 rounded-2xl p-6 text-center shadow-sm text-gray-600">
-        لا يوجد تقييمات مؤرشفة.
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-3">
-      {items.map((r) => (
-        <div
-          key={r.id}
-          className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm"
-        >
-          <div className="flex items-start justify-between gap-3">
-            <div className="text-right">
-              <div className="font-extrabold text-gray-900">
-                {r.customerName || r.userName || r.displayName || "زبون"}
-              </div>
-              <div className="text-xs text-gray-500 mt-0.5">
-                {r.phoneKey ? `رقم: ${r.phoneKey}` : "بدون رقم"}
-              </div>
-            </div>
-
-            <div className="text-right">
-              <div className="text-lg font-black text-gray-900">
-                {starsLabel(r.rating ?? r.stars ?? 0)}
-              </div>
-              <div className="text-xs text-gray-500">مؤرشف</div>
-            </div>
-          </div>
-
-          <div className="mt-4 flex flex-wrap gap-2 justify-end">
-            <button
-              onClick={() => onRestore(r.id)}
-              className="px-3 py-2 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 font-extrabold text-sm"
-            >
-              استرجاع
-            </button>
-
-            <button
-              onClick={() => onDeleteForever(r.id)}
-              className="px-3 py-2 rounded-xl border border-rose-200 bg-rose-50 text-rose-800 hover:bg-rose-100 font-extrabold text-sm"
-            >
-              حذف نهائي
-            </button>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-</file>
-
-<file path="src/pages/barberPanel/reviews/BlockedPhonesPanel.jsx">
-// src/pages/barberPanel/reviews/BlockedPhonesPanel.jsx
-export default function BlockedPhonesPanel({ blocked, loading, onUnblock }) {
-  if (loading && (!blocked || blocked.length === 0)) {
-    return (
-      <div className="bg-white border border-gray-200 rounded-2xl p-6 text-center shadow-sm">
-        جارٍ تحميل الأرقام...
-      </div>
-    );
-  }
-
-  if (!blocked || blocked.length === 0) {
-    return (
-      <div className="bg-white border border-gray-200 rounded-2xl p-6 text-center shadow-sm text-gray-600">
-        لا يوجد أرقام محظورة.
-      </div>
-    );
-  }
-
-  return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm">
-      <div className="text-right font-extrabold text-gray-900 mb-3">
-        قائمة الأرقام المحظورة
-      </div>
-
-      <div className="divide-y">
-        {blocked.map((b) => (
-          <div
-            key={b.id}
-            className="py-3 flex items-center justify-between gap-3"
-          >
-            <div className="text-right">
-              <div className="font-black text-gray-900">
-                {b.phoneKey || b.id}
-              </div>
-              <div className="text-xs text-gray-500">
-                {b.from ? `المصدر: ${b.from}` : ""}{" "}
-                {b.fromBarberId ? ` • ${b.fromBarberId}` : ""}
-              </div>
-            </div>
-
-            <button
-              onClick={() => onUnblock(b.phoneKey || b.id)}
-              className="px-3 py-2 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 font-extrabold text-sm"
-            >
-              إلغاء الحظر
-            </button>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-</file>
-
-<file path="src/pages/barberPanel/reviews/FiltersBar.jsx">
-// src/pages/barberPanel/reviews/FiltersBar.jsx
-export default function FiltersBar({
-  qText,
-  setQText,
-  stars,
-  setStars,
-  sortBy,
-  setSortBy,
-  onRefresh,
-  loading,
-}) {
-  return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-        <input
-          value={qText}
-          onChange={(e) => setQText(e.target.value)}
-          placeholder="بحث بالاسم / الرقم / النص..."
-          className="w-full rounded-xl border border-gray-300 px-3 py-2 text-right focus:ring-2 focus:ring-gold bg-white"
-        />
-
-        <select
-          value={stars}
-          onChange={(e) => setStars(e.target.value)}
-          className="w-full rounded-xl border border-gray-300 px-3 py-2 text-right bg-white"
-        >
-          <option value="all">كل النجوم</option>
-          <option value="5">5 نجوم</option>
-          <option value="4">4 نجوم</option>
-          <option value="3">3 نجوم</option>
-          <option value="2">2 نجوم</option>
-          <option value="1">1 نجمة</option>
-        </select>
-
-        <select
-          value={sortBy}
-          onChange={(e) => setSortBy(e.target.value)}
-          className="w-full rounded-xl border border-gray-300 px-3 py-2 text-right bg-white"
-        >
-          <option value="newest">الأحدث</option>
-          <option value="highest">الأعلى تقييمًا</option>
-          <option value="lowest">الأقل تقييمًا</option>
-        </select>
-
-        <button
-          onClick={onRefresh}
-          disabled={loading}
-          className={`rounded-xl px-4 py-2 font-extrabold border transition
-            ${loading ? "opacity-60 cursor-not-allowed" : "hover:bg-gray-50"}
-            bg-white border-gray-200`}
-        >
-          {loading ? "جارٍ التحديث..." : "تحديث"}
-        </button>
-      </div>
-    </div>
-  );
-}
-</file>
-
-<file path="src/pages/barberPanel/reviews/ReviewCard.jsx">
-// src/pages/barberPanel/reviews/ReviewCard.jsx
-function starsLabel(n) {
-  const v = Math.max(0, Math.min(5, Number(n || 0)));
-  return "★".repeat(v) + "☆".repeat(5 - v);
-}
-
-function prettyName(name) {
-  const s = String(name || "").trim();
-  if (!s) return "زبون";
-  const parts = s.split(/\s+/).filter(Boolean);
-  if (parts.length <= 1) return parts[0];
-  const first = parts[0];
-  const lastInitial = parts[parts.length - 1][0] || "";
-  return `${first} ${lastInitial}.`;
-}
-
-export default function ReviewCard({
-  r,
-  isBlocked,
-  onArchive,
-  onBlock,
-  onUnblock,
-}) {
-  const id = r.id;
-  const name = prettyName(r.customerName || r.userName || r.displayName);
-  const phoneKey = r.phoneKey || r.phone || r.phoneNumber || "";
-  const rating = Number(r.rating ?? r.stars ?? 0);
-  const msg = (r.message || r.text || r.comment || "").trim();
-
-  return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm">
-      <div className="flex items-start justify-between gap-3">
-        <div className="text-right">
-          <div className="font-extrabold text-gray-900">{name}</div>
-          <div className="text-xs text-gray-500 mt-0.5">
-            {phoneKey ? `رقم: ${phoneKey}` : "بدون رقم"}
-          </div>
-        </div>
-
-        <div className="text-right">
-          <div className="text-lg font-black text-gray-900">
-            {starsLabel(rating)}
-          </div>
-          <div className="text-xs text-gray-500">({rating || 0}/5)</div>
-        </div>
-      </div>
-
-      {msg ? (
-        <div className="mt-3 text-sm text-gray-800 bg-gray-50 border border-gray-200 rounded-xl p-3 text-right">
-          {msg}
-        </div>
-      ) : (
-        <div className="mt-3 text-sm text-gray-400 text-right">بدون تعليق</div>
-      )}
-
-      <div className="mt-4 flex flex-wrap gap-2 justify-end">
-        <button
-          onClick={() => onArchive(id)}
-          className="px-3 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 font-extrabold text-sm"
-        >
-          أرشفة
-        </button>
-
-        {phoneKey ? (
-          isBlocked ? (
-            <button
-              onClick={() => onUnblock(phoneKey)}
-              className="px-3 py-2 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 font-extrabold text-sm"
-            >
-              إلغاء الحظر
-            </button>
-          ) : (
-            <button
-              onClick={() => onBlock(phoneKey, id)}
-              className="px-3 py-2 rounded-xl border border-rose-200 bg-rose-50 text-rose-800 hover:bg-rose-100 font-extrabold text-sm"
-            >
-              حظر الرقم
-            </button>
-          )
-        ) : null}
-      </div>
-    </div>
-  );
-}
-</file>
-
-<file path="src/pages/barberPanel/reviews/ReviewsList.jsx">
-// src/pages/barberPanel/reviews/ReviewsList.jsx
-import ReviewCard from "./ReviewCard";
-
-export default function ReviewsList({
-  items,
-  loading,
-  hasMore,
-  onLoadMore,
-  blockedSet,
-  onArchive,
-  onBlock,
-  onUnblock,
-}) {
-  if (loading && (!items || items.length === 0)) {
-    return (
-      <div className="bg-white border border-gray-200 rounded-2xl p-6 text-center shadow-sm">
-        جارٍ تحميل التقييمات...
-      </div>
-    );
-  }
-
-  if (!items || items.length === 0) {
-    return (
-      <div className="bg-white border border-gray-200 rounded-2xl p-6 text-center shadow-sm text-gray-600">
-        لا يوجد تقييمات مطابقة.
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-3">
-      {items.map((r) => (
-        <ReviewCard
-          key={r.id}
-          r={r}
-          isBlocked={blockedSet?.has(String(r.phoneKey || ""))}
-          onArchive={onArchive}
-          onBlock={onBlock}
-          onUnblock={onUnblock}
-        />
-      ))}
-
-      <div className="pt-2">
-        {hasMore ? (
-          <button
-            onClick={onLoadMore}
-            disabled={loading}
-            className={`w-full rounded-2xl px-4 py-3 font-extrabold border transition
-              ${loading ? "opacity-60 cursor-not-allowed" : "hover:bg-gray-50"}
-              bg-white border-gray-200`}
-          >
-            {loading ? "جارٍ التحميل..." : "تحميل المزيد"}
-          </button>
-        ) : (
-          <div className="text-center text-xs text-gray-500">
-            وصلت للنهاية ✅
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-</file>
-
-<file path="src/pages/barberPanel/reviews/ReviewsManagerPage.jsx">
-
-</file>
-
-<file path="src/pages/barberPanel/reviews/SummaryCards.jsx">
-// src/pages/barberPanel/reviews/SummaryCards.jsx
-function StatCard({ title, value, hint }) {
-  return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm">
-      <div className="text-xs text-gray-500 font-bold">{title}</div>
-      <div className="mt-1 text-2xl font-black text-gray-900">{value}</div>
-      {hint ? <div className="mt-1 text-xs text-gray-500">{hint}</div> : null}
-    </div>
-  );
-}
-
-export default function SummaryCards({ count, avg, byStar }) {
-  const avgFixed = Number.isFinite(avg) ? avg.toFixed(2) : "0.00";
-  const five = Number(byStar?.[5] || 0);
-  const four = Number(byStar?.[4] || 0);
-  const three = Number(byStar?.[3] || 0);
-
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-      <StatCard
-        title="عدد التقييمات"
-        value={count}
-        hint="التقييمات النشطة فقط"
-      />
-      <StatCard title="المتوسط" value={avgFixed} hint="حسب التقييمات النشطة" />
-      <StatCard title="5 نجوم" value={five} />
-      <StatCard title="4–3 نجوم" value={four + three} />
-    </div>
-  );
-}
-</file>
-
-<file path="src/pages/barberPanel/reviews/TabsBar.jsx">
-// src/pages/barberPanel/reviews/TabsBar.jsx
-export default function TabsBar({ tab, setTab, counts }) {
-  const items = [
-    { key: "reviews", label: "التقييمات", count: counts?.reviews ?? 0 },
-    { key: "blocked", label: "الأرقام المحظورة", count: counts?.blocked ?? 0 },
-    { key: "archived", label: "الأرشيف", count: counts?.archived ?? 0 },
-  ];
-
-  return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-2 shadow-sm flex gap-2 justify-between">
-      {items.map((it) => {
-        const active = tab === it.key;
-        return (
-          <button
-            key={it.key}
-            onClick={() => setTab(it.key)}
-            className={`flex-1 rounded-xl px-3 py-2 text-sm font-extrabold transition flex items-center justify-center gap-2
-              ${active ? "bg-gold text-primary" : "bg-transparent hover:bg-gray-50 text-gray-800"}`}
-          >
-            <span>{it.label}</span>
-            <span
-              className={`text-xs px-2 py-0.5 rounded-full border
-              ${active ? "border-white/50 bg-white/20 text-primary" : "border-gray-200 bg-gray-50 text-gray-700"}`}
-            >
-              {it.count}
-            </span>
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-</file>
-
-<file path="src/pages/barberPanel/reviews/UndoToast.jsx">
-// src/pages/barberPanel/reviews/UndoToast.jsx
-export default function UndoToast({ undo, onUndo, onClose }) {
-  if (!undo) return null;
-
-  return (
-    <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-[9999]">
-      <div className="bg-gray-900 text-white rounded-2xl px-4 py-3 shadow-lg flex items-center gap-3">
-        <div className="text-sm">
-          تم أرشفة تقييم {undo.name ? `(${undo.name})` : ""}.
-        </div>
-
-        <button
-          className="px-3 py-1.5 rounded-xl bg-white/10 border border-white/20 hover:bg-white/20 font-black text-sm"
-          onClick={onUndo}
-        >
-          تراجع
-        </button>
-
-        <button
-          className="px-3 py-1.5 rounded-xl bg-white/0 hover:bg-white/10 font-black text-sm"
-          onClick={onClose}
-          aria-label="Close"
-        >
-          ✕
-        </button>
-      </div>
-    </div>
-  );
-}
-</file>
-
-<file path="src/pages/barberPanel/reviews/useReviewsManager.js">
-// src/pages/barberPanel/reviews/useReviewsManager.js
-import { useEffect, useMemo, useRef, useState } from "react";
-import { db } from "../../../firebase";
-import {
-  collection,
-  deleteDoc,
-  doc,
-  getDoc,
-  getDocs,
-  limit,
-  orderBy,
-  query,
-  runTransaction,
-  serverTimestamp,
-  setDoc,
-  startAfter,
-} from "firebase/firestore";
-
-const BARBER_ID = "arfat";
-const ARCHIVE_KEEP_DAYS = 14;
-const UNDO_MS = 7000;
-
-function addDaysDate(days) {
-  const d = new Date();
-  d.setDate(d.getDate() + days);
-  return d;
-}
-
-function safeLower(v) {
-  return (v || "").toString().toLowerCase();
-}
-
-function prettyName(name) {
-  const s = String(name || "").trim();
-  if (!s) return "زبون";
-  const parts = s.split(/\s+/).filter(Boolean);
-  if (parts.length <= 1) return parts[0];
-  const first = parts[0];
-  const lastInitial = parts[parts.length - 1][0] || "";
-  return `${first} ${lastInitial}.`;
-}
-
-function safeSummary(data) {
-  return (
-    data || {
-      count: 0,
-      sum: 0,
-      byStar: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
-      tagCounts: {},
-    }
-  );
-}
-
-function decSummary(cur, rating, tags = []) {
-  const r = Number(rating || 0);
-  const next = {
-    ...cur,
-    count: Math.max(0, Number(cur.count || 0) - 1),
-    sum: Math.max(0, Number(cur.sum || 0) - r),
-    byStar: { ...(cur.byStar || { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }) },
-    tagCounts: { ...(cur.tagCounts || {}) },
-  };
-  if (r >= 1 && r <= 5)
-    next.byStar[r] = Math.max(0, Number(next.byStar[r] || 0) - 1);
-
-  (Array.isArray(tags) ? tags : []).forEach((k) => {
-    next.tagCounts[k] = Math.max(0, Number(next.tagCounts[k] || 0) - 1);
-    if (next.tagCounts[k] === 0) delete next.tagCounts[k];
-  });
-
-  return next;
-}
-
-function incSummary(cur, rating, tags = []) {
-  const r = Number(rating || 0);
-  const next = {
-    ...cur,
-    count: Number(cur.count || 0) + 1,
-    sum: Number(cur.sum || 0) + r,
-    byStar: { ...(cur.byStar || { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }) },
-    tagCounts: { ...(cur.tagCounts || {}) },
-  };
-  if (r >= 1 && r <= 5) next.byStar[r] = Number(next.byStar[r] || 0) + 1;
-
-  (Array.isArray(tags) ? tags : []).forEach((k) => {
-    next.tagCounts[k] = Number(next.tagCounts[k] || 0) + 1;
-  });
-
-  return next;
-}
-
-export function useReviewsManager() {
-  const [tab, setTab] = useState("reviews"); // reviews | blocked | archived
-
-  // Active reviews
-  const [reviews, setReviews] = useState([]);
-  const [loadingReviews, setLoadingReviews] = useState(false);
-  const [lastDoc, setLastDoc] = useState(null);
-  const [hasMore, setHasMore] = useState(true);
-
-  // Archived
-  const [archived, setArchived] = useState([]);
-  const [loadingArchived, setLoadingArchived] = useState(false);
-
-  // Blocked
-  const [blocked, setBlocked] = useState([]);
-  const [loadingBlocked, setLoadingBlocked] = useState(false);
-
-  // Filters / sort
-  const [qText, setQText] = useState("");
-  const [stars, setStars] = useState("all");
-  const [sortBy, setSortBy] = useState("newest"); // newest | highest | lowest
-
-  // Summary
-  const [summary, setSummary] = useState({
-    count: 0,
-    sum: 0,
-    byStar: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
-    tagCounts: {},
-  });
-  const [loadingSummary, setLoadingSummary] = useState(false);
-
-  // Undo toast
-  const [undo, setUndo] = useState(null); // { id, name }
-  const undoTimerRef = useRef(null);
-
-  const reviewsCol = collection(db, "barbers", BARBER_ID, "reviews");
-  const summaryRef = doc(db, "barbers", BARBER_ID, "meta", "reviewsSummary");
-
-  const count = Number(summary.count || 0);
-  const avg = count > 0 ? summary.sum / count : 0;
-
-  const fetchSummary = async () => {
-    if (loadingSummary) return;
-    setLoadingSummary(true);
-    try {
-      const ss = await getDoc(summaryRef);
-      if (ss.exists()) setSummary((p) => ({ ...p, ...ss.data() }));
-    } catch (e) {
-      console.error("fetchSummary error:", e);
-    } finally {
-      setLoadingSummary(false);
-    }
-  };
-
-  const fetchReviews = async ({ reset = false } = {}) => {
-    if (loadingReviews) return;
-    setLoadingReviews(true);
-
-    try {
-      let qBase = query(reviewsCol, orderBy("createdAt", "desc"), limit(50));
-
-      if (!reset && lastDoc) {
-        qBase = query(
-          reviewsCol,
-          orderBy("createdAt", "desc"),
-          startAfter(lastDoc),
-          limit(50),
-        );
-      }
-
-      const snap = await getDocs(qBase);
-      const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-
-      // active فقط
-      const onlyActive = docs.filter(
-        (r) => (r.status || "active") === "active",
-      );
-
-      if (reset) setReviews(onlyActive);
-      else setReviews((p) => [...p, ...onlyActive]);
-
-      setLastDoc(snap.docs.length ? snap.docs[snap.docs.length - 1] : null);
-      setHasMore(snap.docs.length === 50);
-    } catch (e) {
-      console.error("fetchReviews error:", e);
-    } finally {
-      setLoadingReviews(false);
-    }
-  };
-
-  const fetchBlocked = async () => {
-    if (loadingBlocked) return;
-    setLoadingBlocked(true);
-    try {
-      const ref = collection(db, "barbers", BARBER_ID, "blockedPhones");
-      const snap = await getDocs(ref);
-      setBlocked(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-    } finally {
-      setLoadingBlocked(false);
-    }
-  };
-
-  const fetchArchived = async () => {
-    if (loadingArchived) return;
-    setLoadingArchived(true);
-    try {
-      const qAll = query(reviewsCol, orderBy("createdAt", "desc"), limit(200));
-      const snap = await getDocs(qAll);
-      const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      setArchived(docs.filter((r) => r.status === "archived"));
-    } catch (e) {
-      console.error("fetchArchived error:", e);
-    } finally {
-      setLoadingArchived(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchReviews({ reset: true });
-    fetchBlocked();
-    fetchArchived();
-    fetchSummary();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const blockPhoneEverywhere = async (phoneKey, reviewId) => {
-    if (!phoneKey) return;
-
-    await setDoc(
-      doc(db, "barbers", BARBER_ID, "blockedPhones", String(phoneKey)),
-      {
-        phoneKey: String(phoneKey),
-        from: "reviews",
-        fromBarberId: BARBER_ID,
-        reviewId: reviewId || null,
-        blockedAt: serverTimestamp(),
-      },
-    );
-
-    await setDoc(doc(db, "blockedPhones", String(phoneKey)), {
-      phoneKey: String(phoneKey),
-      from: "reviews",
-      fromBarberId: BARBER_ID,
-      reviewId: reviewId || null,
-      blockedAt: serverTimestamp(),
-    });
-
-    await fetchBlocked();
-  };
-
-  const unblockPhoneEverywhere = async (phoneKey) => {
-    if (!phoneKey) return;
-    await deleteDoc(
-      doc(db, "barbers", BARBER_ID, "blockedPhones", String(phoneKey)),
-    );
-    await deleteDoc(doc(db, "blockedPhones", String(phoneKey)));
-    await fetchBlocked();
-  };
-
-  const archiveReview = async (reviewId) => {
-    if (!reviewId) return;
-
-    const rLocal = reviews.find((x) => x.id === reviewId);
-    const nameForUndo = prettyName(
-      rLocal?.customerName || rLocal?.userName || rLocal?.displayName,
-    );
-
-    await runTransaction(db, async (tx) => {
-      const reviewRef = doc(db, "barbers", BARBER_ID, "reviews", reviewId);
-      const [rSnap, sSnap] = await Promise.all([
-        tx.get(reviewRef),
-        tx.get(summaryRef),
-      ]);
-      if (!rSnap.exists()) return;
-
-      const r = rSnap.data();
-      if (r.status === "archived") return;
-
-      const cur = safeSummary(sSnap.exists() ? sSnap.data() : null);
-      const rating = r.rating ?? r.stars ?? 0;
-      const tags = r.tags || [];
-      const next = decSummary(cur, rating, tags);
-
-      tx.set(
-        reviewRef,
-        {
-          status: "archived",
-          archivedAt: serverTimestamp(),
-          purgeAt: addDaysDate(ARCHIVE_KEEP_DAYS),
-        },
-        { merge: true },
-      );
-
-      tx.set(
-        summaryRef,
-        { ...next, updatedAt: serverTimestamp() },
-        { merge: true },
-      );
-    });
-
-    setReviews((p) => p.filter((x) => x.id !== reviewId));
-    await fetchArchived();
-    await fetchSummary();
-
-    setUndo({ id: reviewId, name: nameForUndo });
-    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
-    undoTimerRef.current = setTimeout(() => {
-      setUndo(null);
-      undoTimerRef.current = null;
-    }, UNDO_MS);
-  };
-
-  const restoreReview = async (reviewId) => {
-    if (!reviewId) return;
-
-    await runTransaction(db, async (tx) => {
-      const reviewRef = doc(db, "barbers", BARBER_ID, "reviews", reviewId);
-      const [rSnap, sSnap] = await Promise.all([
-        tx.get(reviewRef),
-        tx.get(summaryRef),
-      ]);
-      if (!rSnap.exists()) return;
-
-      const r = rSnap.data();
-      if (r.status !== "archived") return;
-
-      const cur = safeSummary(sSnap.exists() ? sSnap.data() : null);
-      const rating = r.rating ?? r.stars ?? 0;
-      const tags = r.tags || [];
-      const next = incSummary(cur, rating, tags);
-
-      tx.set(
-        reviewRef,
-        { status: "active", restoredAt: serverTimestamp(), purgeAt: null },
-        { merge: true },
-      );
-
-      tx.set(
-        summaryRef,
-        { ...next, updatedAt: serverTimestamp() },
-        { merge: true },
-      );
-    });
-
-    await fetchReviews({ reset: true });
-    await fetchArchived();
-    await fetchSummary();
-  };
-
-  const undoArchive = async () => {
-    if (!undo?.id) return;
-    const id = undo.id;
-    setUndo(null);
-    await restoreReview(id);
-  };
-
-  const deleteArchivedPermanently = async (reviewId) => {
-    if (!reviewId) return;
-    await deleteDoc(doc(db, "barbers", BARBER_ID, "reviews", reviewId));
-    await fetchArchived();
-    await fetchSummary();
-  };
-
-  // ===== Derived / filtered list =====
-  const filteredReviews = useMemo(() => {
-    let list = Array.isArray(reviews) ? [...reviews] : [];
-
-    // stars filter
-    if (stars !== "all") {
-      const s = Number(stars);
-      list = list.filter((r) => Number(r.rating ?? r.stars ?? 0) === s);
-    }
-
-    // search
-    const q = safeLower(qText).trim();
-    if (q) {
-      list = list.filter((r) => {
-        const name = safeLower(r.customerName || r.userName || r.displayName);
-        const phone = safeLower(r.phoneKey || r.phone || r.phoneNumber);
-        const msg = safeLower(r.message || r.text || r.comment);
-        return name.includes(q) || phone.includes(q) || msg.includes(q);
-      });
-    }
-
-    // sort
-    if (sortBy === "highest") {
-      list.sort(
-        (a, b) =>
-          Number(b.rating ?? b.stars ?? 0) - Number(a.rating ?? a.stars ?? 0),
-      );
-    } else if (sortBy === "lowest") {
-      list.sort(
-        (a, b) =>
-          Number(a.rating ?? a.stars ?? 0) - Number(b.rating ?? b.stars ?? 0),
-      );
-    } else {
-      // newest is already from firestore, keep stable
-    }
-
-    return list;
-  }, [reviews, qText, stars, sortBy]);
-
-  return {
-    tab,
-    setTab,
-
-    // data
-    reviews,
-    filteredReviews,
-    archived,
-    blocked,
-    summary,
-    count,
-    avg,
-
-    // loading
-    loadingReviews,
-    loadingArchived,
-    loadingBlocked,
-    loadingSummary,
-
-    // pagination
-    hasMore,
-
-    // filters
-    qText,
-    setQText,
-    stars,
-    setStars,
-    sortBy,
-    setSortBy,
-
-    // actions
-    fetchReviews,
-    fetchArchived,
-    fetchBlocked,
-    fetchSummary,
-
-    blockPhoneEverywhere,
-    unblockPhoneEverywhere,
-
-    archiveReview,
-    restoreReview,
-    undoArchive,
-    deleteArchivedPermanently,
-
-    // undo toast
-    undo,
-    setUndo,
-  };
-}
-</file>
-
-<file path="src/pages/barberPanel/ReviewsAdminPage.jsx">
-
-</file>
-
 <file path=".firebase/hosting.ZGlzdA.cache">
 vite.svg,1747330434585,699a02e0e68a579f687d364bbbe7633161244f35af068220aee37b1b33dfb3c7
 index.html,1751098345638,2cbbe115efbe89db527d62aebac1c9781f1a7b7366433488f7fc786a744365ba
@@ -2579,322 +1256,430 @@ export default function CalendarGrid() {
 }
 </file>
 
-<file path="src/components/reviews/BarberRatingSection.jsx">
+<file path="src/components/reviews/AllReviewsModal.jsx">
+// src/components/reviews/AllReviewsModal.jsx
+import { useEffect, useMemo, useState } from "react";
+import { fetchReviewsPage } from "./reviewsApi";
+
+// ✅ ملاحظة: أنا ما بفرض ستايل.
+// كل الستايلات جوا props.classes عشان تنسخها من صفحة الزبون الحالية.
+export default function AllReviewsModal({
+  open,
+  onClose,
+  db,
+  barberId,
+  classes,
+  title = "كل التقييمات",
+  pageSize = 10,
+}) {
+  const [items, setItems] = useState([]);
+  const [lastDoc, setLastDoc] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  const canLoadMore = useMemo(() => !!lastDoc, [lastDoc]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    let alive = true;
+    (async () => {
+      setLoading(true);
+      try {
+        const res = await fetchReviewsPage({
+          db,
+          barberId,
+          pageSize,
+          afterDoc: null,
+        });
+        if (!alive) return;
+        setItems(res.items);
+        setLastDoc(res.lastDoc);
+      } finally {
+        if (alive) setLoading(false);
+      }
+    })();
+
+    return () => {
+      alive = false;
+    };
+  }, [open, db, barberId, pageSize]);
+
+  const loadMore = async () => {
+    if (!lastDoc || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const res = await fetchReviewsPage({
+        db,
+        barberId,
+        pageSize,
+        afterDoc: lastDoc,
+      });
+      setItems((p) => [...p, ...res.items]);
+      setLastDoc(res.lastDoc);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
+  if (!open) return null;
+
+  return (
+    <div className={classes.modalOverlay} onClick={onClose}>
+      <div className={classes.modalCard} onClick={(e) => e.stopPropagation()}>
+        <div className={classes.modalHeader}>
+          <div className={classes.modalTitle}>{title}</div>
+          <button className={classes.modalCloseBtn} onClick={onClose}>
+            ✕
+          </button>
+        </div>
+
+        <div className={classes.modalBody}>
+          {loading ? (
+            <div className={classes.loading}>جارٍ التحميل...</div>
+          ) : items.length === 0 ? (
+            <div className={classes.emptyState}>
+              لا يوجد تقييمات لعرضها حاليًا
+            </div>
+          ) : (
+            <div className={classes.list}>
+              {items.map((r) => (
+                <ReviewRow key={r.id} r={r} classes={classes} />
+              ))}
+            </div>
+          )}
+
+          {canLoadMore && !loading && (
+            <button
+              className={classes.loadMoreBtn}
+              onClick={loadMore}
+              disabled={loadingMore}
+            >
+              {loadingMore ? "جارٍ تحميل المزيد..." : "تحميل المزيد"}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ReviewRow({ r, classes }) {
+  const [expanded, setExpanded] = useState(false);
+
+  const name = prettyName(r.userName);
+  const stars = clampStars(r.rating);
+
+  return (
+    <div className={classes.reviewCard}>
+      <div className={classes.reviewTopRow}>
+        <div className={classes.starsRow}>
+          <Stars value={stars} classes={classes} />
+        </div>
+
+        {/* ✅ اسم الزبون */}
+        <div className={classes.userName}>{name}</div>
+      </div>
+
+      {!!r.comment && (
+        <div className={classes.commentWrap}>
+          <div
+            className={expanded ? classes.commentFull : classes.commentClamp}
+          >
+            {r.comment}
+          </div>
+
+          {String(r.comment).length > 140 && (
+            <button
+              className={classes.moreBtn}
+              onClick={() => setExpanded((p) => !p)}
+            >
+              {expanded ? "إخفاء" : "عرض المزيد"}
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Stars({ value, classes }) {
+  // رسم نجوم بسيط بدون فرض ألوان جديدة — استخدم كلاس مشروعك
+  const v = clampStars(value);
+  return (
+    <div className={classes.starsInner}>
+      {Array.from({ length: 5 }).map((_, i) => (
+        <span key={i} className={i < v ? classes.starOn : classes.starOff}>
+          ★
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function clampStars(x) {
+  const n = Number(x || 0);
+  if (Number.isNaN(n)) return 0;
+  return Math.max(0, Math.min(5, Math.round(n)));
+}
+
+function prettyName(name) {
+  const s = String(name || "").trim();
+  if (!s) return "زبون";
+  // Ahmad S. style (بدون ما نكسر أسماء عربية)
+  const parts = s.split(/\s+/).filter(Boolean);
+  if (parts.length <= 1) return parts[0];
+  const first = parts[0];
+  const lastInitial = parts[parts.length - 1][0] || "";
+  return `${first} ${lastInitial}.`;
+}
+</file>
+
+<file path="src/components/reviews/CustomerRatingSection.jsx">
+// src/components/reviews/CustomerRatingSection.jsx
 import { useEffect, useState } from "react";
-import SectionTitle from "../common/SectionTitle";
-import { db } from "../../firebase";
+import AllReviewsModal from "./AllReviewsModal";
+import { fetchLatestReviews } from "./reviewsApi";
+
+export default function CustomerRatingSection({
+  db,
+  barberId,
+  title = "التقييمات",
+  classes,
+  previewCount = 3,
+}) {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [openAll, setOpenAll] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+
+    (async () => {
+      if (!barberId) {
+        setItems([]);
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const res = await fetchLatestReviews({
+          db,
+          barberId,
+          pageSize: previewCount,
+        });
+
+        if (!alive) return;
+        setItems(res.items);
+      } finally {
+        if (alive) setLoading(false);
+      }
+    })();
+
+    return () => {
+      alive = false;
+    };
+  }, [db, barberId, previewCount]);
+
+  return (
+    <div className={classes.sectionWrap}>
+      <div className={classes.sectionTitle}>{title}</div>
+
+      {loading ? (
+        <div className={classes.loading}>جارٍ التحميل...</div>
+      ) : items.length === 0 ? (
+        <div className={classes.emptyState}>لا يوجد تقييمات بعد</div>
+      ) : (
+        <>
+          <div className={classes.list}>
+            {items.map((r) => (
+              <PreviewReviewCard key={r.id} r={r} classes={classes} />
+            ))}
+          </div>
+
+          <div className={classes.viewAllRow}>
+            <button
+              className={classes.viewAllBtn}
+              onClick={() => setOpenAll(true)}
+            >
+              عرض كل التقييمات
+            </button>
+          </div>
+        </>
+      )}
+
+      <AllReviewsModal
+        open={openAll}
+        onClose={() => setOpenAll(false)}
+        db={db}
+        barberId={barberId}
+        classes={classes}
+        title="كل التقييمات"
+      />
+    </div>
+  );
+}
+
+function PreviewReviewCard({ r, classes }) {
+  const [expanded, setExpanded] = useState(false);
+
+  const name = prettyName(r.userName);
+  const stars = clampStars(r.rating);
+
+  return (
+    <div className={classes.reviewCard}>
+      <div className={classes.reviewTopRow}>
+        <div className={classes.starsRow}>
+          <Stars value={stars} classes={classes} />
+        </div>
+
+        {/* ✅ اسم الزبون */}
+        <div className={classes.userName}>{name}</div>
+      </div>
+
+      {!!r.comment && (
+        <div className={classes.commentWrap}>
+          <div
+            className={expanded ? classes.commentFull : classes.commentClamp}
+          >
+            {r.comment}
+          </div>
+
+          {String(r.comment).length > 140 && (
+            <button
+              className={classes.moreBtn}
+              onClick={() => setExpanded((p) => !p)}
+            >
+              {expanded ? "إخفاء" : "عرض المزيد"}
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Stars({ value, classes }) {
+  const v = clampStars(value);
+  return (
+    <div className={classes.starsInner}>
+      {Array.from({ length: 5 }).map((_, i) => (
+        <span key={i} className={i < v ? classes.starOn : classes.starOff}>
+          ★
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function clampStars(x) {
+  const n = Number(x || 0);
+  if (Number.isNaN(n)) return 0;
+  return Math.max(0, Math.min(5, Math.round(n)));
+}
+
+function prettyName(name) {
+  const s = String(name || "").trim();
+  if (!s) return "زبون";
+  const parts = s.split(/\s+/).filter(Boolean);
+  if (parts.length <= 1) return parts[0];
+  const first = parts[0];
+  const lastInitial = parts[parts.length - 1][0] || "";
+  return `${first} ${lastInitial}.`;
+}
+</file>
+
+<file path="src/components/reviews/reviewsApi.js">
+// src/components/reviews/reviewsApi.js
 import {
   collection,
-  doc,
-  getDoc,
   getDocs,
   limit,
   orderBy,
   query,
-  runTransaction,
-  serverTimestamp,
+  startAfter,
+  where,
 } from "firebase/firestore";
-import { Star, MessageSquare, TrendingUp } from "lucide-react";
-import {
-  toILPhoneE164,
-  isILPhoneE164,
-  normalizeDigits,
-} from "../../utils/phone";
 
-/* ================== CONFIG ================== */
-const BARBER_ID = "arfat";
-const DEV_DISABLE_REVIEW_GUARDS = true;
+/**
+ * حاولنا نخلي أسماء الحقول مرنة (لأنه مرات المشاريع بتختلف):
+ * - barberId
+ * - rating
+ * - comment / text / message
+ * - createdAt
+ * - userName / customerName / displayName
+ */
 
-/* ================== HELPERS ================== */
-function clamp(n, a, b) {
-  return Math.max(a, Math.min(b, n));
+function normalizeReview(docSnap) {
+  const d = docSnap.data() || {};
+  return {
+    id: docSnap.id,
+    barberId: d.barberId,
+    rating: Number(d.rating ?? d.stars ?? 0),
+    comment: d.comment ?? d.text ?? d.message ?? "",
+    createdAt: d.createdAt ?? d.timestamp ?? null,
+    userName: d.userName ?? d.customerName ?? d.displayName ?? d.name ?? "",
+    userId: d.userId ?? d.customerId ?? null,
+    visible: d.visible ?? true,
+    raw: d,
+  };
 }
 
-/* ================== STARS ================== */
-function StarRow({ value, onChange, readonly = false, size = 22 }) {
-  const v = clamp(Number(value || 0), 0, 5);
-  return (
-    <div className="flex flex-row-reverse items-center gap-1">
-      {[1, 2, 3, 4, 5].map((i) => {
-        const active = i <= v;
-        return (
-          <button
-            key={i}
-            type="button"
-            disabled={readonly}
-            onClick={() => !readonly && onChange?.(i)}
-            className={`p-1 rounded-lg ${
-              readonly ? "cursor-default" : "hover:bg-gold/10"
-            }`}
-          >
-            <Star
-              style={{ width: size, height: size }}
-              className={active ? "text-gold" : "text-gray-300"}
-              fill={active ? "currentColor" : "none"}
-            />
-          </button>
-        );
-      })}
-    </div>
-  );
+export async function fetchLatestReviews({
+  db,
+  barberId,
+  pageSize = 3,
+  includeHidden = false,
+}) {
+  if (!barberId) return { items: [], lastDoc: null };
+
+  // لو عندك فلترة visible بالمشروع، خليك consistent بين الزبون والحلاق
+  const base = [
+    collection(db, "reviews"),
+    where("barberId", "==", barberId),
+    orderBy("createdAt", "desc"),
+    limit(pageSize),
+  ];
+
+  // ما بنحط where("visible"==true) افتراضيًا عشان ما “يختفي” اشي عند طرف ويظهر عند طرف
+  // انت إذا بدك تفعّلها، فعّلها بالطرفين معًا.
+  const q = query(...base);
+
+  const snap = await getDocs(q);
+  const docs = snap.docs;
+  const items = docs
+    .map(normalizeReview)
+    .filter((r) => (includeHidden ? true : r.visible !== false));
+
+  return { items, lastDoc: docs.length ? docs[docs.length - 1] : null };
 }
 
-/* ================== TAGS ================== */
-const TAGS = [
-  { k: "clean", label: "نظافة" },
-  { k: "on_time", label: "دقة بالمواعيد" },
-  { k: "pro", label: "احتراف" },
-  { k: "speed", label: "سرعة" },
-  { k: "price", label: "سعر مناسب" },
-  { k: "respect", label: "تعامل محترم" },
-  { k: "hair_quality", label: "جودة قص الشعر" },
-  { k: "vibe", label: "جو المكان" },
-];
+export async function fetchReviewsPage({
+  db,
+  barberId,
+  pageSize = 10,
+  afterDoc = null,
+  includeHidden = false,
+}) {
+  if (!barberId) return { items: [], lastDoc: null };
 
-/* ================== REVIEW CARD ================== */
-function ReviewCard({ r }) {
-  const rating = Number(r.rating || 0);
-  const comment = r.comment || "";
-  const tags = Array.isArray(r.tags) ? r.tags : [];
+  const parts = [
+    collection(db, "reviews"),
+    where("barberId", "==", barberId),
+    orderBy("createdAt", "desc"),
+    limit(pageSize),
+  ];
 
-  // ✅ اسم الزبون (للجديد) + fallback للقديم
-  const name = String(
-    r.customerName || r.userName || r.displayName || "",
-  ).trim();
+  const q = afterDoc ? query(...parts, startAfter(afterDoc)) : query(...parts);
 
-  const tagLabel = (k) => TAGS.find((t) => t.k === k)?.label || k;
+  const snap = await getDocs(q);
+  const docs = snap.docs;
 
-  return (
-    <div className="rounded-2xl border bg-white p-4 shadow-sm">
-      <div className="flex flex-row-reverse justify-between">
-        {/* ✅ بدل "زبون" */}
-        <div className="text-right font-bold">{name || "زبون"}</div>
-        <StarRow value={rating} readonly size={18} />
-      </div>
+  const items = docs
+    .map(normalizeReview)
+    .filter((r) => (includeHidden ? true : r.visible !== false));
 
-      {tags.length > 0 && (
-        <div className="mt-3 flex flex-row-reverse flex-wrap gap-2">
-          {tags.map((k) => (
-            <span
-              key={k}
-              className="text-xs px-2 py-1 rounded-full bg-[#f6f2ea] border border-gold/20"
-            >
-              {tagLabel(k)}
-            </span>
-          ))}
-        </div>
-      )}
-
-      <p className="mt-3 text-sm text-right text-gray-700">
-        {comment || "(بدون تعليق)"}
-      </p>
-    </div>
-  );
-}
-
-/* ================== MAIN ================== */
-export default function BarberRatingSection() {
-  const [loading, setLoading] = useState(true);
-  const [summary, setSummary] = useState({
-    count: 0,
-    sum: 0,
-    byStar: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
-  });
-  const [latest, setLatest] = useState([]);
-
-  const [open, setOpen] = useState(false);
-
-  // ✅ جديد: اسم الزبون
-  const [customerName, setCustomerName] = useState("");
-
-  const [phone, setPhone] = useState("");
-  const [rating, setRating] = useState(5);
-  const [tags, setTags] = useState([]);
-  const [comment, setComment] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-
-  const count = Number(summary.count || 0);
-  const avg = count > 0 ? summary.sum / count : 0;
-
-  const summaryRef = doc(db, "barbers", BARBER_ID, "meta", "reviewsSummary");
-  const reviewsCol = collection(db, "barbers", BARBER_ID, "reviews");
-
-  /* ================== FETCH ================== */
-  useEffect(() => {
-    (async () => {
-      setLoading(true);
-      const ss = await getDoc(summaryRef);
-      if (ss.exists()) setSummary(ss.data());
-
-      const q = query(reviewsCol, orderBy("createdAt", "desc"), limit(3));
-      const snap = await getDocs(q);
-      setLatest(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-      setLoading(false);
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  /* ================== SUBMIT ================== */
-  async function submitReview() {
-    // ✅ اسم ورقم مطلوبين
-    const nameTrimmed = customerName.trim();
-    if (!nameTrimmed) return;
-
-    const phoneKey =
-      toILPhoneE164(phone) && isILPhoneE164(toILPhoneE164(phone))
-        ? toILPhoneE164(phone)
-        : normalizeDigits(phone);
-
-    if (!phoneKey) return;
-
-    setSubmitting(true);
-
-    await runTransaction(db, async (tx) => {
-      const sSnap = await tx.get(summaryRef);
-      const cur = sSnap.exists()
-        ? sSnap.data()
-        : { count: 0, sum: 0, byStar: {} };
-
-      const reviewRef = doc(reviewsCol);
-
-      tx.set(reviewRef, {
-        rating,
-        tags,
-        comment,
-        status: "active",
-        createdAt: serverTimestamp(),
-
-        // ✅ جديد: اسم الزبون
-        customerName: nameTrimmed,
-
-        // (اختياري) تخزين المفتاح لتسهيل الإدارة لاحقًا
-        phoneKey,
-      });
-
-      tx.set(
-        summaryRef,
-        {
-          count: cur.count + 1,
-          sum: cur.sum + rating,
-          byStar: {
-            ...cur.byStar,
-            [rating]: (cur.byStar?.[rating] || 0) + 1,
-          },
-        },
-        { merge: true },
-      );
-    });
-
-    // ✅ Reset
-    setOpen(false);
-    setCustomerName("");
-    setPhone("");
-    setComment("");
-    setTags([]);
-    setRating(5);
-    setSubmitting(false);
-
-    // ✅ Refresh latest (حتى يظهر الاسم فورًا)
-    const q = query(reviewsCol, orderBy("createdAt", "desc"), limit(3));
-    const snap = await getDocs(q);
-    setLatest(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-
-    const ss = await getDoc(summaryRef);
-    if (ss.exists()) setSummary(ss.data());
-  }
-
-  /* ================== UI ================== */
-  return (
-    <section
-      id="ratings"
-      dir="rtl"
-      className="relative bg-white px-4 py-20 font-body overflow-hidden"
-    >
-      {/* ديكور خفيف جداً (شكل فقط) */}
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-20 right-10 w-64 h-64 rounded-full bg-gold/10 blur-3xl" />
-      </div>
-
-      <SectionTitle
-        icon={
-          <div className="w-10 h-10 rounded-full bg-gold/15 flex items-center justify-center">
-            <TrendingUp className="w-6 h-6 text-gold" />
-          </div>
-        }
-      >
-        تقييمات وتجربة الزبائن
-      </SectionTitle>
-
-      <div className="max-w-3xl mx-auto mt-6 bg-[#fcfaf7] p-6 rounded-3xl shadow-lg border border-gold/10 ring-1 ring-black/5 transition-transform duration-300 hover:-translate-y-1">
-        <div className="text-right">
-          <div className="text-4xl font-black">
-            {count ? avg.toFixed(1) : "—"}
-          </div>
-          <StarRow value={Math.round(avg)} readonly />
-          <div className="text-sm text-gray-600">{count} تقييم</div>
-        </div>
-
-        <div className="mt-6">
-          <div className="flex justify-between items-center">
-            <div className="font-bold">آخر الآراء</div>
-            <button
-              onClick={() => setOpen(!open)}
-              className="bg-gold px-4 py-2 rounded-xl font-bold"
-            >
-              <MessageSquare className="inline w-4 h-4 ml-1" />
-              اكتب تقييم
-            </button>
-          </div>
-
-          {loading ? (
-            <div className="mt-4 text-gray-500">جارٍ التحميل…</div>
-          ) : (
-            <div className="mt-4 grid gap-3 md:grid-cols-3">
-              {latest.map((r) => (
-                <ReviewCard key={r.id} r={r} />
-              ))}
-            </div>
-          )}
-        </div>
-
-        {open && (
-          <div className="mt-6 border-t pt-6">
-            {/* ✅ جديد: اسم الزبون (نفس ستايل رقم الهاتف) */}
-            <input
-              className="w-full border rounded-xl px-4 py-2 mb-3"
-              placeholder="اسمك"
-              value={customerName}
-              onChange={(e) => setCustomerName(e.target.value)}
-            />
-
-            <input
-              className="w-full border rounded-xl px-4 py-2 mb-3"
-              placeholder="رقم الهاتف"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-            />
-
-            <StarRow value={rating} onChange={setRating} />
-
-            <textarea
-              className="w-full border rounded-xl px-4 py-2 mt-3"
-              placeholder="تعليق (اختياري)"
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
-            />
-
-            <button
-              onClick={submitReview}
-              disabled={submitting}
-              className="mt-4 w-full bg-primary text-white py-3 rounded-xl font-bold"
-            >
-              إرسال التقييم
-            </button>
-          </div>
-        )}
-      </div>
-    </section>
-  );
+  return { items, lastDoc: docs.length ? docs[docs.length - 1] : null };
 }
 </file>
 
@@ -7107,10 +5892,629 @@ export default function useSlotExtrasLive({
 
 </file>
 
-<file path="src/pages/barberPanel/ReviewsManagerPage.jsx">
-// src/pages/barberPanel/ReviewsManagerPage.jsx
+<file path="src/pages/barberPanel/reviews/ArchivedPanel.jsx">
+// src/pages/barberPanel/reviews/ArchivedPanel.jsx
+function starsLabel(n) {
+  const v = Math.max(0, Math.min(5, Number(n || 0)));
+  return "★".repeat(v) + "☆".repeat(5 - v);
+}
+
+export default function ArchivedPanel({
+  items,
+  loading,
+  onRestore,
+  onDeleteForever,
+}) {
+  if (loading && (!items || items.length === 0)) {
+    return (
+      <div className="bg-white border border-gray-200 rounded-2xl p-6 text-center shadow-sm">
+        جارٍ تحميل الأرشيف...
+      </div>
+    );
+  }
+
+  if (!items || items.length === 0) {
+    return (
+      <div className="bg-white border border-gray-200 rounded-2xl p-6 text-center shadow-sm text-gray-600">
+        لا يوجد تقييمات مؤرشفة.
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {items.map((r) => (
+        <div
+          key={r.id}
+          className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="text-right">
+              <div className="font-extrabold text-gray-900">
+                {r.customerName || r.userName || r.displayName || "زبون"}
+              </div>
+              <div className="text-xs text-gray-500 mt-0.5">
+                {r.phoneKey ? `رقم: ${r.phoneKey}` : "بدون رقم"}
+              </div>
+            </div>
+
+            <div className="text-right">
+              <div className="text-lg font-black text-gray-900">
+                {starsLabel(r.rating ?? r.stars ?? 0)}
+              </div>
+              <div className="text-xs text-gray-500">مؤرشف</div>
+            </div>
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-2 justify-end">
+            <button
+              onClick={() => onRestore(r.id)}
+              className="px-3 py-2 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 font-extrabold text-sm"
+            >
+              استرجاع
+            </button>
+
+            <button
+              onClick={() => onDeleteForever(r.id)}
+              className="px-3 py-2 rounded-xl border border-rose-200 bg-rose-50 text-rose-800 hover:bg-rose-100 font-extrabold text-sm"
+            >
+              حذف نهائي
+            </button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+</file>
+
+<file path="src/pages/barberPanel/reviews/BlockedPhonesPanel.jsx">
+// src/pages/barberPanel/reviews/BlockedPhonesPanel.jsx
+export default function BlockedPhonesPanel({ blocked, loading, onUnblock }) {
+  if (loading && (!blocked || blocked.length === 0)) {
+    return (
+      <div className="bg-white border border-gray-200 rounded-2xl p-6 text-center shadow-sm">
+        جارٍ تحميل الأرقام...
+      </div>
+    );
+  }
+
+  if (!blocked || blocked.length === 0) {
+    return (
+      <div className="bg-white border border-gray-200 rounded-2xl p-6 text-center shadow-sm text-gray-600">
+        لا يوجد أرقام محظورة.
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm">
+      <div className="text-right font-extrabold text-gray-900 mb-3">
+        قائمة الأرقام المحظورة
+      </div>
+
+      <div className="divide-y">
+        {blocked.map((b) => (
+          <div
+            key={b.id}
+            className="py-3 flex items-center justify-between gap-3"
+          >
+            <div className="text-right">
+              <div className="font-black text-gray-900">
+                {b.phoneKey || b.id}
+              </div>
+              <div className="text-xs text-gray-500">
+                {b.from ? `المصدر: ${b.from}` : ""}{" "}
+                {b.fromBarberId ? ` • ${b.fromBarberId}` : ""}
+              </div>
+            </div>
+
+            <button
+              onClick={() => onUnblock(b.phoneKey || b.id)}
+              className="px-3 py-2 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 font-extrabold text-sm"
+            >
+              إلغاء الحظر
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+</file>
+
+<file path="src/pages/barberPanel/reviews/FiltersBar.jsx">
+// src/pages/barberPanel/reviews/FiltersBar.jsx
+export default function FiltersBar({
+  qText,
+  setQText,
+  stars,
+  setStars,
+  sortBy,
+  setSortBy,
+  onRefresh,
+  loading,
+}) {
+  return (
+    <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <input
+          value={qText}
+          onChange={(e) => setQText(e.target.value)}
+          placeholder="بحث بالاسم / الرقم / النص..."
+          className="w-full rounded-xl border border-gray-300 px-3 py-2 text-right focus:ring-2 focus:ring-gold bg-white"
+        />
+
+        <select
+          value={stars}
+          onChange={(e) => setStars(e.target.value)}
+          className="w-full rounded-xl border border-gray-300 px-3 py-2 text-right bg-white"
+        >
+          <option value="all">كل النجوم</option>
+          <option value="5">5 نجوم</option>
+          <option value="4">4 نجوم</option>
+          <option value="3">3 نجوم</option>
+          <option value="2">2 نجوم</option>
+          <option value="1">1 نجمة</option>
+        </select>
+
+        <select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value)}
+          className="w-full rounded-xl border border-gray-300 px-3 py-2 text-right bg-white"
+        >
+          <option value="newest">الأحدث</option>
+          <option value="highest">الأعلى تقييمًا</option>
+          <option value="lowest">الأقل تقييمًا</option>
+        </select>
+
+        <button
+          onClick={onRefresh}
+          disabled={loading}
+          className={`rounded-xl px-4 py-2 font-extrabold border transition
+            ${loading ? "opacity-60 cursor-not-allowed" : "hover:bg-gray-50"}
+            bg-white border-gray-200`}
+        >
+          {loading ? "جارٍ التحديث..." : "تحديث"}
+        </button>
+      </div>
+    </div>
+  );
+}
+</file>
+
+<file path="src/pages/barberPanel/reviews/ReviewCard.jsx">
+// src/pages/barberPanel/reviews/ReviewCard.jsx
+function starsLabel(n) {
+  const v = Math.max(0, Math.min(5, Number(n || 0)));
+  return "★".repeat(v) + "☆".repeat(5 - v);
+}
+
+function prettyName(name) {
+  const s = String(name || "").trim();
+  if (!s) return "زبون";
+  const parts = s.split(/\s+/).filter(Boolean);
+  if (parts.length <= 1) return parts[0];
+  const first = parts[0];
+  const lastInitial = parts[parts.length - 1][0] || "";
+  return `${first} ${lastInitial}.`;
+}
+
+export default function ReviewCard({
+  r,
+  isBlocked,
+  onArchive,
+  onBlock,
+  onUnblock,
+}) {
+  const id = r.id;
+  const name = prettyName(r.customerName || r.userName || r.displayName);
+  const phoneKey = r.phoneKey || r.phone || r.phoneNumber || "";
+  const rating = Number(r.rating ?? r.stars ?? 0);
+  const msg = (r.message || r.text || r.comment || "").trim();
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div className="text-right">
+          <div className="font-extrabold text-gray-900">{name}</div>
+          <div className="text-xs text-gray-500 mt-0.5">
+            {phoneKey ? `رقم: ${phoneKey}` : "بدون رقم"}
+          </div>
+        </div>
+
+        <div className="text-right">
+          <div className="text-lg font-black text-gray-900">
+            {starsLabel(rating)}
+          </div>
+          <div className="text-xs text-gray-500">({rating || 0}/5)</div>
+        </div>
+      </div>
+
+      {msg ? (
+        <div className="mt-3 text-sm text-gray-800 bg-gray-50 border border-gray-200 rounded-xl p-3 text-right">
+          {msg}
+        </div>
+      ) : (
+        <div className="mt-3 text-sm text-gray-400 text-right">بدون تعليق</div>
+      )}
+
+      <div className="mt-4 flex flex-wrap gap-2 justify-end">
+        <button
+          onClick={() => onArchive(id)}
+          className="px-3 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 font-extrabold text-sm"
+        >
+          أرشفة
+        </button>
+
+        {phoneKey ? (
+          isBlocked ? (
+            <button
+              onClick={() => onUnblock(phoneKey)}
+              className="px-3 py-2 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 font-extrabold text-sm"
+            >
+              إلغاء الحظر
+            </button>
+          ) : (
+            <button
+              onClick={() => onBlock(phoneKey, id)}
+              className="px-3 py-2 rounded-xl border border-rose-200 bg-rose-50 text-rose-800 hover:bg-rose-100 font-extrabold text-sm"
+            >
+              حظر الرقم
+            </button>
+          )
+        ) : null}
+      </div>
+    </div>
+  );
+}
+</file>
+
+<file path="src/pages/barberPanel/reviews/ReviewsList.jsx">
+// src/pages/barberPanel/reviews/ReviewsList.jsx
+import ReviewCard from "./ReviewCard";
+
+export default function ReviewsList({
+  items,
+  loading,
+  hasMore,
+  onLoadMore,
+  blockedSet,
+  onArchive,
+  onBlock,
+  onUnblock,
+}) {
+  if (loading && (!items || items.length === 0)) {
+    return (
+      <div className="bg-white border border-gray-200 rounded-2xl p-6 text-center shadow-sm">
+        جارٍ تحميل التقييمات...
+      </div>
+    );
+  }
+
+  if (!items || items.length === 0) {
+    return (
+      <div className="bg-white border border-gray-200 rounded-2xl p-6 text-center shadow-sm text-gray-600">
+        لا يوجد تقييمات مطابقة.
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {items.map((r) => (
+        <ReviewCard
+          key={r.id}
+          r={r}
+          isBlocked={blockedSet?.has(String(r.phoneKey || ""))}
+          onArchive={onArchive}
+          onBlock={onBlock}
+          onUnblock={onUnblock}
+        />
+      ))}
+
+      <div className="pt-2">
+        {hasMore ? (
+          <button
+            onClick={onLoadMore}
+            disabled={loading}
+            className={`w-full rounded-2xl px-4 py-3 font-extrabold border transition
+              ${loading ? "opacity-60 cursor-not-allowed" : "hover:bg-gray-50"}
+              bg-white border-gray-200`}
+          >
+            {loading ? "جارٍ التحميل..." : "تحميل المزيد"}
+          </button>
+        ) : (
+          <div className="text-center text-xs text-gray-500">
+            وصلت للنهاية ✅
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+</file>
+
+<file path="src/pages/barberPanel/reviews/ReviewsManagerPage.jsx">
+// src/pages/barberPanel/reviews/ReviewsManagerPage.jsx
+import TabsBar from "./TabsBar";
+import SummaryCards from "./SummaryCards";
+import FiltersBar from "./FiltersBar";
+import ReviewsList from "./ReviewsList";
+import BlockedPhonesPanel from "./BlockedPhonesPanel";
+import ArchivedPanel from "./ArchivedPanel";
+import UndoToast from "./UndoToast";
+
+import { useMemo } from "react";
+import { useReviewsManager } from "./useReviewsManager";
+
+export default function ReviewsManagerPage() {
+  const {
+    tab,
+    setTab,
+
+    // data
+    filteredReviews,
+    archived,
+    blocked,
+    summary,
+    count,
+    avg,
+
+    // loading
+    loadingReviews,
+    loadingArchived,
+    loadingBlocked,
+    loadingSummary,
+
+    // pagination
+    hasMore,
+
+    // filters
+    qText,
+    setQText,
+    stars,
+    setStars,
+    sortBy,
+    setSortBy,
+
+    // actions
+    fetchReviews,
+    fetchArchived,
+    fetchBlocked,
+    fetchSummary,
+    archiveReview,
+    restoreReview,
+    deleteArchivedPermanently,
+    blockPhoneEverywhere,
+    unblockPhoneEverywhere,
+
+    // undo
+    undo,
+    setUndo,
+    undoArchive,
+  } = useReviewsManager();
+
+  const counts = useMemo(
+    () => ({
+      reviews: filteredReviews?.length || 0,
+      blocked: blocked?.length || 0,
+      archived: archived?.length || 0,
+    }),
+    [filteredReviews, blocked, archived],
+  );
+
+  const blockedSet = useMemo(() => {
+    const s = new Set();
+    (blocked || []).forEach((b) => {
+      const key = String(b.phoneKey || b.id || "");
+      if (key) s.add(key);
+    });
+    return s;
+  }, [blocked]);
+
+  const onRefresh = async () => {
+    // تحديث شامل مرتب
+    await Promise.all([
+      fetchReviews({ reset: true }),
+      fetchBlocked(),
+      fetchArchived(),
+      fetchSummary(),
+    ]);
+  };
+
+  return (
+    <div className="w-full max-w-4xl mx-auto p-4">
+      {/* Header */}
+      <div className="mb-4">
+        <div className="text-right">
+          <div className="text-2xl font-black text-gray-900">
+            إدارة التقييمات
+          </div>
+          <div className="text-sm text-gray-500 mt-1">
+            أرشف تقييمات، احظر/فك حظر أرقام، وراجع الأرشيف — بشكل منظم وواضح.
+          </div>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="mb-3">
+        <TabsBar tab={tab} setTab={setTab} counts={counts} />
+      </div>
+
+      {/* Summary (بس بالتقييمات) */}
+      {tab === "reviews" ? (
+        <div className="mb-3">
+          <SummaryCards count={count} avg={avg} byStar={summary?.byStar} />
+        </div>
+      ) : null}
+
+      {/* Content */}
+      {tab === "reviews" ? (
+        <>
+          <div className="mb-3">
+            <FiltersBar
+              qText={qText}
+              setQText={setQText}
+              stars={stars}
+              setStars={setStars}
+              sortBy={sortBy}
+              setSortBy={setSortBy}
+              onRefresh={onRefresh}
+              loading={
+                loadingReviews ||
+                loadingBlocked ||
+                loadingArchived ||
+                loadingSummary
+              }
+            />
+          </div>
+
+          <ReviewsList
+            items={filteredReviews}
+            loading={loadingReviews}
+            hasMore={hasMore}
+            onLoadMore={() => fetchReviews({ reset: false })}
+            blockedSet={blockedSet}
+            onArchive={archiveReview}
+            onBlock={blockPhoneEverywhere}
+            onUnblock={unblockPhoneEverywhere}
+          />
+        </>
+      ) : null}
+
+      {tab === "blocked" ? (
+        <BlockedPhonesPanel
+          blocked={blocked}
+          loading={loadingBlocked}
+          onUnblock={unblockPhoneEverywhere}
+        />
+      ) : null}
+
+      {tab === "archived" ? (
+        <ArchivedPanel
+          items={archived}
+          loading={loadingArchived}
+          onRestore={restoreReview}
+          onDeleteForever={deleteArchivedPermanently}
+        />
+      ) : null}
+
+      {/* Undo Toast */}
+      <UndoToast
+        undo={undo}
+        onUndo={undoArchive}
+        onClose={() => setUndo(null)}
+      />
+    </div>
+  );
+}
+</file>
+
+<file path="src/pages/barberPanel/reviews/SummaryCards.jsx">
+// src/pages/barberPanel/reviews/SummaryCards.jsx
+function StatCard({ title, value, hint }) {
+  return (
+    <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm">
+      <div className="text-xs text-gray-500 font-bold">{title}</div>
+      <div className="mt-1 text-2xl font-black text-gray-900">{value}</div>
+      {hint ? <div className="mt-1 text-xs text-gray-500">{hint}</div> : null}
+    </div>
+  );
+}
+
+export default function SummaryCards({ count, avg, byStar }) {
+  const avgFixed = Number.isFinite(avg) ? avg.toFixed(2) : "0.00";
+  const five = Number(byStar?.[5] || 0);
+  const four = Number(byStar?.[4] || 0);
+  const three = Number(byStar?.[3] || 0);
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+      <StatCard
+        title="عدد التقييمات"
+        value={count}
+        hint="التقييمات النشطة فقط"
+      />
+      <StatCard title="المتوسط" value={avgFixed} hint="حسب التقييمات النشطة" />
+      <StatCard title="5 نجوم" value={five} />
+      <StatCard title="4–3 نجوم" value={four + three} />
+    </div>
+  );
+}
+</file>
+
+<file path="src/pages/barberPanel/reviews/TabsBar.jsx">
+// src/pages/barberPanel/reviews/TabsBar.jsx
+export default function TabsBar({ tab, setTab, counts }) {
+  const items = [
+    { key: "reviews", label: "التقييمات", count: counts?.reviews ?? 0 },
+    { key: "blocked", label: "الأرقام المحظورة", count: counts?.blocked ?? 0 },
+    { key: "archived", label: "الأرشيف", count: counts?.archived ?? 0 },
+  ];
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-2xl p-2 shadow-sm flex gap-2 justify-between">
+      {items.map((it) => {
+        const active = tab === it.key;
+        return (
+          <button
+            key={it.key}
+            onClick={() => setTab(it.key)}
+            className={`flex-1 rounded-xl px-3 py-2 text-sm font-extrabold transition flex items-center justify-center gap-2
+              ${active ? "bg-gold text-primary" : "bg-transparent hover:bg-gray-50 text-gray-800"}`}
+          >
+            <span>{it.label}</span>
+            <span
+              className={`text-xs px-2 py-0.5 rounded-full border
+              ${active ? "border-white/50 bg-white/20 text-primary" : "border-gray-200 bg-gray-50 text-gray-700"}`}
+            >
+              {it.count}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+</file>
+
+<file path="src/pages/barberPanel/reviews/UndoToast.jsx">
+// src/pages/barberPanel/reviews/UndoToast.jsx
+export default function UndoToast({ undo, onUndo, onClose }) {
+  if (!undo) return null;
+
+  return (
+    <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-[9999]">
+      <div className="bg-gray-900 text-white rounded-2xl px-4 py-3 shadow-lg flex items-center gap-3">
+        <div className="text-sm">
+          تم أرشفة تقييم {undo.name ? `(${undo.name})` : ""}.
+        </div>
+
+        <button
+          className="px-3 py-1.5 rounded-xl bg-white/10 border border-white/20 hover:bg-white/20 font-black text-sm"
+          onClick={onUndo}
+        >
+          تراجع
+        </button>
+
+        <button
+          className="px-3 py-1.5 rounded-xl bg-white/0 hover:bg-white/10 font-black text-sm"
+          onClick={onClose}
+          aria-label="Close"
+        >
+          ✕
+        </button>
+      </div>
+    </div>
+  );
+}
+</file>
+
+<file path="src/pages/barberPanel/reviews/useReviewsManager.js">
+// src/pages/barberPanel/reviews/useReviewsManager.js
 import { useEffect, useMemo, useRef, useState } from "react";
-import { db } from "../../firebase";
+import { db } from "../../../firebase";
 import {
   collection,
   deleteDoc,
@@ -7127,18 +6531,13 @@ import {
 } from "firebase/firestore";
 
 const BARBER_ID = "arfat";
-const ARCHIVE_KEEP_DAYS = 14; // ✅ مدة بقاء التقييم بعد "حذفه" (مثل الأدوار الملغاة)
-const UNDO_MS = 7000; // ✅ مدة التراجع بعد الحذف المؤقت
+const ARCHIVE_KEEP_DAYS = 14;
+const UNDO_MS = 7000;
 
-function addDaysTimestamp(days) {
+function addDaysDate(days) {
   const d = new Date();
   d.setDate(d.getDate() + days);
   return d;
-}
-
-function starsLabel(n) {
-  const v = Math.max(0, Math.min(5, Number(n || 0)));
-  return "★".repeat(v) + "☆".repeat(5 - v);
 }
 
 function safeLower(v) {
@@ -7155,10 +6554,59 @@ function prettyName(name) {
   return `${first} ${lastInitial}.`;
 }
 
-export default function ReviewsManagerPage() {
+function safeSummary(data) {
+  return (
+    data || {
+      count: 0,
+      sum: 0,
+      byStar: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+      tagCounts: {},
+    }
+  );
+}
+
+function decSummary(cur, rating, tags = []) {
+  const r = Number(rating || 0);
+  const next = {
+    ...cur,
+    count: Math.max(0, Number(cur.count || 0) - 1),
+    sum: Math.max(0, Number(cur.sum || 0) - r),
+    byStar: { ...(cur.byStar || { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }) },
+    tagCounts: { ...(cur.tagCounts || {}) },
+  };
+  if (r >= 1 && r <= 5)
+    next.byStar[r] = Math.max(0, Number(next.byStar[r] || 0) - 1);
+
+  (Array.isArray(tags) ? tags : []).forEach((k) => {
+    next.tagCounts[k] = Math.max(0, Number(next.tagCounts[k] || 0) - 1);
+    if (next.tagCounts[k] === 0) delete next.tagCounts[k];
+  });
+
+  return next;
+}
+
+function incSummary(cur, rating, tags = []) {
+  const r = Number(rating || 0);
+  const next = {
+    ...cur,
+    count: Number(cur.count || 0) + 1,
+    sum: Number(cur.sum || 0) + r,
+    byStar: { ...(cur.byStar || { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }) },
+    tagCounts: { ...(cur.tagCounts || {}) },
+  };
+  if (r >= 1 && r <= 5) next.byStar[r] = Number(next.byStar[r] || 0) + 1;
+
+  (Array.isArray(tags) ? tags : []).forEach((k) => {
+    next.tagCounts[k] = Number(next.tagCounts[k] || 0) + 1;
+  });
+
+  return next;
+}
+
+export function useReviewsManager() {
   const [tab, setTab] = useState("reviews"); // reviews | blocked | archived
 
-  // Reviews (active)
+  // Active reviews
   const [reviews, setReviews] = useState([]);
   const [loadingReviews, setLoadingReviews] = useState(false);
   const [lastDoc, setLastDoc] = useState(null);
@@ -7168,16 +6616,16 @@ export default function ReviewsManagerPage() {
   const [archived, setArchived] = useState([]);
   const [loadingArchived, setLoadingArchived] = useState(false);
 
-  // Search/filter/sort
-  const [qText, setQText] = useState("");
-  const [stars, setStars] = useState("all");
-  const [sortBy, setSortBy] = useState("newest"); // newest | highest | lowest
-
   // Blocked
   const [blocked, setBlocked] = useState([]);
   const [loadingBlocked, setLoadingBlocked] = useState(false);
 
-  // Summary (stats)
+  // Filters / sort
+  const [qText, setQText] = useState("");
+  const [stars, setStars] = useState("all");
+  const [sortBy, setSortBy] = useState("newest"); // newest | highest | lowest
+
+  // Summary
   const [summary, setSummary] = useState({
     count: 0,
     sum: 0,
@@ -7186,7 +6634,7 @@ export default function ReviewsManagerPage() {
   });
   const [loadingSummary, setLoadingSummary] = useState(false);
 
-  // Undo toast for archive
+  // Undo toast
   const [undo, setUndo] = useState(null); // { id, name }
   const undoTimerRef = useRef(null);
 
@@ -7209,7 +6657,6 @@ export default function ReviewsManagerPage() {
     }
   };
 
-  // ===== Fetch ACTIVE Reviews =====
   const fetchReviews = async ({ reset = false } = {}) => {
     if (loadingReviews) return;
     setLoadingReviews(true);
@@ -7229,7 +6676,7 @@ export default function ReviewsManagerPage() {
       const snap = await getDocs(qBase);
       const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 
-      // ✅ فقط active
+      // active فقط
       const onlyActive = docs.filter(
         (r) => (r.status || "active") === "active",
       );
@@ -7237,7 +6684,7 @@ export default function ReviewsManagerPage() {
       if (reset) setReviews(onlyActive);
       else setReviews((p) => [...p, ...onlyActive]);
 
-      setLastDoc(snap.docs[snap.docs.length - 1] || null);
+      setLastDoc(snap.docs.length ? snap.docs[snap.docs.length - 1] : null);
       setHasMore(snap.docs.length === 50);
     } catch (e) {
       console.error("fetchReviews error:", e);
@@ -7246,7 +6693,6 @@ export default function ReviewsManagerPage() {
     }
   };
 
-  // ===== Fetch Blocked (barber-scoped) =====
   const fetchBlocked = async () => {
     if (loadingBlocked) return;
     setLoadingBlocked(true);
@@ -7259,7 +6705,6 @@ export default function ReviewsManagerPage() {
     }
   };
 
-  // ===== Fetch ARCHIVED Reviews (Prototype بدون Index) =====
   const fetchArchived = async () => {
     if (loadingArchived) return;
     setLoadingArchived(true);
@@ -7267,9 +6712,7 @@ export default function ReviewsManagerPage() {
       const qAll = query(reviewsCol, orderBy("createdAt", "desc"), limit(200));
       const snap = await getDocs(qAll);
       const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-
-      const onlyArchived = docs.filter((r) => r.status === "archived");
-      setArchived(onlyArchived);
+      setArchived(docs.filter((r) => r.status === "archived"));
     } catch (e) {
       console.error("fetchArchived error:", e);
     } finally {
@@ -7285,7 +6728,6 @@ export default function ReviewsManagerPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ===== Block/Unblock (barber + global) =====
   const blockPhoneEverywhere = async (phoneKey, reviewId) => {
     if (!phoneKey) return;
 
@@ -7313,72 +6755,16 @@ export default function ReviewsManagerPage() {
 
   const unblockPhoneEverywhere = async (phoneKey) => {
     if (!phoneKey) return;
-
     await deleteDoc(
       doc(db, "barbers", BARBER_ID, "blockedPhones", String(phoneKey)),
     );
     await deleteDoc(doc(db, "blockedPhones", String(phoneKey)));
-
     await fetchBlocked();
   };
 
-  // ===== Summary helpers =====
-  function safeSummary(data) {
-    return (
-      data || {
-        count: 0,
-        sum: 0,
-        byStar: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
-        tagCounts: {},
-      }
-    );
-  }
-
-  function decSummary(cur, rating, tags = []) {
-    const r = Number(rating || 0);
-    const next = {
-      ...cur,
-      count: Math.max(0, Number(cur.count || 0) - 1),
-      sum: Math.max(0, Number(cur.sum || 0) - r),
-      byStar: { ...(cur.byStar || { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }) },
-      tagCounts: { ...(cur.tagCounts || {}) },
-    };
-
-    if (r >= 1 && r <= 5)
-      next.byStar[r] = Math.max(0, Number(next.byStar[r] || 0) - 1);
-
-    (Array.isArray(tags) ? tags : []).forEach((k) => {
-      next.tagCounts[k] = Math.max(0, Number(next.tagCounts[k] || 0) - 1);
-      if (next.tagCounts[k] === 0) delete next.tagCounts[k];
-    });
-
-    return next;
-  }
-
-  function incSummary(cur, rating, tags = []) {
-    const r = Number(rating || 0);
-    const next = {
-      ...cur,
-      count: Number(cur.count || 0) + 1,
-      sum: Number(cur.sum || 0) + r,
-      byStar: { ...(cur.byStar || { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }) },
-      tagCounts: { ...(cur.tagCounts || {}) },
-    };
-
-    if (r >= 1 && r <= 5) next.byStar[r] = Number(next.byStar[r] || 0) + 1;
-
-    (Array.isArray(tags) ? tags : []).forEach((k) => {
-      next.tagCounts[k] = Number(next.tagCounts[k] || 0) + 1;
-    });
-
-    return next;
-  }
-
-  // ===== Archive Review (instead of delete) + UNDO =====
   const archiveReview = async (reviewId) => {
     if (!reviewId) return;
 
-    // اسم للـUndo (لو موجود)
     const rLocal = reviews.find((x) => x.id === reviewId);
     const nameForUndo = prettyName(
       rLocal?.customerName || rLocal?.userName || rLocal?.displayName,
@@ -7386,7 +6772,6 @@ export default function ReviewsManagerPage() {
 
     await runTransaction(db, async (tx) => {
       const reviewRef = doc(db, "barbers", BARBER_ID, "reviews", reviewId);
-
       const [rSnap, sSnap] = await Promise.all([
         tx.get(reviewRef),
         tx.get(summaryRef),
@@ -7399,7 +6784,6 @@ export default function ReviewsManagerPage() {
       const cur = safeSummary(sSnap.exists() ? sSnap.data() : null);
       const rating = r.rating ?? r.stars ?? 0;
       const tags = r.tags || [];
-
       const next = decSummary(cur, rating, tags);
 
       tx.set(
@@ -7407,27 +6791,22 @@ export default function ReviewsManagerPage() {
         {
           status: "archived",
           archivedAt: serverTimestamp(),
-          purgeAt: addDaysTimestamp(ARCHIVE_KEEP_DAYS),
+          purgeAt: addDaysDate(ARCHIVE_KEEP_DAYS),
         },
         { merge: true },
       );
 
       tx.set(
         summaryRef,
-        {
-          ...next,
-          updatedAt: serverTimestamp(),
-        },
+        { ...next, updatedAt: serverTimestamp() },
         { merge: true },
       );
     });
 
-    // UI update
     setReviews((p) => p.filter((x) => x.id !== reviewId));
     await fetchArchived();
     await fetchSummary();
 
-    // UNDO toast
     setUndo({ id: reviewId, name: nameForUndo });
     if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
     undoTimerRef.current = setTimeout(() => {
@@ -7436,13 +6815,11 @@ export default function ReviewsManagerPage() {
     }, UNDO_MS);
   };
 
-  // ===== Restore Review =====
   const restoreReview = async (reviewId) => {
     if (!reviewId) return;
 
     await runTransaction(db, async (tx) => {
       const reviewRef = doc(db, "barbers", BARBER_ID, "reviews", reviewId);
-
       const [rSnap, sSnap] = await Promise.all([
         tx.get(reviewRef),
         tx.get(summaryRef),
@@ -7455,25 +6832,17 @@ export default function ReviewsManagerPage() {
       const cur = safeSummary(sSnap.exists() ? sSnap.data() : null);
       const rating = r.rating ?? r.stars ?? 0;
       const tags = r.tags || [];
-
       const next = incSummary(cur, rating, tags);
 
       tx.set(
         reviewRef,
-        {
-          status: "active",
-          restoredAt: serverTimestamp(),
-          purgeAt: null,
-        },
+        { status: "active", restoredAt: serverTimestamp(), purgeAt: null },
         { merge: true },
       );
 
       tx.set(
         summaryRef,
-        {
-          ...next,
-          updatedAt: serverTimestamp(),
-        },
+        { ...next, updatedAt: serverTimestamp() },
         { merge: true },
       );
     });
@@ -7487,409 +6856,108 @@ export default function ReviewsManagerPage() {
     if (!undo?.id) return;
     const id = undo.id;
     setUndo(null);
-    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
-    undoTimerRef.current = null;
     await restoreReview(id);
   };
 
-  // ===== Hard delete archived (manual) =====
   const deleteArchivedPermanently = async (reviewId) => {
     if (!reviewId) return;
     await deleteDoc(doc(db, "barbers", BARBER_ID, "reviews", reviewId));
-    setArchived((p) => p.filter((x) => x.id !== reviewId));
+    await fetchArchived();
+    await fetchSummary();
   };
 
-  // ===== Filtered ACTIVE Reviews (client-side) =====
+  // ===== Derived / filtered list =====
   const filteredReviews = useMemo(() => {
-    const t = safeLower(qText).trim();
+    let list = Array.isArray(reviews) ? [...reviews] : [];
 
-    let rows = reviews.filter((r) => {
-      const rStars = Number(r.rating || r.stars || 0);
-
-      const phone = r.phoneKey || r.phoneE164 || r.phone || "";
-      const msg = r.comment || r.message || r.text || "";
-      const name = r.customerName || r.userName || r.displayName || "";
-
-      const matchStars = stars === "all" ? true : rStars === Number(stars);
-      const matchText =
-        !t ||
-        safeLower(phone).includes(t) ||
-        safeLower(msg).includes(t) ||
-        safeLower(name).includes(t);
-
-      return matchStars && matchText;
-    });
-
-    // ✅ sort
-    if (sortBy === "highest") {
-      rows = [...rows].sort(
-        (a, b) =>
-          Number(b.rating || b.stars || 0) - Number(a.rating || a.stars || 0),
-      );
-    } else if (sortBy === "lowest") {
-      rows = [...rows].sort(
-        (a, b) =>
-          Number(a.rating || a.stars || 0) - Number(b.rating || b.stars || 0),
-      );
-    } else {
-      // newest: خليه زي ما هو (createdAt desc أصلاً)
+    // stars filter
+    if (stars !== "all") {
+      const s = Number(stars);
+      list = list.filter((r) => Number(r.rating ?? r.stars ?? 0) === s);
     }
 
-    return rows;
+    // search
+    const q = safeLower(qText).trim();
+    if (q) {
+      list = list.filter((r) => {
+        const name = safeLower(r.customerName || r.userName || r.displayName);
+        const phone = safeLower(r.phoneKey || r.phone || r.phoneNumber);
+        const msg = safeLower(r.message || r.text || r.comment);
+        return name.includes(q) || phone.includes(q) || msg.includes(q);
+      });
+    }
+
+    // sort
+    if (sortBy === "highest") {
+      list.sort(
+        (a, b) =>
+          Number(b.rating ?? b.stars ?? 0) - Number(a.rating ?? a.stars ?? 0),
+      );
+    } else if (sortBy === "lowest") {
+      list.sort(
+        (a, b) =>
+          Number(a.rating ?? a.stars ?? 0) - Number(b.rating ?? b.stars ?? 0),
+      );
+    } else {
+      // newest is already from firestore, keep stable
+    }
+
+    return list;
   }, [reviews, qText, stars, sortBy]);
 
-  return (
-    <div className="w-full max-w-4xl mx-auto p-4">
-      <div className="flex items-center justify-between gap-3 mb-4">
-        <h1 className="text-xl font-black">إدارة التقييمات</h1>
+  return {
+    tab,
+    setTab,
 
-        <div className="flex gap-2 flex-wrap">
-          <button
-            className={`px-3 py-2 rounded-lg text-sm font-black border ${
-              tab === "reviews" ? "bg-black text-white" : "bg-white"
-            }`}
-            onClick={() => setTab("reviews")}
-          >
-            التقييمات
-          </button>
-          <button
-            className={`px-3 py-2 rounded-lg text-sm font-black border ${
-              tab === "blocked" ? "bg-black text-white" : "bg-white"
-            }`}
-            onClick={() => setTab("blocked")}
-          >
-            الأرقام المحظورة
-          </button>
-          <button
-            className={`px-3 py-2 rounded-lg text-sm font-black border ${
-              tab === "archived" ? "bg-black text-white" : "bg-white"
-            }`}
-            onClick={() => setTab("archived")}
-          >
-            محذوفة مؤقتًا
-          </button>
-        </div>
-      </div>
+    // data
+    reviews,
+    filteredReviews,
+    archived,
+    blocked,
+    summary,
+    count,
+    avg,
 
-      {/* ✅ Stats (تبويب reviews فقط) */}
-      {tab === "reviews" && (
-        <div className="bg-white border rounded-xl p-4 mb-4">
-          <div className="flex flex-col md:flex-row gap-4 md:items-center md:justify-between">
-            <div className="text-right">
-              <div className="text-3xl font-black">
-                {count ? avg.toFixed(1) : "—"}
-              </div>
-              <div className="text-sm opacity-80">{count} تقييم</div>
-            </div>
+    // loading
+    loadingReviews,
+    loadingArchived,
+    loadingBlocked,
+    loadingSummary,
 
-            <div className="flex-1">
-              <div className="text-sm font-black mb-2">توزيع النجوم</div>
-              <div className="space-y-1">
-                {[5, 4, 3, 2, 1].map((s) => {
-                  const n = Number(summary.byStar?.[s] || 0);
-                  const pct = count ? Math.round((n / count) * 100) : 0;
-                  return (
-                    <div key={s} className="flex items-center gap-2">
-                      <div className="w-10 text-sm font-black">{s}★</div>
-                      <div className="flex-1 h-2 rounded-full bg-gray-100 overflow-hidden">
-                        <div
-                          className="h-2 bg-black"
-                          style={{ width: `${pct}%` }}
-                        />
-                      </div>
-                      <div className="w-16 text-xs opacity-80 text-left">
-                        {n} ({pct}%)
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+    // pagination
+    hasMore,
 
-            <button
-              className="px-3 py-2 rounded-lg border text-sm font-black"
-              onClick={fetchSummary}
-              disabled={loadingSummary}
-              title="تحديث الإحصائيات"
-            >
-              {loadingSummary ? "..." : "تحديث"}
-            </button>
-          </div>
-        </div>
-      )}
+    // filters
+    qText,
+    setQText,
+    stars,
+    setStars,
+    sortBy,
+    setSortBy,
 
-      {tab === "reviews" && (
-        <>
-          <div className="bg-white border rounded-xl p-3 mb-4">
-            <div className="flex flex-col md:flex-row gap-2 md:items-center md:justify-between">
-              <input
-                className="border rounded-lg px-3 py-2 w-full md:w-1/2"
-                placeholder="بحث (اسم / رقم / نص التقييم)"
-                value={qText}
-                onChange={(e) => setQText(e.target.value)}
-              />
+    // actions
+    fetchReviews,
+    fetchArchived,
+    fetchBlocked,
+    fetchSummary,
 
-              <div className="flex gap-2 w-full md:w-auto">
-                <select
-                  className="border rounded-lg px-3 py-2 w-full md:w-48"
-                  value={stars}
-                  onChange={(e) => setStars(e.target.value)}
-                >
-                  <option value="all">كل النجوم</option>
-                  <option value="5">5 نجوم</option>
-                  <option value="4">4 نجوم</option>
-                  <option value="3">3 نجوم</option>
-                  <option value="2">2 نجوم</option>
-                  <option value="1">1 نجمة</option>
-                </select>
+    blockPhoneEverywhere,
+    unblockPhoneEverywhere,
 
-                <select
-                  className="border rounded-lg px-3 py-2 w-full md:w-48"
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  title="ترتيب"
-                >
-                  <option value="newest">الأحدث</option>
-                  <option value="highest">الأعلى تقييمًا</option>
-                  <option value="lowest">الأقل تقييمًا</option>
-                </select>
-              </div>
-            </div>
-          </div>
+    archiveReview,
+    restoreReview,
+    undoArchive,
+    deleteArchivedPermanently,
 
-          <div className="space-y-3">
-            {filteredReviews.map((r) => {
-              const phoneKey = r.phoneKey || r.phoneE164 || r.phone || null;
-              const rStars = Number(r.rating || r.stars || 0);
-              const msg = r.comment || r.message || r.text || "";
-
-              // ✅ الاسم من البيانات
-              const displayName = prettyName(
-                r.customerName || r.userName || r.displayName,
-              );
-
-              const isBlocked = !!blocked.find(
-                (b) => b.id === String(phoneKey),
-              );
-
-              return (
-                <div key={r.id} className="bg-white border rounded-xl p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      {/* ✅ بدل "زبون" */}
-                      <div className="font-black truncate">{displayName}</div>
-
-                      <div className="text-sm opacity-80">
-                        {starsLabel(rStars)}
-                      </div>
-
-                      {phoneKey ? (
-                        <div className="text-xs opacity-70 mt-1">
-                          {String(phoneKey)}
-                        </div>
-                      ) : (
-                        <div className="text-xs text-rose-600 mt-1 font-bold">
-                          لا يوجد رقم داخل بيانات التقييم (لن يمكن الحظر)
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex flex-wrap gap-2 justify-end">
-                      <button
-                        className="px-3 py-2 rounded-lg border text-sm font-black"
-                        onClick={() => archiveReview(r.id)}
-                      >
-                        حذف (مؤقت)
-                      </button>
-
-                      {!isBlocked ? (
-                        <button
-                          className="px-3 py-2 rounded-lg border text-sm font-black"
-                          disabled={!phoneKey}
-                          onClick={() =>
-                            blockPhoneEverywhere(String(phoneKey), r.id)
-                          }
-                        >
-                          حظر الرقم
-                        </button>
-                      ) : (
-                        <button
-                          className="px-3 py-2 rounded-lg border text-sm font-black"
-                          onClick={() =>
-                            unblockPhoneEverywhere(String(phoneKey))
-                          }
-                        >
-                          فك الحظر
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  {msg ? (
-                    <p className="mt-3 text-sm leading-relaxed">{msg}</p>
-                  ) : null}
-                </div>
-              );
-            })}
-
-            {filteredReviews.length === 0 && (
-              <div className="bg-white border rounded-xl p-6 text-center opacity-80">
-                لا يوجد تقييمات.
-              </div>
-            )}
-          </div>
-
-          <div className="mt-4 flex justify-center">
-            {hasMore ? (
-              <button
-                className="px-4 py-2 rounded-lg border font-black"
-                onClick={() => fetchReviews({ reset: false })}
-                disabled={loadingReviews}
-              >
-                {loadingReviews ? "جاري التحميل..." : "تحميل المزيد"}
-              </button>
-            ) : (
-              <div className="text-sm opacity-70">لا يوجد المزيد.</div>
-            )}
-          </div>
-        </>
-      )}
-
-      {tab === "blocked" && (
-        <div className="bg-white border rounded-xl p-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="font-black">الأرقام المحظورة</div>
-            <button
-              className="px-3 py-2 rounded-lg border text-sm font-black"
-              onClick={fetchBlocked}
-            >
-              تحديث
-            </button>
-          </div>
-
-          {loadingBlocked ? (
-            <div className="opacity-70">جاري التحميل...</div>
-          ) : blocked.length === 0 ? (
-            <div className="opacity-80">لا يوجد أرقام محظورة.</div>
-          ) : (
-            <div className="space-y-2">
-              {blocked.map((b) => (
-                <div
-                  key={b.id}
-                  className="flex items-center justify-between border rounded-lg p-3"
-                >
-                  <div className="font-mono text-sm">{b.id}</div>
-                  <button
-                    className="px-3 py-2 rounded-lg border text-sm font-black"
-                    onClick={() => unblockPhoneEverywhere(b.id)}
-                  >
-                    فك الحظر
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {tab === "archived" && (
-        <div className="bg-white border rounded-xl p-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="font-black">
-              محذوفة مؤقتًا (تبقى {ARCHIVE_KEEP_DAYS} يوم)
-            </div>
-            <button
-              className="px-3 py-2 rounded-lg border text-sm font-black"
-              onClick={fetchArchived}
-            >
-              تحديث
-            </button>
-          </div>
-
-          {loadingArchived ? (
-            <div className="opacity-70">جاري التحميل...</div>
-          ) : archived.length === 0 ? (
-            <div className="opacity-80">لا يوجد تقييمات مؤرشفة.</div>
-          ) : (
-            <div className="space-y-3">
-              {archived.map((r) => {
-                const phoneKey = r.phoneKey || r.phoneE164 || r.phone || "";
-                const rStars = Number(r.rating || r.stars || 0);
-                const msg = r.comment || r.message || r.text || "";
-                const displayName = prettyName(
-                  r.customerName || r.userName || r.displayName,
-                );
-
-                return (
-                  <div key={r.id} className="border rounded-xl p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        {/* ✅ بدل "زبون" */}
-                        <div className="font-black">{displayName}</div>
-
-                        <div className="text-sm opacity-80">
-                          {starsLabel(rStars)}
-                        </div>
-                        <div className="text-xs opacity-70 mt-1">
-                          {String(phoneKey)}
-                        </div>
-                      </div>
-
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          className="px-3 py-2 rounded-lg border text-sm font-black"
-                          onClick={() => restoreReview(r.id)}
-                        >
-                          استرجاع
-                        </button>
-                        <button
-                          className="px-3 py-2 rounded-lg border text-sm font-black"
-                          onClick={() => deleteArchivedPermanently(r.id)}
-                        >
-                          حذف نهائي
-                        </button>
-                      </div>
-                    </div>
-
-                    {msg ? (
-                      <p className="mt-3 text-sm leading-relaxed">{msg}</p>
-                    ) : null}
-
-                    {r.purgeAt ? (
-                      <div className="mt-2 text-xs opacity-70">
-                        حذف تلقائي بعد:{" "}
-                        {typeof r.purgeAt?.toDate === "function"
-                          ? r.purgeAt.toDate().toLocaleString()
-                          : new Date(r.purgeAt).toLocaleString()}
-                      </div>
-                    ) : null}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ✅ Undo Toast */}
-      {undo?.id && (
-        <div className="fixed bottom-4 left-4 right-4 max-w-4xl mx-auto">
-          <div className="bg-black text-white rounded-xl p-4 flex items-center justify-between gap-3">
-            <div className="text-sm font-bold">
-              تم حذف تقييم ({undo.name}) مؤقتًا. تراجع؟
-            </div>
-            <button
-              className="px-3 py-2 rounded-lg border border-white text-sm font-black"
-              onClick={undoArchive}
-            >
-              تراجع
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+    // undo toast
+    undo,
+    setUndo,
+  };
 }
+</file>
+
+<file path="src/pages/barberPanel/ReviewsAdminPage.jsx">
+
 </file>
 
 <file path="src/pages/barberPanel/utils/dates.js">
@@ -9603,6 +8671,325 @@ function LanguageSwitcher() {
 export default LanguageSwitcher;
 </file>
 
+<file path="src/components/reviews/BarberRatingSection.jsx">
+import { useEffect, useState } from "react";
+import SectionTitle from "../common/SectionTitle";
+import { db } from "../../firebase";
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  limit,
+  orderBy,
+  query,
+  runTransaction,
+  serverTimestamp,
+} from "firebase/firestore";
+import { Star, MessageSquare, TrendingUp } from "lucide-react";
+import {
+  toILPhoneE164,
+  isILPhoneE164,
+  normalizeDigits,
+} from "../../utils/phone";
+
+/* ================== CONFIG ================== */
+const BARBER_ID = "arfat";
+const DEV_DISABLE_REVIEW_GUARDS = true;
+
+/* ================== HELPERS ================== */
+function clamp(n, a, b) {
+  return Math.max(a, Math.min(b, n));
+}
+
+/* ================== STARS ================== */
+function StarRow({ value, onChange, readonly = false, size = 22 }) {
+  const v = clamp(Number(value || 0), 0, 5);
+  return (
+    <div className="flex flex-row-reverse items-center gap-1">
+      {[1, 2, 3, 4, 5].map((i) => {
+        const active = i <= v;
+        return (
+          <button
+            key={i}
+            type="button"
+            disabled={readonly}
+            onClick={() => !readonly && onChange?.(i)}
+            className={`p-1 rounded-lg ${
+              readonly ? "cursor-default" : "hover:bg-gold/10"
+            }`}
+          >
+            <Star
+              style={{ width: size, height: size }}
+              className={active ? "text-gold" : "text-gray-300"}
+              fill={active ? "currentColor" : "none"}
+            />
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ================== TAGS ================== */
+const TAGS = [
+  { k: "clean", label: "نظافة" },
+  { k: "on_time", label: "دقة بالمواعيد" },
+  { k: "pro", label: "احتراف" },
+  { k: "speed", label: "سرعة" },
+  { k: "price", label: "سعر مناسب" },
+  { k: "respect", label: "تعامل محترم" },
+  { k: "hair_quality", label: "جودة قص الشعر" },
+  { k: "vibe", label: "جو المكان" },
+];
+
+/* ================== REVIEW CARD ================== */
+function ReviewCard({ r }) {
+  const rating = Number(r.rating || 0);
+  const comment = r.comment || "";
+  const tags = Array.isArray(r.tags) ? r.tags : [];
+
+  // ✅ اسم الزبون (للجديد) + fallback للقديم
+  const name = String(
+    r.customerName || r.userName || r.displayName || "",
+  ).trim();
+
+  const tagLabel = (k) => TAGS.find((t) => t.k === k)?.label || k;
+
+  return (
+    <div className="rounded-2xl border bg-white p-4 shadow-sm">
+      <div className="flex flex-row-reverse justify-between">
+        {/* ✅ بدل "زبون" */}
+        <div className="text-right font-bold">{name || "زبون"}</div>
+        <StarRow value={rating} readonly size={18} />
+      </div>
+
+      {tags.length > 0 && (
+        <div className="mt-3 flex flex-row-reverse flex-wrap gap-2">
+          {tags.map((k) => (
+            <span
+              key={k}
+              className="text-xs px-2 py-1 rounded-full bg-[#f6f2ea] border border-gold/20"
+            >
+              {tagLabel(k)}
+            </span>
+          ))}
+        </div>
+      )}
+
+      <p className="mt-3 text-sm text-right text-gray-700">
+        {comment || "(بدون تعليق)"}
+      </p>
+    </div>
+  );
+}
+
+/* ================== MAIN ================== */
+export default function BarberRatingSection() {
+  const [loading, setLoading] = useState(true);
+  const [summary, setSummary] = useState({
+    count: 0,
+    sum: 0,
+    byStar: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+  });
+  const [latest, setLatest] = useState([]);
+
+  const [open, setOpen] = useState(false);
+
+  // ✅ جديد: اسم الزبون
+  const [customerName, setCustomerName] = useState("");
+
+  const [phone, setPhone] = useState("");
+  const [rating, setRating] = useState(5);
+  const [tags, setTags] = useState([]);
+  const [comment, setComment] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const count = Number(summary.count || 0);
+  const avg = count > 0 ? summary.sum / count : 0;
+
+  const summaryRef = doc(db, "barbers", BARBER_ID, "meta", "reviewsSummary");
+  const reviewsCol = collection(db, "barbers", BARBER_ID, "reviews");
+
+  /* ================== FETCH ================== */
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      const ss = await getDoc(summaryRef);
+      if (ss.exists()) setSummary(ss.data());
+
+      const q = query(reviewsCol, orderBy("createdAt", "desc"), limit(3));
+      const snap = await getDocs(q);
+      setLatest(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      setLoading(false);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /* ================== SUBMIT ================== */
+  async function submitReview() {
+    // ✅ اسم ورقم مطلوبين
+    const nameTrimmed = customerName.trim();
+    if (!nameTrimmed) return;
+
+    const phoneKey =
+      toILPhoneE164(phone) && isILPhoneE164(toILPhoneE164(phone))
+        ? toILPhoneE164(phone)
+        : normalizeDigits(phone);
+
+    if (!phoneKey) return;
+
+    setSubmitting(true);
+
+    await runTransaction(db, async (tx) => {
+      const sSnap = await tx.get(summaryRef);
+      const cur = sSnap.exists()
+        ? sSnap.data()
+        : { count: 0, sum: 0, byStar: {} };
+
+      const reviewRef = doc(reviewsCol);
+
+      tx.set(reviewRef, {
+        rating,
+        tags,
+        comment,
+        status: "active",
+        createdAt: serverTimestamp(),
+
+        // ✅ جديد: اسم الزبون
+        customerName: nameTrimmed,
+
+        // (اختياري) تخزين المفتاح لتسهيل الإدارة لاحقًا
+        phoneKey,
+      });
+
+      tx.set(
+        summaryRef,
+        {
+          count: cur.count + 1,
+          sum: cur.sum + rating,
+          byStar: {
+            ...cur.byStar,
+            [rating]: (cur.byStar?.[rating] || 0) + 1,
+          },
+        },
+        { merge: true },
+      );
+    });
+
+    // ✅ Reset
+    setOpen(false);
+    setCustomerName("");
+    setPhone("");
+    setComment("");
+    setTags([]);
+    setRating(5);
+    setSubmitting(false);
+
+    // ✅ Refresh latest (حتى يظهر الاسم فورًا)
+    const q = query(reviewsCol, orderBy("createdAt", "desc"), limit(3));
+    const snap = await getDocs(q);
+    setLatest(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+
+    const ss = await getDoc(summaryRef);
+    if (ss.exists()) setSummary(ss.data());
+  }
+
+  /* ================== UI ================== */
+  return (
+    <section
+      id="ratings"
+      dir="rtl"
+      className="relative bg-white px-4 py-20 font-body overflow-hidden"
+    >
+      {/* ديكور خفيف جداً (شكل فقط) */}
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute -top-20 right-10 w-64 h-64 rounded-full bg-gold/10 blur-3xl" />
+      </div>
+
+      <SectionTitle
+        icon={
+          <div className="w-10 h-10 rounded-full bg-gold/15 flex items-center justify-center">
+            <TrendingUp className="w-6 h-6 text-gold" />
+          </div>
+        }
+      >
+        تقييمات وتجربة الزبائن
+      </SectionTitle>
+
+      <div className="max-w-3xl mx-auto mt-6 bg-[#fcfaf7] p-6 rounded-3xl shadow-lg border border-gold/10 ring-1 ring-black/5 transition-transform duration-300 hover:-translate-y-1">
+        <div className="text-right">
+          <div className="text-4xl font-black">
+            {count ? avg.toFixed(1) : "—"}
+          </div>
+          <StarRow value={Math.round(avg)} readonly />
+          <div className="text-sm text-gray-600">{count} تقييم</div>
+        </div>
+
+        <div className="mt-6">
+          <div className="flex justify-between items-center">
+            <div className="font-bold">آخر الآراء</div>
+            <button
+              onClick={() => setOpen(!open)}
+              className="bg-gold px-4 py-2 rounded-xl font-bold"
+            >
+              <MessageSquare className="inline w-4 h-4 ml-1" />
+              اكتب تقييم
+            </button>
+          </div>
+
+          {loading ? (
+            <div className="mt-4 text-gray-500">جارٍ التحميل…</div>
+          ) : (
+            <div className="mt-4 grid gap-3 md:grid-cols-3">
+              {latest.map((r) => (
+                <ReviewCard key={r.id} r={r} />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {open && (
+          <div className="mt-6 border-t pt-6">
+            {/* ✅ جديد: اسم الزبون (نفس ستايل رقم الهاتف) */}
+            <input
+              className="w-full border rounded-xl px-4 py-2 mb-3"
+              placeholder="اسمك"
+              value={customerName}
+              onChange={(e) => setCustomerName(e.target.value)}
+            />
+
+            <input
+              className="w-full border rounded-xl px-4 py-2 mb-3"
+              placeholder="رقم الهاتف"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+            />
+
+            <StarRow value={rating} onChange={setRating} />
+
+            <textarea
+              className="w-full border rounded-xl px-4 py-2 mt-3"
+              placeholder="تعليق (اختياري)"
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+            />
+
+            <button
+              onClick={submitReview}
+              disabled={submitting}
+              className="mt-4 w-full bg-primary text-white py-3 rounded-xl font-bold"
+            >
+              إرسال التقييم
+            </button>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+</file>
+
 <file path="src/components/shared/SecretBarberButton.jsx">
 // ✅ SecretBarberButton.jsx
 import { useNavigate } from "react-router-dom";
@@ -10430,6 +9817,791 @@ export default function WeeklyHoursReadOnly({
 }
 </file>
 
+<file path="src/pages/barberPanel/ReviewsManagerPage.jsx">
+// src/pages/barberPanel/ReviewsManagerPage.jsx
+import { useEffect, useMemo, useRef, useState } from "react";
+import { db } from "../../firebase";
+import {
+  collection,
+  deleteDoc,
+  doc,
+  getDoc,
+  getDocs,
+  limit,
+  orderBy,
+  query,
+  runTransaction,
+  serverTimestamp,
+  setDoc,
+  startAfter,
+} from "firebase/firestore";
+
+const BARBER_ID = "arfat";
+const ARCHIVE_KEEP_DAYS = 14; // ✅ مدة بقاء التقييم بعد "حذفه" (مثل الأدوار الملغاة)
+const UNDO_MS = 7000; // ✅ مدة التراجع بعد الحذف المؤقت
+
+function addDaysTimestamp(days) {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return d;
+}
+
+function starsLabel(n) {
+  const v = Math.max(0, Math.min(5, Number(n || 0)));
+  return "★".repeat(v) + "☆".repeat(5 - v);
+}
+
+function safeLower(v) {
+  return (v || "").toString().toLowerCase();
+}
+
+function prettyName(name) {
+  const s = String(name || "").trim();
+  if (!s) return "زبون";
+  const parts = s.split(/\s+/).filter(Boolean);
+  if (parts.length <= 1) return parts[0];
+  const first = parts[0];
+  const lastInitial = parts[parts.length - 1][0] || "";
+  return `${first} ${lastInitial}.`;
+}
+
+export default function ReviewsManagerPage() {
+  const [tab, setTab] = useState("reviews"); // reviews | blocked | archived
+
+  // Reviews (active)
+  const [reviews, setReviews] = useState([]);
+  const [loadingReviews, setLoadingReviews] = useState(false);
+  const [lastDoc, setLastDoc] = useState(null);
+  const [hasMore, setHasMore] = useState(true);
+
+  // Archived
+  const [archived, setArchived] = useState([]);
+  const [loadingArchived, setLoadingArchived] = useState(false);
+
+  // Search/filter/sort
+  const [qText, setQText] = useState("");
+  const [stars, setStars] = useState("all");
+  const [sortBy, setSortBy] = useState("newest"); // newest | highest | lowest
+
+  // Blocked
+  const [blocked, setBlocked] = useState([]);
+  const [loadingBlocked, setLoadingBlocked] = useState(false);
+
+  // Summary (stats)
+  const [summary, setSummary] = useState({
+    count: 0,
+    sum: 0,
+    byStar: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+    tagCounts: {},
+  });
+  const [loadingSummary, setLoadingSummary] = useState(false);
+
+  // Undo toast for archive
+  const [undo, setUndo] = useState(null); // { id, name }
+  const undoTimerRef = useRef(null);
+
+  const reviewsCol = collection(db, "barbers", BARBER_ID, "reviews");
+  const summaryRef = doc(db, "barbers", BARBER_ID, "meta", "reviewsSummary");
+
+  const count = Number(summary.count || 0);
+  const avg = count > 0 ? summary.sum / count : 0;
+
+  const fetchSummary = async () => {
+    if (loadingSummary) return;
+    setLoadingSummary(true);
+    try {
+      const ss = await getDoc(summaryRef);
+      if (ss.exists()) setSummary((p) => ({ ...p, ...ss.data() }));
+    } catch (e) {
+      console.error("fetchSummary error:", e);
+    } finally {
+      setLoadingSummary(false);
+    }
+  };
+
+  // ===== Fetch ACTIVE Reviews =====
+  const fetchReviews = async ({ reset = false } = {}) => {
+    if (loadingReviews) return;
+    setLoadingReviews(true);
+
+    try {
+      let qBase = query(reviewsCol, orderBy("createdAt", "desc"), limit(50));
+
+      if (!reset && lastDoc) {
+        qBase = query(
+          reviewsCol,
+          orderBy("createdAt", "desc"),
+          startAfter(lastDoc),
+          limit(50),
+        );
+      }
+
+      const snap = await getDocs(qBase);
+      const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+
+      // ✅ فقط active
+      const onlyActive = docs.filter(
+        (r) => (r.status || "active") === "active",
+      );
+
+      if (reset) setReviews(onlyActive);
+      else setReviews((p) => [...p, ...onlyActive]);
+
+      setLastDoc(snap.docs[snap.docs.length - 1] || null);
+      setHasMore(snap.docs.length === 50);
+    } catch (e) {
+      console.error("fetchReviews error:", e);
+    } finally {
+      setLoadingReviews(false);
+    }
+  };
+
+  // ===== Fetch Blocked (barber-scoped) =====
+  const fetchBlocked = async () => {
+    if (loadingBlocked) return;
+    setLoadingBlocked(true);
+    try {
+      const ref = collection(db, "barbers", BARBER_ID, "blockedPhones");
+      const snap = await getDocs(ref);
+      setBlocked(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    } finally {
+      setLoadingBlocked(false);
+    }
+  };
+
+  // ===== Fetch ARCHIVED Reviews (Prototype بدون Index) =====
+  const fetchArchived = async () => {
+    if (loadingArchived) return;
+    setLoadingArchived(true);
+    try {
+      const qAll = query(reviewsCol, orderBy("createdAt", "desc"), limit(200));
+      const snap = await getDocs(qAll);
+      const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+
+      const onlyArchived = docs.filter((r) => r.status === "archived");
+      setArchived(onlyArchived);
+    } catch (e) {
+      console.error("fetchArchived error:", e);
+    } finally {
+      setLoadingArchived(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchReviews({ reset: true });
+    fetchBlocked();
+    fetchArchived();
+    fetchSummary();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ===== Block/Unblock (barber + global) =====
+  const blockPhoneEverywhere = async (phoneKey, reviewId) => {
+    if (!phoneKey) return;
+
+    await setDoc(
+      doc(db, "barbers", BARBER_ID, "blockedPhones", String(phoneKey)),
+      {
+        phoneKey: String(phoneKey),
+        from: "reviews",
+        fromBarberId: BARBER_ID,
+        reviewId: reviewId || null,
+        blockedAt: serverTimestamp(),
+      },
+    );
+
+    await setDoc(doc(db, "blockedPhones", String(phoneKey)), {
+      phoneKey: String(phoneKey),
+      from: "reviews",
+      fromBarberId: BARBER_ID,
+      reviewId: reviewId || null,
+      blockedAt: serverTimestamp(),
+    });
+
+    await fetchBlocked();
+  };
+
+  const unblockPhoneEverywhere = async (phoneKey) => {
+    if (!phoneKey) return;
+
+    await deleteDoc(
+      doc(db, "barbers", BARBER_ID, "blockedPhones", String(phoneKey)),
+    );
+    await deleteDoc(doc(db, "blockedPhones", String(phoneKey)));
+
+    await fetchBlocked();
+  };
+
+  // ===== Summary helpers =====
+  function safeSummary(data) {
+    return (
+      data || {
+        count: 0,
+        sum: 0,
+        byStar: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+        tagCounts: {},
+      }
+    );
+  }
+
+  function decSummary(cur, rating, tags = []) {
+    const r = Number(rating || 0);
+    const next = {
+      ...cur,
+      count: Math.max(0, Number(cur.count || 0) - 1),
+      sum: Math.max(0, Number(cur.sum || 0) - r),
+      byStar: { ...(cur.byStar || { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }) },
+      tagCounts: { ...(cur.tagCounts || {}) },
+    };
+
+    if (r >= 1 && r <= 5)
+      next.byStar[r] = Math.max(0, Number(next.byStar[r] || 0) - 1);
+
+    (Array.isArray(tags) ? tags : []).forEach((k) => {
+      next.tagCounts[k] = Math.max(0, Number(next.tagCounts[k] || 0) - 1);
+      if (next.tagCounts[k] === 0) delete next.tagCounts[k];
+    });
+
+    return next;
+  }
+
+  function incSummary(cur, rating, tags = []) {
+    const r = Number(rating || 0);
+    const next = {
+      ...cur,
+      count: Number(cur.count || 0) + 1,
+      sum: Number(cur.sum || 0) + r,
+      byStar: { ...(cur.byStar || { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }) },
+      tagCounts: { ...(cur.tagCounts || {}) },
+    };
+
+    if (r >= 1 && r <= 5) next.byStar[r] = Number(next.byStar[r] || 0) + 1;
+
+    (Array.isArray(tags) ? tags : []).forEach((k) => {
+      next.tagCounts[k] = Number(next.tagCounts[k] || 0) + 1;
+    });
+
+    return next;
+  }
+
+  // ===== Archive Review (instead of delete) + UNDO =====
+  const archiveReview = async (reviewId) => {
+    if (!reviewId) return;
+
+    // اسم للـUndo (لو موجود)
+    const rLocal = reviews.find((x) => x.id === reviewId);
+    const nameForUndo = prettyName(
+      rLocal?.customerName || rLocal?.userName || rLocal?.displayName,
+    );
+
+    await runTransaction(db, async (tx) => {
+      const reviewRef = doc(db, "barbers", BARBER_ID, "reviews", reviewId);
+
+      const [rSnap, sSnap] = await Promise.all([
+        tx.get(reviewRef),
+        tx.get(summaryRef),
+      ]);
+      if (!rSnap.exists()) return;
+
+      const r = rSnap.data();
+      if (r.status === "archived") return;
+
+      const cur = safeSummary(sSnap.exists() ? sSnap.data() : null);
+      const rating = r.rating ?? r.stars ?? 0;
+      const tags = r.tags || [];
+
+      const next = decSummary(cur, rating, tags);
+
+      tx.set(
+        reviewRef,
+        {
+          status: "archived",
+          archivedAt: serverTimestamp(),
+          purgeAt: addDaysTimestamp(ARCHIVE_KEEP_DAYS),
+        },
+        { merge: true },
+      );
+
+      tx.set(
+        summaryRef,
+        {
+          ...next,
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true },
+      );
+    });
+
+    // UI update
+    setReviews((p) => p.filter((x) => x.id !== reviewId));
+    await fetchArchived();
+    await fetchSummary();
+
+    // UNDO toast
+    setUndo({ id: reviewId, name: nameForUndo });
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    undoTimerRef.current = setTimeout(() => {
+      setUndo(null);
+      undoTimerRef.current = null;
+    }, UNDO_MS);
+  };
+
+  // ===== Restore Review =====
+  const restoreReview = async (reviewId) => {
+    if (!reviewId) return;
+
+    await runTransaction(db, async (tx) => {
+      const reviewRef = doc(db, "barbers", BARBER_ID, "reviews", reviewId);
+
+      const [rSnap, sSnap] = await Promise.all([
+        tx.get(reviewRef),
+        tx.get(summaryRef),
+      ]);
+      if (!rSnap.exists()) return;
+
+      const r = rSnap.data();
+      if (r.status !== "archived") return;
+
+      const cur = safeSummary(sSnap.exists() ? sSnap.data() : null);
+      const rating = r.rating ?? r.stars ?? 0;
+      const tags = r.tags || [];
+
+      const next = incSummary(cur, rating, tags);
+
+      tx.set(
+        reviewRef,
+        {
+          status: "active",
+          restoredAt: serverTimestamp(),
+          purgeAt: null,
+        },
+        { merge: true },
+      );
+
+      tx.set(
+        summaryRef,
+        {
+          ...next,
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true },
+      );
+    });
+
+    await fetchReviews({ reset: true });
+    await fetchArchived();
+    await fetchSummary();
+  };
+
+  const undoArchive = async () => {
+    if (!undo?.id) return;
+    const id = undo.id;
+    setUndo(null);
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    undoTimerRef.current = null;
+    await restoreReview(id);
+  };
+
+  // ===== Hard delete archived (manual) =====
+  const deleteArchivedPermanently = async (reviewId) => {
+    if (!reviewId) return;
+    await deleteDoc(doc(db, "barbers", BARBER_ID, "reviews", reviewId));
+    setArchived((p) => p.filter((x) => x.id !== reviewId));
+  };
+
+  // ===== Filtered ACTIVE Reviews (client-side) =====
+  const filteredReviews = useMemo(() => {
+    const t = safeLower(qText).trim();
+
+    let rows = reviews.filter((r) => {
+      const rStars = Number(r.rating || r.stars || 0);
+
+      const phone = r.phoneKey || r.phoneE164 || r.phone || "";
+      const msg = r.comment || r.message || r.text || "";
+      const name = r.customerName || r.userName || r.displayName || "";
+
+      const matchStars = stars === "all" ? true : rStars === Number(stars);
+      const matchText =
+        !t ||
+        safeLower(phone).includes(t) ||
+        safeLower(msg).includes(t) ||
+        safeLower(name).includes(t);
+
+      return matchStars && matchText;
+    });
+
+    // ✅ sort
+    if (sortBy === "highest") {
+      rows = [...rows].sort(
+        (a, b) =>
+          Number(b.rating || b.stars || 0) - Number(a.rating || a.stars || 0),
+      );
+    } else if (sortBy === "lowest") {
+      rows = [...rows].sort(
+        (a, b) =>
+          Number(a.rating || a.stars || 0) - Number(b.rating || b.stars || 0),
+      );
+    } else {
+      // newest: خليه زي ما هو (createdAt desc أصلاً)
+    }
+
+    return rows;
+  }, [reviews, qText, stars, sortBy]);
+
+  return (
+    <div className="w-full max-w-4xl mx-auto p-4">
+      <div className="flex items-center justify-between gap-3 mb-4">
+        <h1 className="text-xl font-black">إدارة التقييمات</h1>
+
+        <div className="flex gap-2 flex-wrap">
+          <button
+            className={`px-3 py-2 rounded-lg text-sm font-black border ${
+              tab === "reviews" ? "bg-black text-white" : "bg-white"
+            }`}
+            onClick={() => setTab("reviews")}
+          >
+            التقييمات
+          </button>
+          <button
+            className={`px-3 py-2 rounded-lg text-sm font-black border ${
+              tab === "blocked" ? "bg-black text-white" : "bg-white"
+            }`}
+            onClick={() => setTab("blocked")}
+          >
+            الأرقام المحظورة
+          </button>
+          <button
+            className={`px-3 py-2 rounded-lg text-sm font-black border ${
+              tab === "archived" ? "bg-black text-white" : "bg-white"
+            }`}
+            onClick={() => setTab("archived")}
+          >
+            محذوفة مؤقتًا
+          </button>
+        </div>
+      </div>
+
+      {/* ✅ Stats (تبويب reviews فقط) */}
+      {tab === "reviews" && (
+        <div className="bg-white border rounded-xl p-4 mb-4">
+          <div className="flex flex-col md:flex-row gap-4 md:items-center md:justify-between">
+            <div className="text-right">
+              <div className="text-3xl font-black">
+                {count ? avg.toFixed(1) : "—"}
+              </div>
+              <div className="text-sm opacity-80">{count} تقييم</div>
+            </div>
+
+            <div className="flex-1">
+              <div className="text-sm font-black mb-2">توزيع النجوم</div>
+              <div className="space-y-1">
+                {[5, 4, 3, 2, 1].map((s) => {
+                  const n = Number(summary.byStar?.[s] || 0);
+                  const pct = count ? Math.round((n / count) * 100) : 0;
+                  return (
+                    <div key={s} className="flex items-center gap-2">
+                      <div className="w-10 text-sm font-black">{s}★</div>
+                      <div className="flex-1 h-2 rounded-full bg-gray-100 overflow-hidden">
+                        <div
+                          className="h-2 bg-black"
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                      <div className="w-16 text-xs opacity-80 text-left">
+                        {n} ({pct}%)
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <button
+              className="px-3 py-2 rounded-lg border text-sm font-black"
+              onClick={fetchSummary}
+              disabled={loadingSummary}
+              title="تحديث الإحصائيات"
+            >
+              {loadingSummary ? "..." : "تحديث"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {tab === "reviews" && (
+        <>
+          <div className="bg-white border rounded-xl p-3 mb-4">
+            <div className="flex flex-col md:flex-row gap-2 md:items-center md:justify-between">
+              <input
+                className="border rounded-lg px-3 py-2 w-full md:w-1/2"
+                placeholder="بحث (اسم / رقم / نص التقييم)"
+                value={qText}
+                onChange={(e) => setQText(e.target.value)}
+              />
+
+              <div className="flex gap-2 w-full md:w-auto">
+                <select
+                  className="border rounded-lg px-3 py-2 w-full md:w-48"
+                  value={stars}
+                  onChange={(e) => setStars(e.target.value)}
+                >
+                  <option value="all">كل النجوم</option>
+                  <option value="5">5 نجوم</option>
+                  <option value="4">4 نجوم</option>
+                  <option value="3">3 نجوم</option>
+                  <option value="2">2 نجوم</option>
+                  <option value="1">1 نجمة</option>
+                </select>
+
+                <select
+                  className="border rounded-lg px-3 py-2 w-full md:w-48"
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  title="ترتيب"
+                >
+                  <option value="newest">الأحدث</option>
+                  <option value="highest">الأعلى تقييمًا</option>
+                  <option value="lowest">الأقل تقييمًا</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            {filteredReviews.map((r) => {
+              const phoneKey = r.phoneKey || r.phoneE164 || r.phone || null;
+              const rStars = Number(r.rating || r.stars || 0);
+              const msg = r.comment || r.message || r.text || "";
+
+              // ✅ الاسم من البيانات
+              const displayName = prettyName(
+                r.customerName || r.userName || r.displayName,
+              );
+
+              const isBlocked = !!blocked.find(
+                (b) => b.id === String(phoneKey),
+              );
+
+              return (
+                <div key={r.id} className="bg-white border rounded-xl p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      {/* ✅ بدل "زبون" */}
+                      <div className="font-black truncate">{displayName}</div>
+
+                      <div className="text-sm opacity-80">
+                        {starsLabel(rStars)}
+                      </div>
+
+                      {phoneKey ? (
+                        <div className="text-xs opacity-70 mt-1">
+                          {String(phoneKey)}
+                        </div>
+                      ) : (
+                        <div className="text-xs text-rose-600 mt-1 font-bold">
+                          لا يوجد رقم داخل بيانات التقييم (لن يمكن الحظر)
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 justify-end">
+                      <button
+                        className="px-3 py-2 rounded-lg border text-sm font-black"
+                        onClick={() => archiveReview(r.id)}
+                      >
+                        حذف (مؤقت)
+                      </button>
+
+                      {!isBlocked ? (
+                        <button
+                          className="px-3 py-2 rounded-lg border text-sm font-black"
+                          disabled={!phoneKey}
+                          onClick={() =>
+                            blockPhoneEverywhere(String(phoneKey), r.id)
+                          }
+                        >
+                          حظر الرقم
+                        </button>
+                      ) : (
+                        <button
+                          className="px-3 py-2 rounded-lg border text-sm font-black"
+                          onClick={() =>
+                            unblockPhoneEverywhere(String(phoneKey))
+                          }
+                        >
+                          فك الحظر
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {msg ? (
+                    <p className="mt-3 text-sm leading-relaxed">{msg}</p>
+                  ) : null}
+                </div>
+              );
+            })}
+
+            {filteredReviews.length === 0 && (
+              <div className="bg-white border rounded-xl p-6 text-center opacity-80">
+                لا يوجد تقييمات.
+              </div>
+            )}
+          </div>
+
+          <div className="mt-4 flex justify-center">
+            {hasMore ? (
+              <button
+                className="px-4 py-2 rounded-lg border font-black"
+                onClick={() => fetchReviews({ reset: false })}
+                disabled={loadingReviews}
+              >
+                {loadingReviews ? "جاري التحميل..." : "تحميل المزيد"}
+              </button>
+            ) : (
+              <div className="text-sm opacity-70">لا يوجد المزيد.</div>
+            )}
+          </div>
+        </>
+      )}
+
+      {tab === "blocked" && (
+        <div className="bg-white border rounded-xl p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="font-black">الأرقام المحظورة</div>
+            <button
+              className="px-3 py-2 rounded-lg border text-sm font-black"
+              onClick={fetchBlocked}
+            >
+              تحديث
+            </button>
+          </div>
+
+          {loadingBlocked ? (
+            <div className="opacity-70">جاري التحميل...</div>
+          ) : blocked.length === 0 ? (
+            <div className="opacity-80">لا يوجد أرقام محظورة.</div>
+          ) : (
+            <div className="space-y-2">
+              {blocked.map((b) => (
+                <div
+                  key={b.id}
+                  className="flex items-center justify-between border rounded-lg p-3"
+                >
+                  <div className="font-mono text-sm">{b.id}</div>
+                  <button
+                    className="px-3 py-2 rounded-lg border text-sm font-black"
+                    onClick={() => unblockPhoneEverywhere(b.id)}
+                  >
+                    فك الحظر
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {tab === "archived" && (
+        <div className="bg-white border rounded-xl p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="font-black">
+              محذوفة مؤقتًا (تبقى {ARCHIVE_KEEP_DAYS} يوم)
+            </div>
+            <button
+              className="px-3 py-2 rounded-lg border text-sm font-black"
+              onClick={fetchArchived}
+            >
+              تحديث
+            </button>
+          </div>
+
+          {loadingArchived ? (
+            <div className="opacity-70">جاري التحميل...</div>
+          ) : archived.length === 0 ? (
+            <div className="opacity-80">لا يوجد تقييمات مؤرشفة.</div>
+          ) : (
+            <div className="space-y-3">
+              {archived.map((r) => {
+                const phoneKey = r.phoneKey || r.phoneE164 || r.phone || "";
+                const rStars = Number(r.rating || r.stars || 0);
+                const msg = r.comment || r.message || r.text || "";
+                const displayName = prettyName(
+                  r.customerName || r.userName || r.displayName,
+                );
+
+                return (
+                  <div key={r.id} className="border rounded-xl p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        {/* ✅ بدل "زبون" */}
+                        <div className="font-black">{displayName}</div>
+
+                        <div className="text-sm opacity-80">
+                          {starsLabel(rStars)}
+                        </div>
+                        <div className="text-xs opacity-70 mt-1">
+                          {String(phoneKey)}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          className="px-3 py-2 rounded-lg border text-sm font-black"
+                          onClick={() => restoreReview(r.id)}
+                        >
+                          استرجاع
+                        </button>
+                        <button
+                          className="px-3 py-2 rounded-lg border text-sm font-black"
+                          onClick={() => deleteArchivedPermanently(r.id)}
+                        >
+                          حذف نهائي
+                        </button>
+                      </div>
+                    </div>
+
+                    {msg ? (
+                      <p className="mt-3 text-sm leading-relaxed">{msg}</p>
+                    ) : null}
+
+                    {r.purgeAt ? (
+                      <div className="mt-2 text-xs opacity-70">
+                        حذف تلقائي بعد:{" "}
+                        {typeof r.purgeAt?.toDate === "function"
+                          ? r.purgeAt.toDate().toLocaleString()
+                          : new Date(r.purgeAt).toLocaleString()}
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ✅ Undo Toast */}
+      {undo?.id && (
+        <div className="fixed bottom-4 left-4 right-4 max-w-4xl mx-auto">
+          <div className="bg-black text-white rounded-xl p-4 flex items-center justify-between gap-3">
+            <div className="text-sm font-bold">
+              تم حذف تقييم ({undo.name}) مؤقتًا. تراجع؟
+            </div>
+            <button
+              className="px-3 py-2 rounded-lg border border-white text-sm font-black"
+              onClick={undoArchive}
+            >
+              تراجع
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+</file>
+
 <file path="src/pages/barberPanel/WeeklyHoursPage.jsx">
 // src/pages/barberPanel/WeeklyHoursPage.jsx
 import { useEffect, useMemo, useState, useCallback } from "react";
@@ -11088,99 +11260,6 @@ export default function OpeningStatusCard({ status, workingHours }) {
             );
           })}
         </ul>
-      </div>
-    </div>
-  );
-}
-</file>
-
-<file path="src/components/booking/parts/ProgressBar.jsx">
-// src/components/booking/parts/ProgressBar.jsx
-import React, { useMemo } from "react";
-import {
-  FaUser,
-  FaPhone,
-  FaCalendarAlt,
-  FaClock,
-  FaCut,
-  FaCheck,
-} from "react-icons/fa";
-
-/**
- * مؤشر بسيط بدون أرقام/بار:
- *  - step: الخطوة النشطة (1..6)
- *  - completed: كائن بولياني لكل خطوة {name,phone,date,time,service,confirm}
- *  - labels: أسماء اختيارية تظهر من sm+
- */
-export default function ProgressBar({ step = 1, completed = {}, labels }) {
-  const dir = (typeof document !== "undefined" && document?.dir) || "rtl";
-
-  const Icons = useMemo(
-    () => [FaUser, FaPhone, FaCalendarAlt, FaClock, FaCut, FaCheck],
-    [],
-  );
-  const keys = ["name", "phone", "date", "time", "service", "confirm"];
-  const total = Icons.length;
-  const current = Math.min(Math.max(Number(step) || 1, 1), total);
-
-  return (
-    <div className="w-full" dir={dir} aria-label="Progress steps">
-      <div className="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-gray-100 rounded-t-2xl -mt-6 -mx-6 px-6 pt-6">
-        <ol className="flex items-end justify-between gap-3 sm:gap-4 select-none">
-          {Icons.map((Icon, idx) => {
-            const idx1 = idx + 1;
-            const isActive = idx1 === current;
-            const isDone = Boolean(completed[keys[idx]]);
-
-            return (
-              <li key={idx1} className="flex-1">
-                <div className="relative flex flex-col items-center">
-                  {/* ✓ مستقلة لكل خطوة */}
-                  <div
-                    className={`absolute -top-3 h-5 w-5 rounded-full flex items-center justify-center text-[11px]
-                    ${
-                      isDone
-                        ? "bg-emerald-500 text-white shadow"
-                        : "bg-slate-200 text-slate-400"
-                    }`}
-                    title={isDone ? "مكتملة" : "غير مكتملة"}
-                  >
-                    ✓
-                  </div>
-
-                  <div
-                    className={`h-10 w-10 rounded-full border flex items-center justify-center
-                      ${
-                        isActive
-                          ? "border-amber-400 bg-amber-50"
-                          : isDone
-                            ? "border-blue-500 bg-blue-50"
-                            : "border-slate-300 bg-slate-50"
-                      }`}
-                    aria-current={isActive ? "step" : undefined}
-                  >
-                    <Icon
-                      className={`${
-                        isActive
-                          ? "text-[#1F2937]"
-                          : isDone
-                            ? "text-blue-600"
-                            : "text-slate-500"
-                      } text-lg`}
-                      aria-hidden
-                    />
-                  </div>
-
-                  {labels?.[idx] && (
-                    <span className="hidden sm:block text-[11px] text-slate-600 mt-2 truncate max-w-[90px]">
-                      {labels[idx]}
-                    </span>
-                  )}
-                </div>
-              </li>
-            );
-          })}
-        </ol>
       </div>
     </div>
   );
@@ -12099,6 +12178,99 @@ export default {
 };
 </file>
 
+<file path="src/components/booking/parts/ProgressBar.jsx">
+// src/components/booking/parts/ProgressBar.jsx
+import React, { useMemo } from "react";
+import {
+  FaUser,
+  FaPhone,
+  FaCalendarAlt,
+  FaClock,
+  FaCut,
+  FaCheck,
+} from "react-icons/fa";
+
+/**
+ * مؤشر بسيط بدون أرقام/بار:
+ *  - step: الخطوة النشطة (1..6)
+ *  - completed: كائن بولياني لكل خطوة {name,phone,date,time,service,confirm}
+ *  - labels: أسماء اختيارية تظهر من sm+
+ */
+export default function ProgressBar({ step = 1, completed = {}, labels }) {
+  const dir = (typeof document !== "undefined" && document?.dir) || "rtl";
+
+  const Icons = useMemo(
+    () => [FaUser, FaPhone, FaCalendarAlt, FaClock, FaCut, FaCheck],
+    [],
+  );
+  const keys = ["name", "phone", "date", "time", "service", "confirm"];
+  const total = Icons.length;
+  const current = Math.min(Math.max(Number(step) || 1, 1), total);
+
+  return (
+    <div className="w-full" dir={dir} aria-label="Progress steps">
+      <div className="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-gray-100 rounded-t-2xl -mt-6 -mx-6 px-6 pt-6">
+        <ol className="flex items-end justify-between gap-3 sm:gap-4 select-none">
+          {Icons.map((Icon, idx) => {
+            const idx1 = idx + 1;
+            const isActive = idx1 === current;
+            const isDone = Boolean(completed[keys[idx]]);
+
+            return (
+              <li key={idx1} className="flex-1">
+                <div className="relative flex flex-col items-center">
+                  {/* ✓ مستقلة لكل خطوة */}
+                  <div
+                    className={`absolute -top-3 h-5 w-5 rounded-full flex items-center justify-center text-[11px]
+                    ${
+                      isDone
+                        ? "bg-emerald-500 text-white shadow"
+                        : "bg-slate-200 text-slate-400"
+                    }`}
+                    title={isDone ? "مكتملة" : "غير مكتملة"}
+                  >
+                    ✓
+                  </div>
+
+                  <div
+                    className={`h-10 w-10 rounded-full border flex items-center justify-center
+                      ${
+                        isActive
+                          ? "border-amber-400 bg-amber-50"
+                          : isDone
+                            ? "border-blue-500 bg-blue-50"
+                            : "border-slate-300 bg-slate-50"
+                      }`}
+                    aria-current={isActive ? "step" : undefined}
+                  >
+                    <Icon
+                      className={`${
+                        isActive
+                          ? "text-[#1F2937]"
+                          : isDone
+                            ? "text-blue-600"
+                            : "text-slate-500"
+                      } text-lg`}
+                      aria-hidden
+                    />
+                  </div>
+
+                  {labels?.[idx] && (
+                    <span className="hidden sm:block text-[11px] text-slate-600 mt-2 truncate max-w-[90px]">
+                      {labels[idx]}
+                    </span>
+                  )}
+                </div>
+              </li>
+            );
+          })}
+        </ol>
+      </div>
+    </div>
+  );
+}
+</file>
+
 <file path="src/components/booking/parts/SuccessModal.jsx">
 // src/components/booking/SuccessModal.jsx
 import { useState } from "react";
@@ -12870,217 +13042,6 @@ function Contact() {
 export default Contact;
 </file>
 
-<file path="src/components/booking/CheckReservation.jsx">
-// src/components/booking/CheckReservation.jsx
-import { useState } from "react";
-import { collection, query, where, getDocs } from "firebase/firestore";
-import { db } from "../../firebase";
-import { useTranslation } from "react-i18next";
-import SectionTitle from "../common/SectionTitle";
-import {
-  toILPhoneE164,
-  isILPhoneE164,
-  e164ToLocalPretty,
-} from "../../utils/phone";
-import {
-  Phone,
-  CalendarDays,
-  Clock3,
-  Scissors,
-  ShieldCheck,
-} from "lucide-react";
-
-function InfoRow({ label, value, icon }) {
-  return (
-    <div
-      className="bg-gray-50 border border-gray-200 rounded-2xl p-4 flex flex-col gap-1 text-right"
-      dir="rtl"
-    >
-      <div className="text-xs text-gray-500 flex flex-row-reverse items-center gap-2">
-        {icon}
-        <span>{label}</span>
-      </div>
-      <div className="text-sm font-bold text-gray-900">{value || "-"}</div>
-    </div>
-  );
-}
-
-export default function CheckReservation() {
-  const [phone, setPhone] = useState("");
-  const [results, setResults] = useState([]);
-  const [notFound, setNotFound] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const { t } = useTranslation();
-
-  const handleCheck = async () => {
-    setResults([]);
-    setNotFound(false);
-    if (!phone) return;
-
-    const p = toILPhoneE164(phone);
-    if (!isILPhoneE164(p)) {
-      setNotFound(true);
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const qy = query(
-        collection(db, "bookings"),
-        where("phoneNumber", "==", p),
-        where("bookingCode", "!=", ""),
-      );
-      const querySnapshot = await getDocs(qy);
-
-      if (querySnapshot.empty) {
-        setNotFound(true);
-      } else {
-        const data = querySnapshot.docs
-          .map((doc) => ({ id: doc.id, ...doc.data() }))
-          .filter(
-            (doc) =>
-              doc.fullName &&
-              doc.selectedDate &&
-              doc.selectedTime &&
-              doc.bookingCode,
-          );
-
-        setResults(data);
-      }
-    } catch (error) {
-      console.error("Error fetching bookings:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <section className="bg-beige py-12 px-4 font-body">
-      <div className="max-w-2xl mx-auto">
-        <SectionTitle icon="🔎">
-          {t("check_booking") || "تحقق من الحجز"}
-        </SectionTitle>
-
-        <p className="text-center text-sm text-gray-600 mt-2">
-          أدخل رقم هاتفك لعرض حجوزاتك. احتفظ بالكود لأنه مهم للتحقق أو الإلغاء.
-        </p>
-
-        {/* Card */}
-        <div
-          className="mt-6 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm"
-          dir="rtl"
-        >
-          {/* Header mini */}
-          <div className="flex flex-row-reverse items-center justify-between gap-3 mb-4">
-            <div className="flex flex-row-reverse items-center gap-2">
-              <ShieldCheck className="w-5 h-5 opacity-70" />
-              <span className="font-extrabold text-gray-900">متابعة الحجز</span>
-            </div>
-            <span className="px-3 py-1 text-xs rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700">
-              خطوة 1
-            </span>
-          </div>
-
-          {/* Phone input */}
-          <div className="space-y-2">
-            <label className="block text-sm font-semibold text-gray-800">
-              {t("phone") || "رقم الهاتف"}
-            </label>
-
-            <div className="relative">
-              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
-                <Phone className="w-4 h-4" />
-              </span>
-
-              <input
-                type="tel"
-                placeholder="مثال: 05X-XXXXXXX"
-                className="w-full border border-gray-300 rounded-2xl pr-11 pl-4 py-3 text-right shadow-sm focus:ring-2 focus:ring-gold bg-white"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-              />
-            </div>
-
-            <button
-              onClick={handleCheck}
-              disabled={loading || !phone}
-              className={`w-full mt-2 bg-gold text-primary py-3 rounded-2xl font-extrabold transition ${
-                loading || !phone
-                  ? "opacity-60 cursor-not-allowed"
-                  : "hover:bg-darkText hover:text-light"
-              }`}
-            >
-              {loading
-                ? t("loading") || "جارٍ التحقق..."
-                : t("check") || "تحقق"}
-            </button>
-
-            {notFound && (
-              <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-right text-rose-700">
-                {t("no_booking_found") ||
-                  "لا يوجد حجوزات لهذا الرقم (أو الرقم غير صحيح)."}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Results */}
-        {results.length > 0 && (
-          <div className="mt-6 space-y-4">
-            {results.map((r) => (
-              <div
-                key={r.id}
-                className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm"
-                dir="rtl"
-              >
-                <div className="flex flex-row-reverse justify-between items-start mb-4">
-                  <div className="text-right">
-                    <div className="text-lg font-extrabold text-gray-900">
-                      {r.fullName}
-                    </div>
-                    <div className="text-sm text-gray-700 mt-1">
-                      {e164ToLocalPretty(r.phoneNumber)}
-                    </div>
-                  </div>
-                  <span className="px-3 py-1 text-xs rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700">
-                    حجز
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 gap-3">
-                  <InfoRow
-                    label="الخدمة"
-                    value={r.selectedService}
-                    icon={<Scissors className="w-4 h-4 opacity-70" />}
-                  />
-                  <InfoRow
-                    label="الساعة"
-                    value={r.selectedTime}
-                    icon={<Clock3 className="w-4 h-4 opacity-70" />}
-                  />
-                  <InfoRow
-                    label="التاريخ"
-                    value={r.selectedDate}
-                    icon={<CalendarDays className="w-4 h-4 opacity-70" />}
-                  />
-                </div>
-
-                <div className="mt-4 rounded-2xl border border-gray-200 bg-gray-50 p-4 text-right">
-                  <div className="text-xs text-gray-500 mb-1">🔐 كود الحجز</div>
-                  <div className="text-xl font-black font-mono tracking-widest text-gray-900">
-                    {r.bookingCode || "-"}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </section>
-  );
-}
-</file>
-
 <file path="src/hooks/useAvailableTimes.js">
 // src/hooks/useAvailableTimes.js
 import { useEffect, useMemo, useState } from "react";
@@ -13325,102 +13286,215 @@ function App() {
 export default App;
 </file>
 
-<file path="src/components/home/InstagramSlider.jsx">
+<file path="src/components/booking/CheckReservation.jsx">
+// src/components/booking/CheckReservation.jsx
+import { useState } from "react";
+import { collection, query, where, getDocs } from "firebase/firestore";
+import { db } from "../../firebase";
 import { useTranslation } from "react-i18next";
-import { useState, useEffect } from "react";
-import { Swiper, SwiperSlide } from "swiper/react";
-import { Autoplay, Thumbs } from "swiper/modules";
 import SectionTitle from "../common/SectionTitle";
+import {
+  toILPhoneE164,
+  isILPhoneE164,
+  e164ToLocalPretty,
+} from "../../utils/phone";
+import {
+  Phone,
+  CalendarDays,
+  Clock3,
+  Scissors,
+  ShieldCheck,
+} from "lucide-react";
 
-import AOS from "aos";
-import "aos/dist/aos.css";
+function InfoRow({ label, value, icon }) {
+  return (
+    <div
+      className="bg-gray-50 border border-gray-200 rounded-2xl p-4 flex flex-col gap-1 text-right"
+      dir="rtl"
+    >
+      <div className="text-xs text-gray-500 flex flex-row-reverse items-center gap-2">
+        {icon}
+        <span>{label}</span>
+      </div>
+      <div className="text-sm font-bold text-gray-900">{value || "-"}</div>
+    </div>
+  );
+}
 
-import "swiper/css";
-import "swiper/css/thumbs";
-import "swiper/css/autoplay";
-
-const images = [
-  "/cuts/p1.jpg",
-  "/cuts/p2.jpg",
-  "/cuts/p3.jpg",
-  "/cuts/p4.jpg",
-  "/cuts/p5.jpg",
-  "/cuts/p6.jpg",
-  "/cuts/p8.jpg",
-  "/cuts/p9.jpg",
-  "/cuts/p10.jpg",
-  "/cuts/p11.jpg",
-];
-
-function InstagramSlider() {
-  const [thumbsSwiper, setThumbsSwiper] = useState(null);
+export default function CheckReservation() {
+  const [phone, setPhone] = useState("");
+  const [results, setResults] = useState([]);
+  const [notFound, setNotFound] = useState(false);
+  const [loading, setLoading] = useState(false);
   const { t } = useTranslation();
 
-  useEffect(() => {
-    AOS.init({ duration: 900, once: true });
-  }, []);
+  const handleCheck = async () => {
+    setResults([]);
+    setNotFound(false);
+    if (!phone) return;
+
+    const p = toILPhoneE164(phone);
+    if (!isILPhoneE164(p)) {
+      setNotFound(true);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const qy = query(
+        collection(db, "bookings"),
+        where("phoneNumber", "==", p),
+        where("bookingCode", "!=", ""),
+      );
+      const querySnapshot = await getDocs(qy);
+
+      if (querySnapshot.empty) {
+        setNotFound(true);
+      } else {
+        const data = querySnapshot.docs
+          .map((doc) => ({ id: doc.id, ...doc.data() }))
+          .filter(
+            (doc) =>
+              doc.fullName &&
+              doc.selectedDate &&
+              doc.selectedTime &&
+              doc.bookingCode,
+          );
+
+        setResults(data);
+      }
+    } catch (error) {
+      console.error("Error fetching bookings:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <section className="relative bg-[#f8f6f1] py-20 px-4 md:px-16 text-center overflow-hidden">
-      {/* ديكور خفيف جداً (يعطي حياة بدون ما يزعج) */}
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-24 -left-24 w-72 h-72 rounded-full bg-gold/10 blur-3xl" />
-        <div className="absolute -bottom-24 -right-24 w-72 h-72 rounded-full bg-gold/10 blur-3xl" />
-      </div>
+    <section className="bg-beige py-12 px-4 font-body">
+      <div className="max-w-2xl mx-auto">
+        <SectionTitle icon="🔎">
+          {t("check_booking") || "تحقق من الحجز"}
+        </SectionTitle>
 
-      <div
-        className="relative max-w-5xl mx-auto bg-white/90 backdrop-blur rounded-3xl shadow-lg p-8 md:p-12 border border-gold/10 transition-transform duration-300 hover:-translate-y-1"
-        data-aos="fade-up"
-      >
-        <SectionTitle>{t("slider_title") || "قصّات من لمساتنا"}</SectionTitle>
+        <p className="text-center text-sm text-gray-600 mt-2">
+          أدخل رقم هاتفك لعرض حجوزاتك. احتفظ بالكود لأنه مهم للتحقق أو الإلغاء.
+        </p>
 
-        <div className="rounded-2xl overflow-hidden shadow-md ring-1 ring-black/5">
-          <Swiper
-            modules={[Autoplay, Thumbs]}
-            thumbs={{ swiper: thumbsSwiper }}
-            autoplay={{ delay: 3000, disableOnInteraction: false }}
-            loop={true}
-            spaceBetween={10}
-            speed={1100}
-            grabCursor={true}
-          >
-            {images.map((src, i) => (
-              <SwiperSlide key={i}>
-                <img
-                  src={src}
-                  alt={`cut-${i}`}
-                  className="w-full h-[420px] md:h-[450px] object-cover transition-transform duration-700 ease-in-out hover:scale-105"
-                />
-              </SwiperSlide>
-            ))}
-          </Swiper>
+        {/* Card */}
+        <div
+          className="mt-6 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm"
+          dir="rtl"
+        >
+          {/* Header mini */}
+          <div className="flex flex-row-reverse items-center justify-between gap-3 mb-4">
+            <div className="flex flex-row-reverse items-center gap-2">
+              <ShieldCheck className="w-5 h-5 opacity-70" />
+              <span className="font-extrabold text-gray-900">متابعة الحجز</span>
+            </div>
+            <span className="px-3 py-1 text-xs rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700">
+              خطوة 1
+            </span>
+          </div>
+
+          {/* Phone input */}
+          <div className="space-y-2">
+            <label className="block text-sm font-semibold text-gray-800">
+              {t("phone") || "رقم الهاتف"}
+            </label>
+
+            <div className="relative">
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
+                <Phone className="w-4 h-4" />
+              </span>
+
+              <input
+                type="tel"
+                placeholder="مثال: 05X-XXXXXXX"
+                className="w-full border border-gray-300 rounded-2xl pr-11 pl-4 py-3 text-right shadow-sm focus:ring-2 focus:ring-gold bg-white"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+              />
+            </div>
+
+            <button
+              onClick={handleCheck}
+              disabled={loading || !phone}
+              className={`w-full mt-2 bg-gold text-primary py-3 rounded-2xl font-extrabold transition ${
+                loading || !phone
+                  ? "opacity-60 cursor-not-allowed"
+                  : "hover:bg-darkText hover:text-light"
+              }`}
+            >
+              {loading
+                ? t("loading") || "جارٍ التحقق..."
+                : t("check") || "تحقق"}
+            </button>
+
+            {notFound && (
+              <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-right text-rose-700">
+                {t("no_booking_found") ||
+                  "لا يوجد حجوزات لهذا الرقم (أو الرقم غير صحيح)."}
+              </div>
+            )}
+          </div>
         </div>
 
-        <div className="mt-6">
-          <Swiper
-            modules={[Thumbs]}
-            onSwiper={setThumbsSwiper}
-            slidesPerView={5}
-            spaceBetween={10}
-            watchSlidesProgress
-          >
-            {images.map((src, i) => (
-              <SwiperSlide key={i}>
-                <img
-                  src={src}
-                  alt={`thumb-${i}`}
-                  className="w-full h-20 object-cover rounded-xl border border-transparent hover:border-gold/70 transition-all duration-300 cursor-pointer ring-1 ring-black/5"
-                />
-              </SwiperSlide>
+        {/* Results */}
+        {results.length > 0 && (
+          <div className="mt-6 space-y-4">
+            {results.map((r) => (
+              <div
+                key={r.id}
+                className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm"
+                dir="rtl"
+              >
+                <div className="flex flex-row-reverse justify-between items-start mb-4">
+                  <div className="text-right">
+                    <div className="text-lg font-extrabold text-gray-900">
+                      {r.fullName}
+                    </div>
+                    <div className="text-sm text-gray-700 mt-1">
+                      {e164ToLocalPretty(r.phoneNumber)}
+                    </div>
+                  </div>
+                  <span className="px-3 py-1 text-xs rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700">
+                    حجز
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3">
+                  <InfoRow
+                    label="الخدمة"
+                    value={r.selectedService}
+                    icon={<Scissors className="w-4 h-4 opacity-70" />}
+                  />
+                  <InfoRow
+                    label="الساعة"
+                    value={r.selectedTime}
+                    icon={<Clock3 className="w-4 h-4 opacity-70" />}
+                  />
+                  <InfoRow
+                    label="التاريخ"
+                    value={r.selectedDate}
+                    icon={<CalendarDays className="w-4 h-4 opacity-70" />}
+                  />
+                </div>
+
+                <div className="mt-4 rounded-2xl border border-gray-200 bg-gray-50 p-4 text-right">
+                  <div className="text-xs text-gray-500 mb-1">🔐 كود الحجز</div>
+                  <div className="text-xl font-black font-mono tracking-widest text-gray-900">
+                    {r.bookingCode || "-"}
+                  </div>
+                </div>
+              </div>
             ))}
-          </Swiper>
-        </div>
+          </div>
+        )}
       </div>
     </section>
   );
 }
-
-export default InstagramSlider;
 </file>
 
 <file path="src/components/layout/Footer.jsx">
@@ -13566,227 +13640,102 @@ export default Footer;
 }
 </file>
 
-<file path="src/components/layout/Header.jsx">
-// ✅ src/components/layout/Header.jsx — UX ممتاز + اللغات ظاهرة دائمًا
+<file path="src/components/home/InstagramSlider.jsx">
 import { useTranslation } from "react-i18next";
-import LanguageSwitcher from "./LanguageSwitcher";
-import { Link, useLocation } from "react-router-dom";
-import { useEffect, useRef, useState } from "react";
-import logo from "../../assets/arfatblacklogo.png";
+import { useState, useEffect } from "react";
+import { Swiper, SwiperSlide } from "swiper/react";
+import { Autoplay, Thumbs } from "swiper/modules";
+import SectionTitle from "../common/SectionTitle";
 
-function Header() {
-  const { t, i18n } = useTranslation();
-  const isArabic = i18n.language === "ar";
-  const fontClass = isArabic ? "font-tajawal" : "font-heading";
+import AOS from "aos";
+import "aos/dist/aos.css";
 
-  const [menuOpen, setMenuOpen] = useState(false);
-  const location = useLocation();
-  const menuRef = useRef(null);
-  const buttonRef = useRef(null);
-  const headerRef = useRef(null);
+import "swiper/css";
+import "swiper/css/thumbs";
+import "swiper/css/autoplay";
 
-  // أغلق القائمة عند تغيّر المسار
+const images = [
+  "/cuts/p1.jpg",
+  "/cuts/p2.jpg",
+  "/cuts/p3.jpg",
+  "/cuts/p4.jpg",
+  "/cuts/p5.jpg",
+  "/cuts/p6.jpg",
+  "/cuts/p8.jpg",
+  "/cuts/p9.jpg",
+  "/cuts/p10.jpg",
+  "/cuts/p11.jpg",
+];
+
+function InstagramSlider() {
+  const [thumbsSwiper, setThumbsSwiper] = useState(null);
+  const { t } = useTranslation();
+
   useEffect(() => {
-    setMenuOpen(false);
-  }, [location.pathname]);
-  // ✅ خزّن ارتفاع الهيدر كـ CSS variable عشان أي sticky تحت الهيدر يشتغل صح
-  useEffect(() => {
-    const applyHeaderHeight = () => {
-      const h = headerRef.current?.offsetHeight || 72;
-      document.documentElement.style.setProperty("--app-header-h", `${h}px`);
-    };
-
-    applyHeaderHeight();
-
-    // لو الهيدر تغيّر بسبب ريسبونسف/فونت/لغة
-    window.addEventListener("resize", applyHeaderHeight);
-
-    return () => window.removeEventListener("resize", applyHeaderHeight);
-  }, [i18n.language]);
-
-  // قفل تمرير الصفحة + Esc + ضغط خارج القائمة
-  useEffect(() => {
-    const prevOverflow = document.body.style.overflow;
-
-    if (menuOpen) document.body.style.overflow = "hidden";
-    else document.body.style.overflow = prevOverflow || "";
-
-    const onKeyDown = (e) => {
-      if (e.key === "Escape") setMenuOpen(false);
-    };
-
-    const onClickOutside = (e) => {
-      if (!menuRef.current) return;
-      const isInsideMenu = menuRef.current.contains(e.target);
-      const isOnButton = buttonRef.current?.contains(e.target);
-      if (menuOpen && !isInsideMenu && !isOnButton) setMenuOpen(false);
-    };
-
-    document.addEventListener("keydown", onKeyDown);
-    document.addEventListener("click", onClickOutside);
-
-    return () => {
-      document.removeEventListener("keydown", onKeyDown);
-      document.removeEventListener("click", onClickOutside);
-      document.body.style.overflow = prevOverflow || "";
-    };
-  }, [menuOpen]);
-
-  const linkClass = (to) =>
-    `hover:text-gold transition ${
-      location.pathname === to ? "text-gold font-semibold" : ""
-    }`;
+    AOS.init({ duration: 900, once: true });
+  }, []);
 
   return (
-    <header
-      ref={headerRef}
-      className={`bg-primary text-light shadow-md fixed top-0 left-0 w-full z-50 ${fontClass}`}
-      role="banner"
-    >
-      <a
-        href="#main"
-        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 bg-gold text-primary px-3 py-2 rounded-md"
-      >
-        {isArabic ? "تخطَّ إلى المحتوى" : "Skip to content"}
-      </a>
-
-      <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between relative">
-        {/* الشعار */}
-        <Link
-          to="/"
-          className="flex items-center gap-3 text-2xl md:text-3xl font-notokufi font-bold tracking-tight text-gold"
-          aria-label="Arfat Barber - Home"
-        >
-          <img
-            src={logo}
-            alt="Arfat Barber Logo"
-            className="w-10 h-10 md:w-12 md:h-12 object-contain rounded-full"
-            loading="eager"
-            fetchPriority="high"
-          />
-          Arfat Barber
-        </Link>
-
-        {/* روابط سطح المكتب */}
-        <nav
-          className="hidden md:flex gap-x-10 items-center text-lg font-tajawal font-medium tracking-wide px-2"
-          aria-label={isArabic ? "التنقل الرئيسي" : "Main navigation"}
-        >
-          <Link to="/" className={linkClass("/")}>
-            {t("home")}
-          </Link>
-
-          {/* <a href="#services" className="hover:text-gold transition">{t("services")}</a> */}
-
-          <Link to="/contact" className={linkClass("/contact")}>
-            {t("contact")}
-          </Link>
-        </nav>
-
-        {/* يمين سطح المكتب: احجز الآن + اللغات */}
-        <div className="hidden md:flex items-center gap-4">
-          <Link
-            to="/?scrollTo=booking"
-            className="bg-gold text-primary font-tajawal font-bold px-4 py-2 rounded-xl shadow-sm hover:bg-darkText hover:text-light transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gold"
-          >
-            {t("book_now")}
-          </Link>
-          <LanguageSwitcher />
-        </div>
-
-        {/* يمين الموبايل: اللغات ظاهرة دائمًا + زر القائمة */}
-        <div className="md:hidden flex items-center gap-3">
-          <LanguageSwitcher />
-
-          {/* ← تبقى ظاهرة حتى لو القائمة مسكّرة */}
-          <button
-            ref={buttonRef}
-            onClick={() => setMenuOpen((v) => !v)}
-            className="focus:outline-none rounded-md p-2"
-            aria-label={
-              menuOpen
-                ? isArabic
-                  ? "إغلاق القائمة"
-                  : "Close menu"
-                : isArabic
-                  ? "فتح القائمة"
-                  : "Open menu"
-            }
-            aria-expanded={menuOpen}
-            aria-controls="mobile-menu"
-          >
-            <span className="sr-only">{menuOpen ? "Close" : "Open"}</span>
-            <div className="w-6 h-6 relative" aria-hidden="true">
-              <span
-                className={`absolute left-0 top-1 w-6 h-0.5 bg-light transition-transform ${
-                  menuOpen ? "rotate-45 translate-y-2" : ""
-                }`}
-              />
-              <span
-                className={`absolute left-0 top-2.5 w-6 h-0.5 bg-light transition-opacity ${
-                  menuOpen ? "opacity-0" : "opacity-100"
-                }`}
-              />
-              <span
-                className={`absolute left-0 top-4 w-6 h-0.5 bg-light transition-transform ${
-                  menuOpen ? "-rotate-45 -translate-y-2" : ""
-                }`}
-              />
-            </div>
-          </button>
-        </div>
+    <section className="relative bg-[#f8f6f1] py-20 px-4 md:px-16 text-center overflow-hidden">
+      {/* ديكور خفيف جداً (يعطي حياة بدون ما يزعج) */}
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute -top-24 -left-24 w-72 h-72 rounded-full bg-gold/10 blur-3xl" />
+        <div className="absolute -bottom-24 -right-24 w-72 h-72 rounded-full bg-gold/10 blur-3xl" />
       </div>
 
-      {/* قائمة الموبايل — absolute تحت الهيدر، بلا فراغ عند الإغلاق */}
       <div
-        id="mobile-menu"
-        ref={menuRef}
-        className={`md:hidden absolute left-0 top-full w-full bg-primary text-light px-6 pb-4 text-sm font-tajawal font-medium origin-top transition-[opacity,transform] duration-200 ${
-          menuOpen
-            ? "opacity-100 translate-y-0 pointer-events-auto"
-            : "opacity-0 -translate-y-2 pointer-events-none select-none"
-        }`}
+        className="relative max-w-5xl mx-auto bg-white/90 backdrop-blur rounded-3xl shadow-lg p-8 md:p-12 border border-gold/10 transition-transform duration-300 hover:-translate-y-1"
+        data-aos="fade-up"
       >
-        <Link
-          to="/"
-          className="block py-2 hover:text-gold focus:outline-none focus-visible:ring-2 focus-visible:ring-gold rounded"
-          onClick={() => setMenuOpen(false)}
-          aria-current={location.pathname === "/" ? "page" : undefined}
-        >
-          {t("home")}
-        </Link>
+        <SectionTitle>{t("slider_title") || "قصّات من لمساتنا"}</SectionTitle>
 
-        <Link
-          to="/about"
-          className="block py-2 hover:text-gold focus:outline-none focus-visible:ring-2 focus-visible:ring-gold rounded"
-          onClick={() => setMenuOpen(false)}
-          aria-current={location.pathname === "/about" ? "page" : undefined}
-        >
-          {t("about")}
-        </Link>
+        <div className="rounded-2xl overflow-hidden shadow-md ring-1 ring-black/5">
+          <Swiper
+            modules={[Autoplay, Thumbs]}
+            thumbs={{ swiper: thumbsSwiper }}
+            autoplay={{ delay: 3000, disableOnInteraction: false }}
+            loop={true}
+            spaceBetween={10}
+            speed={1100}
+            grabCursor={true}
+          >
+            {images.map((src, i) => (
+              <SwiperSlide key={i}>
+                <img
+                  src={src}
+                  alt={`cut-${i}`}
+                  className="w-full h-[420px] md:h-[450px] object-cover transition-transform duration-700 ease-in-out hover:scale-105"
+                />
+              </SwiperSlide>
+            ))}
+          </Swiper>
+        </div>
 
-        <Link
-          to="/contact"
-          className="block py-2 hover:text-gold focus:outline-none focus-visible:ring-2 focus-visible:ring-gold rounded"
-          onClick={() => setMenuOpen(false)}
-          aria-current={location.pathname === "/contact" ? "page" : undefined}
-        >
-          {t("contact")}
-        </Link>
-
-        <Link
-          to="/?scrollTo=booking"
-          className="block mt-2 bg-gold text-primary text-center font-tajawal font-bold px-4 py-2 rounded-xl hover:bg-darkText hover:text-light transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gold"
-          onClick={() => setMenuOpen(false)}
-        >
-          {t("book_now")}
-        </Link>
+        <div className="mt-6">
+          <Swiper
+            modules={[Thumbs]}
+            onSwiper={setThumbsSwiper}
+            slidesPerView={5}
+            spaceBetween={10}
+            watchSlidesProgress
+          >
+            {images.map((src, i) => (
+              <SwiperSlide key={i}>
+                <img
+                  src={src}
+                  alt={`thumb-${i}`}
+                  className="w-full h-20 object-cover rounded-xl border border-transparent hover:border-gold/70 transition-all duration-300 cursor-pointer ring-1 ring-black/5"
+                />
+              </SwiperSlide>
+            ))}
+          </Swiper>
+        </div>
       </div>
-    </header>
+    </section>
   );
 }
 
-export default Header;
+export default InstagramSlider;
 </file>
 
 <file path="src/pages/Dashboard.jsx">
@@ -14200,12 +14149,258 @@ function CardBox({ color = "gray", title, children }) {
 }
 </file>
 
+<file path="src/components/layout/Header.jsx">
+// ✅ src/components/layout/Header.jsx — Polish بصري (2+3+4+5+6) بدون كسر المنطق
+import { useTranslation } from "react-i18next";
+import LanguageSwitcher from "./LanguageSwitcher";
+import { Link, useLocation } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import logo from "../../assets/arfatblacklogo.png";
+
+function Header() {
+  const { t, i18n } = useTranslation();
+  const isArabic = i18n.language === "ar";
+  const fontClass = isArabic ? "font-tajawal" : "font-heading";
+
+  const [menuOpen, setMenuOpen] = useState(false);
+  const location = useLocation();
+  const menuRef = useRef(null);
+  const buttonRef = useRef(null);
+  const headerRef = useRef(null);
+
+  // أغلق القائمة عند تغيّر المسار
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [location.pathname]);
+
+  // ✅ خزّن ارتفاع الهيدر كـ CSS variable عشان أي sticky تحت الهيدر يشتغل صح
+  useEffect(() => {
+    const applyHeaderHeight = () => {
+      const h = headerRef.current?.offsetHeight || 72;
+      document.documentElement.style.setProperty("--app-header-h", `${h}px`);
+    };
+
+    applyHeaderHeight();
+    window.addEventListener("resize", applyHeaderHeight);
+
+    return () => window.removeEventListener("resize", applyHeaderHeight);
+  }, [i18n.language]);
+
+  // قفل تمرير الصفحة + Esc + ضغط خارج القائمة
+  useEffect(() => {
+    const prevOverflow = document.body.style.overflow;
+
+    if (menuOpen) document.body.style.overflow = "hidden";
+    else document.body.style.overflow = prevOverflow || "";
+
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") setMenuOpen(false);
+    };
+
+    const onClickOutside = (e) => {
+      if (!menuRef.current) return;
+      const isInsideMenu = menuRef.current.contains(e.target);
+      const isOnButton = buttonRef.current?.contains(e.target);
+      if (menuOpen && !isInsideMenu && !isOnButton) setMenuOpen(false);
+    };
+
+    document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("click", onClickOutside);
+
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("click", onClickOutside);
+      document.body.style.overflow = prevOverflow || "";
+    };
+  }, [menuOpen]);
+
+  const linkClass = (to) =>
+    `transition-colors duration-200 hover:text-gold ${
+      location.pathname === to ? "text-gold font-semibold" : "text-light/90"
+    }`;
+
+  return (
+    <header
+      ref={headerRef}
+      className={`bg-primary text-light shadow-md fixed top-0 left-0 w-full z-50 ${fontClass}`}
+      role="banner"
+    >
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 bg-gold text-primary px-3 py-2 rounded-md"
+      >
+        {isArabic ? "تخطَّ إلى المحتوى" : "Skip to content"}
+      </a>
+
+      {/* ✅ ارتفاع أنظف + محاذاة Premium */}
+      <div className="max-w-7xl mx-auto px-6 h-[64px] flex items-center justify-between relative">
+        {/* الشعار */}
+        <Link
+          to="/"
+          className="flex items-center gap-3 text-gold select-none"
+          aria-label="Arfat Barber - Home"
+        >
+          {/* (6) Glow subtle على اللوجو */}
+          <span className="relative">
+            <img
+              src={logo}
+              alt="Arfat Barber Logo"
+              className="w-10 h-10 md:w-11 md:h-11 object-contain rounded-full shadow-[0_0_0_2px_rgba(255,215,0,0.12),0_6px_18px_rgba(0,0,0,0.25)]"
+              loading="eager"
+              fetchPriority="high"
+            />
+          </span>
+
+          {/* (3) Brand typographic polish */}
+          <span className="leading-none">
+            <span className="block text-[18px] md:text-[20px] font-black tracking-tight">
+              Arafat
+            </span>
+            <span className="block -mt-0.5 text-[13px] md:text-[14px] font-semibold tracking-wide text-gold/80">
+              Barber
+            </span>
+          </span>
+        </Link>
+
+        {/* روابط سطح المكتب */}
+        <nav
+          className="hidden md:flex gap-x-10 items-center text-[16px] font-tajawal font-medium tracking-wide"
+          aria-label={isArabic ? "التنقل الرئيسي" : "Main navigation"}
+        >
+          <Link to="/" className={linkClass("/")}>
+            {t("home")}
+          </Link>
+
+          <Link to="/contact" className={linkClass("/contact")}>
+            {t("contact")}
+          </Link>
+        </nav>
+
+        {/* يمين سطح المكتب: احجز الآن + اللغات */}
+        <div className="hidden md:flex items-center gap-3">
+          <Link
+            to="/?scrollTo=booking"
+            className="bg-gold text-primary font-tajawal font-black px-4 py-2 rounded-xl shadow-sm hover:bg-darkText hover:text-light transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gold"
+          >
+            {t("book_now")}
+          </Link>
+
+          {/* (5) فاصل خفيف */}
+          <span className="w-px h-7 bg-white/10 mx-1" aria-hidden="true" />
+
+          {/* (2) تهدئة شكل اللغة (Wrapper) */}
+          <div className="rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-colors px-2 py-1">
+            <LanguageSwitcher />
+          </div>
+        </div>
+
+        {/* يمين الموبايل: اللغات + زر القائمة */}
+        <div className="md:hidden flex items-center gap-2">
+          {/* (2) تهدئة شكل اللغة (Wrapper) */}
+          <div className="rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-colors px-2 py-1">
+            <LanguageSwitcher />
+          </div>
+
+          {/* (5) فاصل خفيف */}
+          <span className="w-px h-7 bg-white/10 mx-1" aria-hidden="true" />
+
+          {/* (4) Hamburger كزر Modern */}
+          <button
+            ref={buttonRef}
+            onClick={() => setMenuOpen((v) => !v)}
+            className="focus:outline-none rounded-xl w-10 h-10 grid place-items-center bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
+            aria-label={
+              menuOpen
+                ? isArabic
+                  ? "إغلاق القائمة"
+                  : "Close menu"
+                : isArabic
+                  ? "فتح القائمة"
+                  : "Open menu"
+            }
+            aria-expanded={menuOpen}
+            aria-controls="mobile-menu"
+          >
+            <span className="sr-only">{menuOpen ? "Close" : "Open"}</span>
+            <div className="w-6 h-6 relative" aria-hidden="true">
+              <span
+                className={`absolute left-0 top-1 w-6 h-0.5 bg-light transition-transform duration-200 ${
+                  menuOpen ? "rotate-45 translate-y-2" : ""
+                }`}
+              />
+              <span
+                className={`absolute left-0 top-2.5 w-6 h-0.5 bg-light transition-opacity duration-200 ${
+                  menuOpen ? "opacity-0" : "opacity-100"
+                }`}
+              />
+              <span
+                className={`absolute left-0 top-4 w-6 h-0.5 bg-light transition-transform duration-200 ${
+                  menuOpen ? "-rotate-45 -translate-y-2" : ""
+                }`}
+              />
+            </div>
+          </button>
+        </div>
+      </div>
+
+      {/* قائمة الموبايل — absolute تحت الهيدر، بلا فراغ عند الإغلاق */}
+      <div
+        id="mobile-menu"
+        ref={menuRef}
+        className={`md:hidden absolute left-0 top-full w-full bg-primary text-light px-6 pb-4 text-sm font-tajawal font-medium origin-top transition-[opacity,transform] duration-200 ${
+          menuOpen
+            ? "opacity-100 translate-y-0 pointer-events-auto"
+            : "opacity-0 -translate-y-2 pointer-events-none select-none"
+        }`}
+      >
+        <Link
+          to="/"
+          className="block py-2 hover:text-gold focus:outline-none focus-visible:ring-2 focus-visible:ring-gold rounded"
+          onClick={() => setMenuOpen(false)}
+          aria-current={location.pathname === "/" ? "page" : undefined}
+        >
+          {t("home")}
+        </Link>
+
+        <Link
+          to="/about"
+          className="block py-2 hover:text-gold focus:outline-none focus-visible:ring-2 focus-visible:ring-gold rounded"
+          onClick={() => setMenuOpen(false)}
+          aria-current={location.pathname === "/about" ? "page" : undefined}
+        >
+          {t("about")}
+        </Link>
+
+        <Link
+          to="/contact"
+          className="block py-2 hover:text-gold focus:outline-none focus-visible:ring-2 focus-visible:ring-gold rounded"
+          onClick={() => setMenuOpen(false)}
+          aria-current={location.pathname === "/contact" ? "page" : undefined}
+        >
+          {t("contact")}
+        </Link>
+
+        <Link
+          to="/?scrollTo=booking"
+          className="block mt-2 bg-gold text-primary text-center font-tajawal font-black px-4 py-2 rounded-xl hover:bg-darkText hover:text-light transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gold"
+          onClick={() => setMenuOpen(false)}
+        >
+          {t("book_now")}
+        </Link>
+      </div>
+    </header>
+  );
+}
+
+export default Header;
+</file>
+
 <file path="src/routes.jsx">
 import { Routes, Route, Navigate } from "react-router-dom";
 import React, { useEffect, useState } from "react";
 import Dashboard from "./pages/Dashboard";
 import BlockedPhones from "./pages/BlockedPhones";
-import ReviewsManagerPage from "./pages/barberPanel/ReviewsManagerPage";
+import ReviewsManagerPage from "./pages/barberPanel/reviews/ReviewsManagerPage";
 
 import Home from "./pages/Home";
 import BookingIntro from "./pages/BookingIntro";
@@ -14316,6 +14511,15 @@ export default function AppRoutes() {
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
+}
+</file>
+
+<file path="src/pages/AdminBookings.jsx">
+// src/pages/AdminBookings.jsx
+import AdminBookingsPage from "./adminBookings/AdminBookingsPage";
+
+export default function AdminBookings() {
+  return <AdminBookingsPage />;
 }
 </file>
 
@@ -14725,15 +14929,6 @@ function InfoRow({ label, value, icon }) {
 }
 
 export default BookingTracker;
-</file>
-
-<file path="src/pages/AdminBookings.jsx">
-// src/pages/AdminBookings.jsx
-import AdminBookingsPage from "./adminBookings/AdminBookingsPage";
-
-export default function AdminBookings() {
-  return <AdminBookingsPage />;
-}
 </file>
 
 <file path="src/pages/Home.jsx">
