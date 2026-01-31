@@ -1,0 +1,131 @@
+/* src/styles/heroEnhancements.css */
+
+/* طبقات محسّنة + Mobile-first + بدون تغيير محتوى */
+
+/* ==== HERO LAYERS ==== */
+.hero-overlay {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Gradient overlay بدل black opacity الجامد */
+.hero-overlay::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.72),
+    rgba(0, 0, 0, 0.42),
+    rgba(0, 0, 0, 0.18)
+  );
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* حركة خفيفة للصورة (Ken Burns) - محسّنة ومش مزعجة */
+.hero-media {
+  transform: scale(1.02);
+  will-change: transform;
+  animation: heroKenBurns 12s ease-in-out infinite alternate;
+}
+
+/* على الموبايل نخليها أخف */
+@media (max-width: 768px) {
+  .hero-media {
+    animation-duration: 16s;
+    transform: scale(1.015);
+  }
+}
+
+@keyframes heroKenBurns {
+  from {
+    transform: scale(1.02);
+  }
+  to {
+    transform: scale(1.055);
+  }
+}
+
+/* ==== CONTENT ON TOP ==== */
+.hero-content {
+  position: relative;
+  z-index: 2;
+}
+
+.hero-text-shadow {
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+}
+
+/* ==== VISUAL RHYTHM (7) ==== */
+.hero-anim-title,
+.hero-anim-sub,
+.hero-anim-cta {
+  opacity: 0;
+  transform: translateY(12px);
+  will-change: transform, opacity;
+  animation: heroFadeUp 520ms ease-out forwards;
+}
+
+.hero-anim-sub {
+  animation-delay: 120ms;
+}
+.hero-anim-cta {
+  animation-delay: 240ms;
+}
+
+@keyframes heroFadeUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ==== EYE GUIDANCE (9) ==== */
+.hero-cta-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+.hero-cta-wrap::before {
+  content: "";
+  position: absolute;
+  inset: -34px;
+  background: radial-gradient(
+    circle,
+    rgba(200, 170, 90, 0.22),
+    transparent 62%
+  );
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* ==== TACTILE FEEL (8) ==== */
+.hero-cta-btn {
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    filter 180ms ease;
+}
+
+.hero-cta-btn:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.02);
+}
+
+.hero-cta-btn:active {
+  transform: translateY(0);
+  box-shadow: inset 0 3px 7px rgba(0, 0, 0, 0.28);
+}
+
+/* ==== REDUCED MOTION SUPPORT (مهم للموبايل) ==== */
+@media (prefers-reduced-motion: reduce) {
+  .hero-media,
+  .hero-anim-title,
+  .hero-anim-sub,
+  .hero-anim-cta {
+    animation: none !important;
+    transform: none !important;
+    opacity: 1 !important;
+  }
+}
