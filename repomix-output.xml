@@ -185,6 +185,7 @@ src/routes.jsx
 src/services/barberWeeklyHours.js
 src/services/bookingService.js
 src/services/fcmTest.js
+src/styles/heroEnhancements.css
 src/translations/ar.json
 src/translations/en.json
 src/translations/he.json
@@ -7624,6 +7625,140 @@ export async function createTestNotificationRequest(token, payload) {
 }
 </file>
 
+<file path="src/styles/heroEnhancements.css">
+/* src/styles/heroEnhancements.css */
+
+/* طبقات محسّنة + Mobile-first + بدون تغيير محتوى */
+
+/* ==== HERO LAYERS ==== */
+.hero-overlay {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Gradient overlay بدل black opacity الجامد */
+.hero-overlay::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.72),
+    rgba(0, 0, 0, 0.42),
+    rgba(0, 0, 0, 0.18)
+  );
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* حركة خفيفة للصورة (Ken Burns) - محسّنة ومش مزعجة */
+.hero-media {
+  transform: scale(1.02);
+  will-change: transform;
+  animation: heroKenBurns 12s ease-in-out infinite alternate;
+}
+
+/* على الموبايل نخليها أخف */
+@media (max-width: 768px) {
+  .hero-media {
+    animation-duration: 16s;
+    transform: scale(1.015);
+  }
+}
+
+@keyframes heroKenBurns {
+  from {
+    transform: scale(1.02);
+  }
+  to {
+    transform: scale(1.055);
+  }
+}
+
+/* ==== CONTENT ON TOP ==== */
+.hero-content {
+  position: relative;
+  z-index: 2;
+}
+
+.hero-text-shadow {
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+}
+
+/* ==== VISUAL RHYTHM (7) ==== */
+.hero-anim-title,
+.hero-anim-sub,
+.hero-anim-cta {
+  opacity: 0;
+  transform: translateY(12px);
+  will-change: transform, opacity;
+  animation: heroFadeUp 520ms ease-out forwards;
+}
+
+.hero-anim-sub {
+  animation-delay: 120ms;
+}
+.hero-anim-cta {
+  animation-delay: 240ms;
+}
+
+@keyframes heroFadeUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ==== EYE GUIDANCE (9) ==== */
+.hero-cta-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+.hero-cta-wrap::before {
+  content: "";
+  position: absolute;
+  inset: -34px;
+  background: radial-gradient(
+    circle,
+    rgba(200, 170, 90, 0.22),
+    transparent 62%
+  );
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* ==== TACTILE FEEL (8) ==== */
+.hero-cta-btn {
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    filter 180ms ease;
+}
+
+.hero-cta-btn:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.02);
+}
+
+.hero-cta-btn:active {
+  transform: translateY(0);
+  box-shadow: inset 0 3px 7px rgba(0, 0, 0, 0.28);
+}
+
+/* ==== REDUCED MOTION SUPPORT (مهم للموبايل) ==== */
+@media (prefers-reduced-motion: reduce) {
+  .hero-media,
+  .hero-anim-title,
+  .hero-anim-sub,
+  .hero-anim-cta {
+    animation: none !important;
+    transform: none !important;
+    opacity: 1 !important;
+  }
+}
+</file>
+
 <file path="src/utils/cancelGuard.js">
 // ثابت: نافذة الإلغاء بالدقائق
 export const CANCELLATION_WINDOW_MIN = 50;
@@ -12502,91 +12637,6 @@ function Footer() {
 export default Footer;
 </file>
 
-<file path="src/components/home/HeroSection.jsx">
-import { useTranslation } from "react-i18next";
-import { useEffect } from "react";
-import AOS from "aos";
-import "aos/dist/aos.css";
-
-function HeroSection() {
-  const { t } = useTranslation();
-
-  useEffect(() => {
-    AOS.init({ duration: 1000 });
-  }, []);
-
-  const smoothScrollTo = (id) => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
-
-  const onCheckClick = (e) => {
-    e.preventDefault();
-    smoothScrollTo("check-booking");
-  };
-
-  const onBookClick = (e) => {
-    e.preventDefault();
-    smoothScrollTo("booking");
-  };
-
-  return (
-    <section className="relative w-full h-screen overflow-hidden flex items-center justify-center">
-      {/* الصورة الكاملة */}
-      <img
-        src="/barber-hero.jpg"
-        alt="Barber Hero"
-        className="absolute inset-0 w-full h-full object-cover object-center z-0"
-      />
-
-      {/* طبقة تعتيم */}
-      <div className="absolute inset-0 bg-black bg-opacity-60 z-10"></div>
-
-      {/* النص */}
-      <div
-        className="relative z-20 text-center px-4 max-w-2xl"
-        data-aos="fade-up"
-      >
-        <h1 className="font-notokufi text-5xl md:text-6xl font-extrabold mb-4 leading-tight tracking-tight text-gold">
-          {t("hero_title") || "أسلوب يليق بك، بكل بساطة"}
-        </h1>
-
-        <p className="text-lg md:text-xl mb-6 font-tajawal text-beige max-w-xl mx-auto">
-          {t("hero_subtitle") || "لمحة مُظهرك، يناسبك ويعبر عنك"}
-        </p>
-
-        {/* Primary CTA */}
-        <a
-          href="#booking"
-          onClick={onBookClick}
-          className="inline-flex items-center justify-center bg-gold hover:bg-yellow-400 text-primary font-semibold px-6 py-3 rounded shadow-md transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gold"
-        >
-          {t("book_now") || "Book Now"}
-        </a>
-
-        {/* Secondary CTA (Perfect: lightweight + doesn’t compete) */}
-        <div className="mt-3">
-          <a
-            href="#check-booking"
-            onClick={onCheckClick}
-            className="inline-flex items-center gap-2 text-sm font-tajawal font-semibold text-beige/90 hover:text-gold transition underline underline-offset-4 decoration-white/30 hover:decoration-gold/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gold rounded"
-            aria-label={t("check_booking") || "تحقق من الحجز"}
-          >
-            <span aria-hidden="true">↓</span>
-            <span>{t("check_booking") || "تحقق من الحجز"}</span>
-          </a>
-
-          {/* سطر ثقة صغير (اختياري، بس حلو جدًا للموبايل) */}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-export default HeroSection;
-</file>
-
 <file path="src/firebase.js">
 // ✅ firebase.js
 
@@ -13023,6 +13073,112 @@ export default function BarberPanel() {
     </div>
   );
 }
+</file>
+
+<file path="src/components/home/HeroSection.jsx">
+import { useTranslation } from "react-i18next";
+import { useEffect } from "react";
+import AOS from "aos";
+import "aos/dist/aos.css";
+
+// ✅ تحسينات شكلية فقط (آمنة)
+import "../../styles/heroEnhancements.css";
+
+function HeroSection() {
+  const { t } = useTranslation();
+
+  useEffect(() => {
+    AOS.init({ duration: 1000 });
+  }, []);
+
+  const smoothScrollTo = (id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const onCheckClick = (e) => {
+    e.preventDefault();
+    smoothScrollTo("check-booking");
+  };
+
+  const onBookClick = (e) => {
+    e.preventDefault();
+    smoothScrollTo("booking");
+  };
+
+  return (
+    <section
+      className="hero-overlay relative w-full min-h-[100svh] h-screen overflow-hidden flex items-center justify-center"
+      aria-label="Hero"
+    >
+      {/* الصورة */}
+      <img
+        src="/barber-hero.jpg"
+        alt="Barber Hero"
+        className="hero-media absolute inset-0 w-full h-full object-cover object-center z-0"
+        loading="eager"
+      />
+
+      {/* النص */}
+      <div
+        className="hero-content text-center px-4 max-w-2xl"
+        data-aos="fade-up"
+      >
+        {/* 🔴 الحل الحقيقي: ظل أغمق ذكي */}
+        <h1
+          className="
+            hero-anim-title
+            font-notokufi
+            text-4xl sm:text-5xl md:text-6xl
+            font-extrabold
+            mb-4
+            leading-tight
+            tracking-tight
+            text-gold
+          "
+          style={{
+            textShadow:
+              "0 2px 6px rgba(0,0,0,0.85), 0 6px 24px rgba(0,0,0,0.6)",
+          }}
+        >
+          {t("hero_title") || "أسلوب يليق بك، بكل بساطة"}
+        </h1>
+
+        <p className="hero-anim-sub hero-text-shadow text-base sm:text-lg md:text-xl mb-6 font-tajawal text-beige max-w-xl mx-auto leading-relaxed">
+          {t("hero_subtitle") || "لمحة مُظهرك، يناسبك ويعبر عنك"}
+        </p>
+
+        {/* Primary CTA */}
+        <div className="hero-anim-cta hero-cta-wrap">
+          <a
+            href="#booking"
+            onClick={onBookClick}
+            className="hero-cta-btn inline-flex items-center justify-center bg-gold hover:bg-yellow-400 text-primary font-semibold px-7 py-3.5 rounded-xl shadow-md transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gold"
+            style={{ minHeight: 44 }}
+          >
+            {t("book_now") || "Book Now"}
+          </a>
+        </div>
+
+        {/* Secondary CTA */}
+        <div className="mt-3">
+          <a
+            href="#check-booking"
+            onClick={onCheckClick}
+            className="inline-flex items-center gap-2 text-sm font-tajawal font-semibold text-beige/90 hover:text-gold transition underline underline-offset-4 decoration-white/30 hover:decoration-gold/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gold rounded"
+            aria-label={t("check_booking") || "تحقق من الحجز"}
+          >
+            <span aria-hidden="true">↓</span>
+            <span>{t("check_booking") || "تحقق من الحجز"}</span>
+          </a>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+export default HeroSection;
 </file>
 
 <file path="src/pages/Contact.jsx">
