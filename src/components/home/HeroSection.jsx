@@ -4,11 +4,9 @@ import AOS from "aos";
 import "aos/dist/aos.css";
 
 import "../../styles/heroEnhancements.css";
-import RamadanCurve from "./RamadanCurve";
 
 function HeroSection() {
-  const { t, i18n } = useTranslation();
-  const dir = i18n?.dir?.() || "rtl";
+  const { t } = useTranslation();
 
   useEffect(() => {
     AOS.init({ duration: 1000 });
@@ -37,18 +35,6 @@ function HeroSection() {
         alt="Barber Hero"
         className="hero-media absolute inset-0 w-full h-full object-cover object-center z-0"
         loading="eager"
-      />
-
-      {/* ✅ Accent Ramadan Curve (Luxury) */}
-      <RamadanCurve
-        dir={dir}
-        message="رمضان كريم"
-        subMessage="أعاده الله علينا وعليكم باليُمن والبركات"
-        speed={0.08}
-        curveAmount={60}
-        showCrescent
-        showSparkles
-        debug={false}
       />
 
       <div

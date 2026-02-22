@@ -156,3 +156,15 @@ html[dir="rtl"] .hero-ramadan-text {
     stroke-width: 30;
   }
 }
+
+.hero-ramadan-text {
+  font-size: 32px !important; /* كبير وواضح */
+  font-weight: 900 !important;
+  letter-spacing: 1.2px !important;
+}
+
+@media (max-width: 768px) {
+  .hero-ramadan-text {
+    font-size: 26px !important;
+  }
+}

@@ -4,23 +4,23 @@ export default function RamadanCurve({
   message = "رمضان كريم",
   subMessage = "أعاده الله علينا وعليكم باليُمن والبركات",
   curveAmount = 85,
-  showCrescent = true,
-  showSparkles = true,
   debug = false,
 }) {
   const pathRef = useRef(null);
 
   const fullText = useMemo(() => {
-    const crescent = showCrescent ? "🌙" : "";
-    const sparkle = showSparkles ? "✧" : "•";
-    return `${message}  ${crescent}  ${sparkle}  ${subMessage}`;
-  }, [message, subMessage, showCrescent, showSparkles]);
+    // جملة واحدة فقط
+    return `${message}  🌙  ✧  ${subMessage}`;
+  }, [message, subMessage]);
 
+  // ✅ أهم إصلاح: عكس اتجاه المسار نفسه (Safari RTL fix)
   const pathD = useMemo(() => {
     const baseY = 120;
     const controlY = baseY + curveAmount;
-    // داخل الـ viewBox عشان ما ينقص
-    return `M 60 ${baseY} Q 600 ${controlY} 1140 ${baseY}`;
+
+    // بدل: M 60 ... 1140
+    // صارت: M 1140 ... 60  (reverse)
+    return `M 1140 ${baseY} Q 600 ${controlY} 60 ${baseY}`;
   }, [curveAmount]);
 
   return (
@@ -103,8 +103,6 @@ export default function RamadanCurve({
             className="hero-ramadan-ribbonGlass"
             filter="url(#ramadanRibbonBlur)"
           />
-
-          {/* خطوط ذهبية */}
           <use
             href="#ramadan-curve-path"
             className="hero-ramadan-ribbonGoldTop"
@@ -114,19 +112,16 @@ export default function RamadanCurve({
             className="hero-ramadan-ribbonGoldBottom"
           />
 
-          {/* ✅ النص: هنا إصلاح الـ RTL بالعنف القانوني */}
+          {/* ✅ حجم خط Inline (غصب عن Safari/CSS) */}
           <text
             className="hero-ramadan-text"
             fill="url(#ramadanGold)"
             filter="url(#ramadanGlow)"
             textAnchor="middle"
-            direction="rtl"
-            style={{ unicodeBidi: "bidi-override" }}
+            style={{ fontSize: "30px", fontWeight: 900 }}
           >
             <textPath href="#ramadan-curve-path" startOffset="50%">
-              <tspan direction="rtl" style={{ unicodeBidi: "bidi-override" }}>
-                {fullText}
-              </tspan>
+              {fullText}
             </textPath>
           </text>
         </svg>
