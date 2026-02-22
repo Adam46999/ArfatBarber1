@@ -3,11 +3,12 @@ import { useEffect } from "react";
 import AOS from "aos";
 import "aos/dist/aos.css";
 
-// ✅ تحسينات شكلية فقط (آمنة)
 import "../../styles/heroEnhancements.css";
+import RamadanCurve from "./RamadanCurve";
 
 function HeroSection() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const dir = i18n?.dir?.() || "rtl";
 
   useEffect(() => {
     AOS.init({ duration: 1000 });
@@ -30,11 +31,7 @@ function HeroSection() {
   };
 
   return (
-    <section
-      className="hero-overlay relative w-full min-h-[100svh] h-screen overflow-hidden flex items-center justify-center"
-      aria-label="Hero"
-    >
-      {/* الصورة */}
+    <section className="hero-overlay relative w-full min-h-[100svh] h-screen overflow-hidden flex items-center justify-center">
       <img
         src="/barber-hero.jpg"
         alt="Barber Hero"
@@ -42,23 +39,24 @@ function HeroSection() {
         loading="eager"
       />
 
-      {/* النص */}
+      {/* ✅ Accent Ramadan Curve (Luxury) */}
+      <RamadanCurve
+        dir={dir}
+        message="رمضان كريم"
+        subMessage="أعاده الله علينا وعليكم باليُمن والبركات"
+        speed={0.08}
+        curveAmount={60}
+        showCrescent
+        showSparkles
+        debug={false}
+      />
+
       <div
         className="hero-content text-center px-4 max-w-2xl"
         data-aos="fade-up"
       >
-        {/* 🔴 الحل الحقيقي: ظل أغمق ذكي */}
         <h1
-          className="
-            hero-anim-title
-            font-notokufi
-            text-4xl sm:text-5xl md:text-6xl
-            font-extrabold
-            mb-4
-            leading-tight
-            tracking-tight
-            text-gold
-          "
+          className="font-notokufi text-4xl sm:text-5xl md:text-6xl font-extrabold mb-4 leading-tight tracking-tight text-gold"
           style={{
             textShadow:
               "0 2px 6px rgba(0,0,0,0.85), 0 6px 24px rgba(0,0,0,0.6)",
@@ -67,29 +65,26 @@ function HeroSection() {
           {t("hero_title") || "أسلوب يليق بك، بكل بساطة"}
         </h1>
 
-        <p className="hero-anim-sub hero-text-shadow text-base sm:text-lg md:text-xl mb-6 font-tajawal text-beige max-w-xl mx-auto leading-relaxed">
+        <p className="text-base sm:text-lg md:text-xl mb-6 font-tajawal text-beige max-w-xl mx-auto leading-relaxed">
           {t("hero_subtitle") || "لمحة مُظهرك، يناسبك ويعبر عنك"}
         </p>
 
-        {/* Primary CTA */}
-        <div className="hero-anim-cta hero-cta-wrap">
+        <div>
           <a
             href="#booking"
             onClick={onBookClick}
-            className="hero-cta-btn inline-flex items-center justify-center bg-gold hover:bg-yellow-400 text-primary font-semibold px-7 py-3.5 rounded-xl shadow-md transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gold"
+            className="inline-flex items-center justify-center bg-gold hover:bg-yellow-400 text-primary font-semibold px-7 py-3.5 rounded-xl shadow-md transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gold"
             style={{ minHeight: 44 }}
           >
-            {t("book_now") || "Book Now"}
+            {t("book_now") || "احجز الآن"}
           </a>
         </div>
 
-        {/* Secondary CTA */}
         <div className="mt-3">
           <a
             href="#check-booking"
             onClick={onCheckClick}
-            className="inline-flex items-center gap-2 text-sm font-tajawal font-semibold text-beige/90 hover:text-gold transition underline underline-offset-4 decoration-white/30 hover:decoration-gold/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gold rounded"
-            aria-label={t("check_booking") || "تحقق من الحجز"}
+            className="inline-flex items-center gap-2 text-sm font-tajawal font-semibold text-beige/90 hover:text-gold transition underline underline-offset-4 decoration-white/30 hover:decoration-gold/60"
           >
             <span aria-hidden="true">↓</span>
             <span>{t("check_booking") || "تحقق من الحجز"}</span>

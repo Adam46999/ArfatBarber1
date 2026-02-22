@@ -99,13 +99,36 @@ function Header() {
             />
           </span>
 
-          {/* (3) Brand typographic polish */}
+          {/* (3) Brand typographic polish (بدون أنيميشن) */}
           <span className="leading-none">
             <span className="block text-[18px] md:text-[20px] font-black tracking-tight">
-              Arafat
+              Arfat
             </span>
             <span className="block -mt-0.5 text-[13px] md:text-[14px] font-semibold tracking-wide text-gold/80">
               Barber
+            </span>
+          </span>
+
+          {/* ✅ Ramadan badge (راقي، لا يكسر التصميم) */}
+          <span className="flex items-center gap-2 px-2.5 py-1 rounded-full border border-white/10 bg-white/5 text-light/90">
+            <span aria-hidden="true" className="text-[14px]">
+              <svg
+                viewBox="0 0 24 24"
+                className="w-5 h-5 md:w-6 md:h-6 text-gold"
+                fill="currentColor"
+              >
+                <path d="M21 12.79A9 9 0 1111.21 3c.12 0 .24 0 .36.01A7 7 0 1021 12.79z" />
+              </svg>
+            </span>
+
+            {/* على الموبايل نص أقصر */}
+            <span className="text-[12px] font-semibold text-gold md:text-[13px]">
+              رمضان كريم
+            </span>
+
+            {/* الجملة الطويلة فقط على الديسكتوب */}
+            <span className="hidden md:inline text-[12px] text-light/70">
+              حياكم الله… وأوقات مباركة
             </span>
           </span>
         </Link>

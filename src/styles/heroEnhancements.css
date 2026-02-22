@@ -1,14 +1,17 @@
 /* src/styles/heroEnhancements.css */
 
-/* طبقات محسّنة + Mobile-first + بدون تغيير محتوى */
-
-/* ==== HERO LAYERS ==== */
+/* HERO LAYERS */
 .hero-overlay {
   position: relative;
   overflow: hidden;
+  overflow-x: clip;
+}
+@supports not (overflow-x: clip) {
+  .hero-overlay {
+    overflow-x: hidden;
+  }
 }
 
-/* Gradient overlay بدل black opacity الجامد */
 .hero-overlay::before {
   content: "";
   position: absolute;
@@ -23,19 +26,10 @@
   pointer-events: none;
 }
 
-/* حركة خفيفة للصورة (Ken Burns) - محسّنة ومش مزعجة */
 .hero-media {
   transform: scale(1.02);
   will-change: transform;
-  animation: heroKenBurns 12s ease-in-out infinite alternate;
-}
-
-/* على الموبايل نخليها أخف */
-@media (max-width: 768px) {
-  .hero-media {
-    animation-duration: 16s;
-    transform: scale(1.015);
-  }
+  animation: heroKenBurns 14s ease-in-out infinite alternate;
 }
 
 @keyframes heroKenBurns {
@@ -47,85 +41,109 @@
   }
 }
 
-/* ==== CONTENT ON TOP ==== */
 .hero-content {
   position: relative;
-  z-index: 2;
+  z-index: 3;
 }
 
-.hero-text-shadow {
-  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+/* RAMADAN POSITION */
+:root {
+  --header-h: 72px;
+  --ramadan-gap-desktop: 12px;
+  --ramadan-gap-mobile: 8px;
 }
 
-/* ==== VISUAL RHYTHM (7) ==== */
-.hero-anim-title,
-.hero-anim-sub,
-.hero-anim-cta {
+.hero-ramadan-wrap {
+  position: absolute;
+  inset-inline: 0;
+  top: calc(
+    var(--header-h) + env(safe-area-inset-top) + var(--ramadan-gap-desktop)
+  );
+  z-index: 4;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  overflow: visible;
   opacity: 0;
-  transform: translateY(12px);
-  will-change: transform, opacity;
-  animation: heroFadeUp 520ms ease-out forwards;
+  animation: ramadanFadeIn 520ms ease forwards;
 }
 
-.hero-anim-sub {
-  animation-delay: 120ms;
-}
-.hero-anim-cta {
-  animation-delay: 240ms;
-}
-
-@keyframes heroFadeUp {
+@keyframes ramadanFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
   to {
     opacity: 1;
     transform: translateY(0);
   }
 }
 
-/* ==== EYE GUIDANCE (9) ==== */
-.hero-cta-wrap {
+/* RAMADAN CURVE */
+.hero-ramadan-curve {
   position: relative;
-  display: inline-block;
-}
-
-.hero-cta-wrap::before {
-  content: "";
-  position: absolute;
-  inset: -34px;
-  background: radial-gradient(
-    circle,
-    rgba(200, 170, 90, 0.22),
-    transparent 62%
-  );
-  z-index: -1;
   pointer-events: none;
+  user-select: none;
+  overflow: visible;
+  filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.35))
+    drop-shadow(0 2px 6px rgba(0, 0, 0, 0.35));
 }
 
-/* ==== TACTILE FEEL (8) ==== */
-.hero-cta-btn {
-  transition:
-    transform 180ms ease,
-    box-shadow 180ms ease,
-    filter 180ms ease;
+.hero-ramadan-svg {
+  width: min(980px, calc(100% - 16px));
+  height: 170px;
+  display: block;
+  margin: 0 auto;
+  overflow: visible;
 }
 
-.hero-cta-btn:hover {
-  transform: translateY(-1px);
-  filter: brightness(1.02);
+/* TEXT */
+.hero-ramadan-text {
+  font-size: clamp(18px, 3vw, 30px);
+  font-weight: 900;
+  letter-spacing: 1.8px;
+  fill: rgba(255, 255, 255, 0.96);
 }
 
-.hero-cta-btn:active {
-  transform: translateY(0);
-  box-shadow: inset 0 3px 7px rgba(0, 0, 0, 0.28);
+html[dir="rtl"] .hero-ramadan-text {
+  direction: rtl;
 }
 
-/* ==== REDUCED MOTION SUPPORT (مهم للموبايل) ==== */
-@media (prefers-reduced-motion: reduce) {
-  .hero-media,
-  .hero-anim-title,
-  .hero-anim-sub,
-  .hero-anim-cta {
-    animation: none !important;
-    transform: none !important;
-    opacity: 1 !important;
+/* Ribbon زجاجي */
+.hero-ramadan-ribbonGlass {
+  fill: none;
+  stroke-width: 36;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* خطوط ذهبية */
+.hero-ramadan-ribbonGoldTop {
+  fill: none;
+  stroke: rgba(247, 231, 183, 0.25);
+  stroke-width: 1.4;
+  transform: translateY(-0.8px);
+}
+
+.hero-ramadan-ribbonGoldBottom {
+  fill: none;
+  stroke: rgba(184, 146, 59, 0.18);
+  stroke-width: 1.4;
+  transform: translateY(0.8px);
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .hero-ramadan-svg {
+    width: calc(100% - 12px);
+    height: 160px;
+  }
+
+  .hero-ramadan-text {
+    font-size: clamp(16px, 4vw, 24px);
+  }
+
+  .hero-ramadan-ribbonGlass {
+    stroke-width: 30;
   }
 }
