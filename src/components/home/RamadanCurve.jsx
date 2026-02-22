@@ -4,7 +4,6 @@ export default function RamadanCurve({
   message = "رمضان كريم",
   subMessage = "أعاده الله علينا وعليكم باليُمن والبركات",
   curveAmount = 85,
-  dir = "rtl",
   showCrescent = true,
   showSparkles = true,
   debug = false,
@@ -20,6 +19,7 @@ export default function RamadanCurve({
   const pathD = useMemo(() => {
     const baseY = 120;
     const controlY = baseY + curveAmount;
+    // داخل الـ viewBox عشان ما ينقص
     return `M 60 ${baseY} Q 600 ${controlY} 1140 ${baseY}`;
   }, [curveAmount]);
 
@@ -27,7 +27,6 @@ export default function RamadanCurve({
     <div
       className={`hero-ramadan-wrap ${debug ? "hero-ramadan-debug" : ""}`}
       aria-hidden="true"
-      dir={dir}
     >
       <div className="hero-ramadan-curve">
         <svg
@@ -39,13 +38,12 @@ export default function RamadanCurve({
         >
           <defs>
             <path
-              ref={pathRef}
               id="ramadan-curve-path"
+              ref={pathRef}
               d={pathD}
               fill="transparent"
             />
 
-            {/* 🔥 Gradient ذهبي أفخم */}
             <linearGradient id="ramadanGold" x1="0.05" y1="0" x2="0.95" y2="1">
               <stop offset="0%" stopColor="#b8923b" />
               <stop offset="35%" stopColor="#f7e7b7" />
@@ -53,14 +51,12 @@ export default function RamadanCurve({
               <stop offset="100%" stopColor="#b8923b" />
             </linearGradient>
 
-            {/* 🔥 لمسة ذهبية خفيفة داخل الشريط */}
             <linearGradient id="ramadanRibbonTint" x1="0" y1="0" x2="1" y2="0">
               <stop offset="0%" stopColor="rgba(198,168,91,0.10)" />
               <stop offset="50%" stopColor="rgba(0,0,0,0.14)" />
               <stop offset="100%" stopColor="rgba(198,168,91,0.10)" />
             </linearGradient>
 
-            {/* Glow أنعم */}
             <filter
               id="ramadanGlow"
               x="-50%"
@@ -108,27 +104,29 @@ export default function RamadanCurve({
             filter="url(#ramadanRibbonBlur)"
           />
 
-          {/* خط ذهبي علوي */}
+          {/* خطوط ذهبية */}
           <use
             href="#ramadan-curve-path"
             className="hero-ramadan-ribbonGoldTop"
           />
-
-          {/* خط ذهبي سفلي */}
           <use
             href="#ramadan-curve-path"
             className="hero-ramadan-ribbonGoldBottom"
           />
 
-          {/* النص */}
+          {/* ✅ النص: هنا إصلاح الـ RTL بالعنف القانوني */}
           <text
             className="hero-ramadan-text"
             fill="url(#ramadanGold)"
             filter="url(#ramadanGlow)"
             textAnchor="middle"
+            direction="rtl"
+            style={{ unicodeBidi: "bidi-override" }}
           >
             <textPath href="#ramadan-curve-path" startOffset="50%">
-              {fullText}
+              <tspan direction="rtl" style={{ unicodeBidi: "bidi-override" }}>
+                {fullText}
+              </tspan>
             </textPath>
           </text>
         </svg>
