@@ -18,11 +18,24 @@ function Home() {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const targetId = params.get("scrollTo");
-    if (targetId) {
-      const element = document.getElementById(targetId);
-      if (element) {
-        setTimeout(() => element.scrollIntoView({ behavior: "smooth" }), 100);
-      }
+    if (!targetId) return;
+
+    const realId =
+      targetId === "booking" && document.getElementById("booking-form-start")
+        ? "booking-form-start"
+        : targetId;
+
+    const element = document.getElementById(realId);
+    if (element) {
+      setTimeout(() => {
+        const y =
+          element.getBoundingClientRect().top + window.pageYOffset - 100; // 👈 عدل الرقم هون
+
+        window.scrollTo({
+          top: y,
+          behavior: "smooth",
+        });
+      }, 100);
     }
   }, [location]);
 

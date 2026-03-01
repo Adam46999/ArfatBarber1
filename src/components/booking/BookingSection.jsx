@@ -196,6 +196,9 @@ function BookingSection() {
           />
         </div>
 
+        {/* ✅ هذا هو الهدف اللي بدك الزر ينزل عليه بالزبط */}
+        <div id="booking-form-start" />
+
         <div className="bg-white shadow-xl rounded-2xl p-8 space-y-6 border border-gray-100">
           <SuccessModal
             visible={submitted && showSuccessMessage}

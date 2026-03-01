@@ -25,7 +25,16 @@ function HeroSection() {
 
   const onBookClick = (e) => {
     e.preventDefault();
-    smoothScrollTo("booking");
+    // ✅ بدل ما ينزل على ساعات العمل، ينزل على بداية النموذج داخل الكرت
+    const el = document.getElementById("booking-form-start");
+    if (el) {
+      const y = el.getBoundingClientRect().top + window.pageYOffset - 100; // 👈 نفس الرقم هون
+
+      window.scrollTo({
+        top: y,
+        behavior: "smooth",
+      });
+    }
   };
 
   return (
@@ -57,7 +66,7 @@ function HeroSection() {
 
         <div>
           <a
-            href="#booking"
+            href="#booking-form-start"
             onClick={onBookClick}
             className="inline-flex items-center justify-center bg-gold hover:bg-yellow-400 text-primary font-semibold px-7 py-3.5 rounded-xl shadow-md transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gold"
             style={{ minHeight: 44 }}

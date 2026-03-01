@@ -104,6 +104,7 @@ src/components/common/SectionTitle.jsx
 src/components/home/ContactSection.jsx
 src/components/home/HeroSection.jsx
 src/components/home/InstagramSlider.jsx
+src/components/home/RamadanCurve.jsx
 src/components/layout/FloatingWhatsappButton.jsx
 src/components/layout/Footer.jsx
 src/components/layout/Header.jsx
@@ -114,6 +115,8 @@ src/components/reviews/CustomerRatingSection.jsx
 src/components/reviews/reviewsApi.js
 src/components/shared/SecretBarberButton.jsx
 src/components/shared/Spinner.jsx
+src/components/shared/TextType.css
+src/components/shared/TextType.jsx
 src/components/ui/Button.jsx
 src/components/ui/Card.jsx
 src/constants/barberDefaultWeeklyHours.js
@@ -339,19 +342,19 @@ export default [
 <file path="et --hard a2865d4">
 [33ma2865d4[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m making admin booking faster by changing the useefeect
 [33md87efe3[m the passing time in BokSec is now unreadable and translate step
-[33mce8f93d[m ŮŮŘŞ Ř§ŘŽŘą ŘŞŘ­ŘŻŮŘŤŘ§ŘŞ
+[33mce8f93d[m قمت اخر تحديثات
 [33m4e5f1c9[m hiding passed hours
-[33m508285a[m ŘŞŘ˛Ř¨ŮŘˇ Ř§ŮŘ§Ř­ŘľŘ§ŘŚŮŘ§ŘŞ Ř´ŮŮŮŘ§
-[33m8857b30[m ŘŞŘ˛Ř¨ŮŘˇ Ř§ŮŘ§Ř­ŘľŘ§ŘŚŮŘ§ŘŞ Ř´ŮŮŮŘ§
-[33mfe87ce6[m ŘŞŘ˛Ř¨ŮŘˇ Ř§ŮŘ§Ř­ŘľŘ§ŘŚŮŘ§ŘŞ Ř´ŮŮŮŘ§
-[33m6820b74[m ŘŞŘšŘŻŮŮ ŮŮŘ­Ů Ř§ŮŘ­ŘŹŮŘ˛Ř§ŘŞ ŮŘ´ŮŮ Ř§ŘąŘŞŘ¨
-[33m072d30a[m ŘŞŘšŮŮŮ Ř§ŮŘ§ŮŮŘ§ŘŞ Ř§ŮŮŘ­ŘŹŮŘ˛Ů Ř¨Ř§ŮŘ§Ř­ŮŘą ŮŮŘłŘŽ Ř§ŮŮŮŘŻ
+[33m508285a[m تزبيط الاحصائيات شكليا
+[33m8857b30[m تزبيط الاحصائيات شكليا
+[33mfe87ce6[m تزبيط الاحصائيات شكليا
+[33m6820b74[m تعديل لوحه الحجوزات لشكل ارتب
+[33m072d30a[m تعليم الاوقات المحجوزه بالاحمر ونسخ الكود
 [33mf632a8f[m ahsaiat
-[33m8f21a7f[m ŘŞŘšŘˇŮŮ Ř§ŮŘ§Ů
+[33m8f21a7f[m تعطيل ايام
 [33m3c1b5a7[m firbase problem solved
 [33m1e7e622[m sunday problem
-[33m8fb9650[m ŘŞŘšŘŻŮŮ ŮŮŘ­Ů Ř§ŮŘ­ŘŹŮŘ˛Ř§ŘŞ
-[33m8b09db8[m Ř˛ŮŘ§ŘŻŮ ŘŹŮŮŮ Ř§ŘŽŘŞŘą ŘŞŘ§ŘąŮŘŽ Ř§ŮŘ­ŘŹŘ˛
+[33m8fb9650[m تعديل لوحه الحجوزات
+[33m8b09db8[m زياده جمله اختر تاريخ الحجز
 [33m859c016[m calendar
 [33m9890949[m steps in reservation
 [33m0d1ac1d[m finishng
@@ -364,19 +367,19 @@ export default [
 [33mdca74aa[m  Fix: prevent FCM crash on mobile
 [33me3abcbc[m  Fix Firebase config (apiKey + storageBucket)
 [33mbcf7b7c[m  Update title and favicon for Arfat Barber
-[33mc8b3c60[m ŘąŮŘš Ř˘ŘŽŘą ŮŘłŘŽŘŠ ŮŮ Ř§ŮŮŮŘŻ - ŘŞŘ­ŘŻŮŘŤ ŮŮŘ§ŘŚŮ
+[33mc8b3c60[m رفع آخر نسخة من الكود - تحديث نهائي
 [33m7c197b9[m hours editing
 [33m6ae05d5[m Fix FaScissors icon error and update BarberPanel component
-[33m6a0fdc3[m ŘŞŘ­ŘŻŮŘŤŘ§ŘŞ ŮŮŘ­ŘŠ Ř§ŮŘ­ŮŘ§Ů ŮŘš ŘŞŘłŘŹŮŮ Ř§ŮŘŽŘąŮŘŹ
+[33m6a0fdc3[m تحديثات لوحة الحلاق مع تسجيل الخروج
 [33m6d1995e[m Add Vercel rewrites for React routing
 [33m383bd27[m Add Vercel rewrites for React routing
 [33ma1c235e[m control pannel
 [33m0b0fce0[m add worcing hours
 [33mfa5608d[m deleting the third reservation button
 [33m08b3464[m Refactor Contact section, switch to Waze, remove About from Home, and full multi-language support
-[33m5a8e4ff[m  ŘŞŘ­ŘŻŮŘŤŘ§ŘŞ: ŘŻŘšŮ ŮŘşŘ§ŘŞ ŮŘ§ŘŽŘŞŮŘ§Řą Ř§ŮŘŽŘŻŮŘŠ Ř¨Ř§ŮŘ­ŘŹŘ˛ + ŘĽŘ˛Ř§ŮŘŠ Ř˛Řą ŮŮ Contact
+[33m5a8e4ff[m  تحديثات: دعم لغات واختيار الخدمة بالحجز + إزالة زر من Contact
 [33mab4ba7f[m Update logo and styles
-[33m19ef96f[m  ŘĽŘśŘ§ŮŘŠ ŘłŮŘ§ŮŘŻŘą Instagram Ř§Ř­ŘŞŘąŘ§ŮŮ
+[33m19ef96f[m  إضافة سلايدر Instagram احترافي
 [33mb55da8c[m first commit
 </file>
 
@@ -385,17 +388,17 @@ export default [
 [33mfc54ee0[m hiding passed hours
 [33m820b153[m hiding passed hours
 [33m4e5f1c9[m hiding passed hours
-[33m508285a[m ŘŞŘ˛Ř¨ŮŘˇ Ř§ŮŘ§Ř­ŘľŘ§ŘŚŮŘ§ŘŞ Ř´ŮŮŮŘ§
-[33m8857b30[m ŘŞŘ˛Ř¨ŮŘˇ Ř§ŮŘ§Ř­ŘľŘ§ŘŚŮŘ§ŘŞ Ř´ŮŮŮŘ§
-[33mfe87ce6[m ŘŞŘ˛Ř¨ŮŘˇ Ř§ŮŘ§Ř­ŘľŘ§ŘŚŮŘ§ŘŞ Ř´ŮŮŮŘ§
-[33m6820b74[m ŘŞŘšŘŻŮŮ ŮŮŘ­Ů Ř§ŮŘ­ŘŹŮŘ˛Ř§ŘŞ ŮŘ´ŮŮ Ř§ŘąŘŞŘ¨
-[33m072d30a[m ŘŞŘšŮŮŮ Ř§ŮŘ§ŮŮŘ§ŘŞ Ř§ŮŮŘ­ŘŹŮŘ˛Ů Ř¨Ř§ŮŘ§Ř­ŮŘą ŮŮŘłŘŽ Ř§ŮŮŮŘŻ
+[33m508285a[m تزبيط الاحصائيات شكليا
+[33m8857b30[m تزبيط الاحصائيات شكليا
+[33mfe87ce6[m تزبيط الاحصائيات شكليا
+[33m6820b74[m تعديل لوحه الحجوزات لشكل ارتب
+[33m072d30a[m تعليم الاوقات المحجوزه بالاحمر ونسخ الكود
 [33mf632a8f[m ahsaiat
-[33m8f21a7f[m ŘŞŘšŘˇŮŮ Ř§ŮŘ§Ů
+[33m8f21a7f[m تعطيل ايام
 [33m3c1b5a7[m firbase problem solved
 [33m1e7e622[m sunday problem
-[33m8fb9650[m ŘŞŘšŘŻŮŮ ŮŮŘ­Ů Ř§ŮŘ­ŘŹŮŘ˛Ř§ŘŞ
-[33m8b09db8[m Ř˛ŮŘ§ŘŻŮ ŘŹŮŮŮ Ř§ŘŽŘŞŘą ŘŞŘ§ŘąŮŘŽ Ř§ŮŘ­ŘŹŘ˛
+[33m8fb9650[m تعديل لوحه الحجوزات
+[33m8b09db8[m زياده جمله اختر تاريخ الحجز
 [33m859c016[m calendar
 [33m9890949[m steps in reservation
 [33m0d1ac1d[m finishng
@@ -408,19 +411,19 @@ export default [
 [33mdca74aa[m  Fix: prevent FCM crash on mobile
 [33me3abcbc[m  Fix Firebase config (apiKey + storageBucket)
 [33mbcf7b7c[m  Update title and favicon for Arfat Barber
-[33mc8b3c60[m ŘąŮŘš Ř˘ŘŽŘą ŮŘłŘŽŘŠ ŮŮ Ř§ŮŮŮŘŻ - ŘŞŘ­ŘŻŮŘŤ ŮŮŘ§ŘŚŮ
+[33mc8b3c60[m رفع آخر نسخة من الكود - تحديث نهائي
 [33m7c197b9[m hours editing
 [33m6ae05d5[m Fix FaScissors icon error and update BarberPanel component
-[33m6a0fdc3[m ŘŞŘ­ŘŻŮŘŤŘ§ŘŞ ŮŮŘ­ŘŠ Ř§ŮŘ­ŮŘ§Ů ŮŘš ŘŞŘłŘŹŮŮ Ř§ŮŘŽŘąŮŘŹ
+[33m6a0fdc3[m تحديثات لوحة الحلاق مع تسجيل الخروج
 [33m6d1995e[m Add Vercel rewrites for React routing
 [33m383bd27[m Add Vercel rewrites for React routing
 [33ma1c235e[m control pannel
 [33m0b0fce0[m add worcing hours
 [33mfa5608d[m deleting the third reservation button
 [33m08b3464[m Refactor Contact section, switch to Waze, remove About from Home, and full multi-language support
-[33m5a8e4ff[m  ŘŞŘ­ŘŻŮŘŤŘ§ŘŞ: ŘŻŘšŮ ŮŘşŘ§ŘŞ ŮŘ§ŘŽŘŞŮŘ§Řą Ř§ŮŘŽŘŻŮŘŠ Ř¨Ř§ŮŘ­ŘŹŘ˛ + ŘĽŘ˛Ř§ŮŘŠ Ř˛Řą ŮŮ Contact
+[33m5a8e4ff[m  تحديثات: دعم لغات واختيار الخدمة بالحجز + إزالة زر من Contact
 [33mab4ba7f[m Update logo and styles
-[33m19ef96f[m  ŘĽŘśŘ§ŮŘŠ ŘłŮŘ§ŮŘŻŘą Instagram Ř§Ř­ŘŞŘąŘ§ŮŮ
+[33m19ef96f[m  إضافة سلايدر Instagram احترافي
 [33mb55da8c[m first commit
 </file>
 
@@ -1361,6 +1364,223 @@ function Spinner() {
 }
 
 export default Spinner;
+</file>
+
+<file path="src/components/shared/TextType.css">
+.text-type {
+  display: inline-block;
+  white-space: pre-wrap;
+}
+
+.text-type__content {
+  display: inline-block;
+}
+
+.text-type__cursor {
+  margin-left: 0.25rem;
+  display: inline-block;
+  opacity: 1;
+}
+
+.text-type__cursor--hidden {
+  display: none;
+}
+</file>
+
+<file path="src/components/shared/TextType.jsx">
+import {
+  useEffect,
+  useRef,
+  useState,
+  createElement,
+  useMemo,
+  useCallback,
+} from "react";
+import { gsap } from "gsap";
+import "./TextType.css";
+
+const TextType = ({
+  text,
+  as: Component = "span",
+  typingSpeed = 90,
+  initialDelay = 0,
+  pauseDuration = 900,
+  deletingSpeed = 60,
+  loop = false,
+  className = "",
+  showCursor = false,
+  hideCursorWhileTyping = false,
+  cursorCharacter = "●",
+  cursorClassName = "",
+  cursorBlinkDuration = 0.6,
+  textColors = [],
+  variableSpeed,
+  onSentenceComplete,
+  startOnVisible = false,
+  reverseMode = false,
+  ...props
+}) => {
+  const [displayedText, setDisplayedText] = useState("");
+  const [currentCharIndex, setCurrentCharIndex] = useState(0);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [currentTextIndex, setCurrentTextIndex] = useState(0);
+  const [isVisible, setIsVisible] = useState(!startOnVisible);
+
+  const cursorRef = useRef(null);
+  const containerRef = useRef(null);
+
+  const textArray = useMemo(
+    () => (Array.isArray(text) ? text : [text]),
+    [text],
+  );
+
+  const getRandomSpeed = useCallback(() => {
+    if (!variableSpeed) return typingSpeed;
+    const { min, max } = variableSpeed;
+    return Math.random() * (max - min) + min;
+  }, [variableSpeed, typingSpeed]);
+
+  const getCurrentTextColor = () => {
+    if (textColors.length === 0) return "inherit";
+    return textColors[currentTextIndex % textColors.length];
+  };
+
+  // Start on visible (optional)
+  useEffect(() => {
+    if (!startOnVisible || !containerRef.current) return;
+
+    const observer = new IntersectionObserver(
+      (entries) =>
+        entries.forEach((e) => e.isIntersecting && setIsVisible(true)),
+      { threshold: 0.1 },
+    );
+
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, [startOnVisible]);
+
+  // Cursor blink
+  useEffect(() => {
+    if (!showCursor || !cursorRef.current) return;
+
+    gsap.killTweensOf(cursorRef.current);
+    gsap.set(cursorRef.current, { opacity: 1 });
+    gsap.to(cursorRef.current, {
+      opacity: 0,
+      duration: cursorBlinkDuration,
+      repeat: -1,
+      yoyo: true,
+      ease: "power2.inOut",
+    });
+  }, [showCursor, cursorBlinkDuration]);
+
+  // Typing logic
+  useEffect(() => {
+    if (!isVisible) return;
+
+    let timeout;
+    const currentText = textArray[currentTextIndex] ?? "";
+    const processedText = reverseMode
+      ? currentText.split("").reverse().join("")
+      : currentText;
+
+    const tick = () => {
+      // deleting
+      if (isDeleting) {
+        if (displayedText === "") {
+          setIsDeleting(false);
+
+          if (onSentenceComplete)
+            onSentenceComplete(textArray[currentTextIndex], currentTextIndex);
+
+          // stop if finished and not looping
+          if (currentTextIndex === textArray.length - 1 && !loop) return;
+
+          setCurrentTextIndex((p) => (p + 1) % textArray.length);
+          setCurrentCharIndex(0);
+          timeout = setTimeout(() => {}, pauseDuration);
+        } else {
+          timeout = setTimeout(
+            () => setDisplayedText((p) => p.slice(0, -1)),
+            deletingSpeed,
+          );
+        }
+        return;
+      }
+
+      // typing
+      if (currentCharIndex < processedText.length) {
+        timeout = setTimeout(
+          () => {
+            setDisplayedText((p) => p + processedText[currentCharIndex]);
+            setCurrentCharIndex((p) => p + 1);
+          },
+          variableSpeed ? getRandomSpeed() : typingSpeed,
+        );
+        return;
+      }
+
+      // finished typing sentence
+      if (onSentenceComplete)
+        onSentenceComplete(textArray[currentTextIndex], currentTextIndex);
+
+      // stop if last sentence and no loop
+      if (currentTextIndex === textArray.length - 1 && !loop) return;
+
+      timeout = setTimeout(() => setIsDeleting(true), pauseDuration);
+    };
+
+    if (currentCharIndex === 0 && !isDeleting && displayedText === "") {
+      timeout = setTimeout(tick, initialDelay);
+    } else {
+      tick();
+    }
+
+    return () => clearTimeout(timeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    currentCharIndex,
+    displayedText,
+    isDeleting,
+    typingSpeed,
+    deletingSpeed,
+    pauseDuration,
+    textArray,
+    currentTextIndex,
+    loop,
+    initialDelay,
+    isVisible,
+    reverseMode,
+    variableSpeed,
+    onSentenceComplete,
+  ]);
+
+  const shouldHideCursor =
+    hideCursorWhileTyping &&
+    (currentCharIndex < (textArray[currentTextIndex]?.length ?? 0) ||
+      isDeleting);
+
+  return createElement(
+    Component,
+    { ref: containerRef, className: `text-type ${className}`, ...props },
+    <span
+      className="text-type__content"
+      style={{ color: getCurrentTextColor() }}
+    >
+      {displayedText}
+    </span>,
+    showCursor && (
+      <span
+        ref={cursorRef}
+        className={`text-type__cursor ${cursorClassName} ${shouldHideCursor ? "text-type__cursor--hidden" : ""}`}
+      >
+        {cursorCharacter}
+      </span>
+    ),
+  );
+};
+
+export default TextType;
 </file>
 
 <file path="src/components/ui/Button.jsx">
@@ -7292,140 +7512,6 @@ export async function createTestNotificationRequest(token, payload) {
 }
 </file>
 
-<file path="src/styles/heroEnhancements.css">
-/* src/styles/heroEnhancements.css */
-
-/* طبقات محسّنة + Mobile-first + بدون تغيير محتوى */
-
-/* ==== HERO LAYERS ==== */
-.hero-overlay {
-  position: relative;
-  overflow: hidden;
-}
-
-/* Gradient overlay بدل black opacity الجامد */
-.hero-overlay::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    to top,
-    rgba(0, 0, 0, 0.72),
-    rgba(0, 0, 0, 0.42),
-    rgba(0, 0, 0, 0.18)
-  );
-  z-index: 1;
-  pointer-events: none;
-}
-
-/* حركة خفيفة للصورة (Ken Burns) - محسّنة ومش مزعجة */
-.hero-media {
-  transform: scale(1.02);
-  will-change: transform;
-  animation: heroKenBurns 12s ease-in-out infinite alternate;
-}
-
-/* على الموبايل نخليها أخف */
-@media (max-width: 768px) {
-  .hero-media {
-    animation-duration: 16s;
-    transform: scale(1.015);
-  }
-}
-
-@keyframes heroKenBurns {
-  from {
-    transform: scale(1.02);
-  }
-  to {
-    transform: scale(1.055);
-  }
-}
-
-/* ==== CONTENT ON TOP ==== */
-.hero-content {
-  position: relative;
-  z-index: 2;
-}
-
-.hero-text-shadow {
-  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
-}
-
-/* ==== VISUAL RHYTHM (7) ==== */
-.hero-anim-title,
-.hero-anim-sub,
-.hero-anim-cta {
-  opacity: 0;
-  transform: translateY(12px);
-  will-change: transform, opacity;
-  animation: heroFadeUp 520ms ease-out forwards;
-}
-
-.hero-anim-sub {
-  animation-delay: 120ms;
-}
-.hero-anim-cta {
-  animation-delay: 240ms;
-}
-
-@keyframes heroFadeUp {
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* ==== EYE GUIDANCE (9) ==== */
-.hero-cta-wrap {
-  position: relative;
-  display: inline-block;
-}
-
-.hero-cta-wrap::before {
-  content: "";
-  position: absolute;
-  inset: -34px;
-  background: radial-gradient(
-    circle,
-    rgba(200, 170, 90, 0.22),
-    transparent 62%
-  );
-  z-index: -1;
-  pointer-events: none;
-}
-
-/* ==== TACTILE FEEL (8) ==== */
-.hero-cta-btn {
-  transition:
-    transform 180ms ease,
-    box-shadow 180ms ease,
-    filter 180ms ease;
-}
-
-.hero-cta-btn:hover {
-  transform: translateY(-1px);
-  filter: brightness(1.02);
-}
-
-.hero-cta-btn:active {
-  transform: translateY(0);
-  box-shadow: inset 0 3px 7px rgba(0, 0, 0, 0.28);
-}
-
-/* ==== REDUCED MOTION SUPPORT (مهم للموبايل) ==== */
-@media (prefers-reduced-motion: reduce) {
-  .hero-media,
-  .hero-anim-title,
-  .hero-anim-sub,
-  .hero-anim-cta {
-    animation: none !important;
-    transform: none !important;
-    opacity: 1 !important;
-  }
-}
-</file>
-
 <file path="src/utils/cancelGuard.js">
 // ثابت: نافذة الإلغاء بالدقائق
 export const CANCELLATION_WINDOW_MIN = 50;
@@ -11593,6 +11679,140 @@ export default function ServiceSelector({ selectedService, onSelect, rtl }) {
 }
 </file>
 
+<file path="src/components/home/RamadanCurve.jsx">
+import { useMemo, useRef } from "react";
+
+export default function RamadanCurve({
+  message = "رمضان كريم",
+  subMessage = "أعاده الله علينا وعليكم باليُمن والبركات",
+  curveAmount = 85,
+  debug = false,
+}) {
+  const pathRef = useRef(null);
+
+  const fullText = useMemo(() => {
+    // جملة واحدة فقط
+    return `${message}  🌙  ✧  ${subMessage}`;
+  }, [message, subMessage]);
+
+  // ✅ أهم إصلاح: عكس اتجاه المسار نفسه (Safari RTL fix)
+  const pathD = useMemo(() => {
+    const baseY = 120;
+    const controlY = baseY + curveAmount;
+
+    // بدل: M 60 ... 1140
+    // صارت: M 1140 ... 60  (reverse)
+    return `M 1140 ${baseY} Q 600 ${controlY} 60 ${baseY}`;
+  }, [curveAmount]);
+
+  return (
+    <div
+      className={`hero-ramadan-wrap ${debug ? "hero-ramadan-debug" : ""}`}
+      aria-hidden="true"
+    >
+      <div className="hero-ramadan-curve">
+        <svg
+          width="100%"
+          height="170"
+          viewBox="0 0 1200 220"
+          className="hero-ramadan-svg"
+          role="img"
+        >
+          <defs>
+            <path
+              id="ramadan-curve-path"
+              ref={pathRef}
+              d={pathD}
+              fill="transparent"
+            />
+
+            <linearGradient id="ramadanGold" x1="0.05" y1="0" x2="0.95" y2="1">
+              <stop offset="0%" stopColor="#b8923b" />
+              <stop offset="35%" stopColor="#f7e7b7" />
+              <stop offset="60%" stopColor="#e6c774" />
+              <stop offset="100%" stopColor="#b8923b" />
+            </linearGradient>
+
+            <linearGradient id="ramadanRibbonTint" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="rgba(198,168,91,0.10)" />
+              <stop offset="50%" stopColor="rgba(0,0,0,0.14)" />
+              <stop offset="100%" stopColor="rgba(198,168,91,0.10)" />
+            </linearGradient>
+
+            <filter
+              id="ramadanGlow"
+              x="-50%"
+              y="-50%"
+              width="200%"
+              height="200%"
+            >
+              <feGaussianBlur stdDeviation="0.9" result="blur" />
+              <feColorMatrix
+                in="blur"
+                type="matrix"
+                values="
+                  1 0 0 0 0
+                  0 1 0 0 0
+                  0 0 1 0 0
+                  0 0 0 0.35 0"
+                result="glow"
+              />
+              <feMerge>
+                <feMergeNode in="glow" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+
+            <filter
+              id="ramadanRibbonBlur"
+              x="-60%"
+              y="-60%"
+              width="220%"
+              height="220%"
+            >
+              <feGaussianBlur stdDeviation="3" result="b" />
+              <feMerge>
+                <feMergeNode in="b" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
+
+          {/* Ribbon زجاجي */}
+          <use
+            href="#ramadan-curve-path"
+            stroke="url(#ramadanRibbonTint)"
+            className="hero-ramadan-ribbonGlass"
+            filter="url(#ramadanRibbonBlur)"
+          />
+          <use
+            href="#ramadan-curve-path"
+            className="hero-ramadan-ribbonGoldTop"
+          />
+          <use
+            href="#ramadan-curve-path"
+            className="hero-ramadan-ribbonGoldBottom"
+          />
+
+          {/* ✅ حجم خط Inline (غصب عن Safari/CSS) */}
+          <text
+            className="hero-ramadan-text"
+            fill="url(#ramadanGold)"
+            filter="url(#ramadanGlow)"
+            textAnchor="middle"
+            style={{ fontSize: "30px", fontWeight: 900 }}
+          >
+            <textPath href="#ramadan-curve-path" startOffset="50%">
+              {fullText}
+            </textPath>
+          </text>
+        </svg>
+      </div>
+    </div>
+  );
+}
+</file>
+
 <file path="src/i18n.js">
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
@@ -13796,110 +14016,177 @@ export default function BarberPanel() {
 }
 </file>
 
-<file path="src/components/home/HeroSection.jsx">
-import { useTranslation } from "react-i18next";
-import { useEffect } from "react";
-import AOS from "aos";
-import "aos/dist/aos.css";
+<file path="src/styles/heroEnhancements.css">
+/* src/styles/heroEnhancements.css */
 
-// ✅ تحسينات شكلية فقط (آمنة)
-import "../../styles/heroEnhancements.css";
-
-function HeroSection() {
-  const { t } = useTranslation();
-
-  useEffect(() => {
-    AOS.init({ duration: 1000 });
-  }, []);
-
-  const smoothScrollTo = (id) => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
-
-  const onCheckClick = (e) => {
-    e.preventDefault();
-    smoothScrollTo("check-booking");
-  };
-
-  const onBookClick = (e) => {
-    e.preventDefault();
-    smoothScrollTo("booking");
-  };
-
-  return (
-    <section
-      className="hero-overlay relative w-full min-h-[100svh] h-screen overflow-hidden flex items-center justify-center"
-      aria-label="Hero"
-    >
-      {/* الصورة */}
-      <img
-        src="/barber-hero.jpg"
-        alt="Barber Hero"
-        className="hero-media absolute inset-0 w-full h-full object-cover object-center z-0"
-        loading="eager"
-      />
-
-      {/* النص */}
-      <div
-        className="hero-content text-center px-4 max-w-2xl"
-        data-aos="fade-up"
-      >
-        {/* 🔴 الحل الحقيقي: ظل أغمق ذكي */}
-        <h1
-          className="
-            hero-anim-title
-            font-notokufi
-            text-4xl sm:text-5xl md:text-6xl
-            font-extrabold
-            mb-4
-            leading-tight
-            tracking-tight
-            text-gold
-          "
-          style={{
-            textShadow:
-              "0 2px 6px rgba(0,0,0,0.85), 0 6px 24px rgba(0,0,0,0.6)",
-          }}
-        >
-          {t("hero_title") || "أسلوب يليق بك، بكل بساطة"}
-        </h1>
-
-        <p className="hero-anim-sub hero-text-shadow text-base sm:text-lg md:text-xl mb-6 font-tajawal text-beige max-w-xl mx-auto leading-relaxed">
-          {t("hero_subtitle") || "لمحة مُظهرك، يناسبك ويعبر عنك"}
-        </p>
-
-        {/* Primary CTA */}
-        <div className="hero-anim-cta hero-cta-wrap">
-          <a
-            href="#booking"
-            onClick={onBookClick}
-            className="hero-cta-btn inline-flex items-center justify-center bg-gold hover:bg-yellow-400 text-primary font-semibold px-7 py-3.5 rounded-xl shadow-md transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gold"
-            style={{ minHeight: 44 }}
-          >
-            {t("book_now") || "Book Now"}
-          </a>
-        </div>
-
-        {/* Secondary CTA */}
-        <div className="mt-3">
-          <a
-            href="#check-booking"
-            onClick={onCheckClick}
-            className="inline-flex items-center gap-2 text-sm font-tajawal font-semibold text-beige/90 hover:text-gold transition underline underline-offset-4 decoration-white/30 hover:decoration-gold/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gold rounded"
-            aria-label={t("check_booking") || "تحقق من الحجز"}
-          >
-            <span aria-hidden="true">↓</span>
-            <span>{t("check_booking") || "تحقق من الحجز"}</span>
-          </a>
-        </div>
-      </div>
-    </section>
-  );
+/* HERO LAYERS */
+.hero-overlay {
+  position: relative;
+  overflow: hidden;
+  overflow-x: clip;
+}
+@supports not (overflow-x: clip) {
+  .hero-overlay {
+    overflow-x: hidden;
+  }
 }
 
-export default HeroSection;
+.hero-overlay::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.72),
+    rgba(0, 0, 0, 0.42),
+    rgba(0, 0, 0, 0.18)
+  );
+  z-index: 1;
+  pointer-events: none;
+}
+
+.hero-media {
+  transform: scale(1.02);
+  will-change: transform;
+  animation: heroKenBurns 14s ease-in-out infinite alternate;
+}
+
+@keyframes heroKenBurns {
+  from {
+    transform: scale(1.02);
+  }
+  to {
+    transform: scale(1.055);
+  }
+}
+
+.hero-content {
+  position: relative;
+  z-index: 3;
+}
+
+/* RAMADAN POSITION */
+:root {
+  --header-h: 72px;
+  --ramadan-gap-desktop: 12px;
+  --ramadan-gap-mobile: 8px;
+}
+
+.hero-ramadan-wrap {
+  position: absolute;
+  inset-inline: 0;
+  top: calc(
+    var(--header-h) + env(safe-area-inset-top) + var(--ramadan-gap-desktop)
+  );
+  z-index: 4;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  overflow: visible;
+  opacity: 0;
+  animation: ramadanFadeIn 520ms ease forwards;
+}
+
+@keyframes ramadanFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* RAMADAN CURVE */
+.hero-ramadan-curve {
+  position: relative;
+  pointer-events: none;
+  user-select: none;
+  overflow: visible;
+  filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.35))
+    drop-shadow(0 2px 6px rgba(0, 0, 0, 0.35));
+}
+
+.hero-ramadan-svg {
+  width: min(980px, calc(100% - 16px));
+  height: 170px;
+  display: block;
+  margin: 0 auto;
+  overflow: visible;
+}
+
+/* TEXT */
+.hero-ramadan-text {
+  /* أكبر بكثير خصوصاً للموبايل */
+  font-size: clamp(22px, 5.2vw, 34px);
+  font-weight: 900;
+  letter-spacing: 1.4px;
+  fill: rgba(255, 255, 255, 0.96);
+  unicode-bidi: bidi-override; /* دعم إضافي */
+  direction: rtl; /* دعم إضافي */
+}
+
+/* موبايل: أكبر كمان */
+@media (max-width: 768px) {
+  .hero-ramadan-text {
+    font-size: clamp(20px, 5.6vw, 28px);
+  }
+}
+html[dir="rtl"] .hero-ramadan-text {
+  direction: rtl;
+}
+
+/* Ribbon زجاجي */
+.hero-ramadan-ribbonGlass {
+  fill: none;
+  stroke-width: 36;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* خطوط ذهبية */
+.hero-ramadan-ribbonGoldTop {
+  fill: none;
+  stroke: rgba(247, 231, 183, 0.25);
+  stroke-width: 1.4;
+  transform: translateY(-0.8px);
+}
+
+.hero-ramadan-ribbonGoldBottom {
+  fill: none;
+  stroke: rgba(184, 146, 59, 0.18);
+  stroke-width: 1.4;
+  transform: translateY(0.8px);
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .hero-ramadan-svg {
+    width: calc(100% - 12px);
+    height: 160px;
+  }
+
+  .hero-ramadan-text {
+    font-size: clamp(16px, 4vw, 24px);
+  }
+
+  .hero-ramadan-ribbonGlass {
+    stroke-width: 30;
+  }
+}
+
+.hero-ramadan-text {
+  font-size: 32px !important; /* كبير وواضح */
+  font-weight: 900 !important;
+  letter-spacing: 1.2px !important;
+}
+
+@media (max-width: 768px) {
+  .hero-ramadan-text {
+    font-size: 26px !important;
+  }
+}
 </file>
 
 <file path="src/pages/Contact.jsx">
@@ -14466,6 +14753,88 @@ export default function CheckReservation() {
 }
 </file>
 
+<file path="src/components/home/HeroSection.jsx">
+import { useTranslation } from "react-i18next";
+import { useEffect } from "react";
+import { Link } from "react-router-dom";
+import AOS from "aos";
+import "aos/dist/aos.css";
+
+import "../../styles/heroEnhancements.css";
+
+function HeroSection() {
+  const { t } = useTranslation();
+
+  useEffect(() => {
+    AOS.init({ duration: 1000 });
+  }, []);
+
+  const smoothScrollTo = (id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const onCheckClick = (e) => {
+    e.preventDefault();
+    smoothScrollTo("check-booking");
+  };
+
+  return (
+    <section className="hero-overlay relative w-full min-h-[100svh] h-screen overflow-hidden flex items-center justify-center">
+      <img
+        src="/barber-hero.jpg"
+        alt="Barber Hero"
+        className="hero-media absolute inset-0 w-full h-full object-cover object-center z-0"
+        loading="eager"
+      />
+
+      <div
+        className="hero-content text-center px-4 max-w-2xl"
+        data-aos="fade-up"
+      >
+        <h1
+          className="font-notokufi text-4xl sm:text-5xl md:text-6xl font-extrabold mb-4 leading-tight tracking-tight text-gold"
+          style={{
+            textShadow:
+              "0 2px 6px rgba(0,0,0,0.85), 0 6px 24px rgba(0,0,0,0.6)",
+          }}
+        >
+          {t("hero_title") || "أسلوب يليق بك، بكل بساطة"}
+        </h1>
+
+        <p className="text-base sm:text-lg md:text-xl mb-6 font-tajawal text-beige max-w-xl mx-auto leading-relaxed">
+          {t("hero_subtitle") || "لمحة مُظهرك، يناسبك ويعبر عنك"}
+        </p>
+
+        <div>
+          <Link
+            to="/booking-form"
+            className="inline-flex items-center justify-center bg-gold hover:bg-yellow-400 text-primary font-semibold px-7 py-3.5 rounded-xl shadow-md transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gold"
+            style={{ minHeight: 44 }}
+          >
+            {t("book_now") || "احجز الآن"}
+          </Link>
+        </div>
+
+        <div className="mt-3">
+          <a
+            href="#check-booking"
+            onClick={onCheckClick}
+            className="inline-flex items-center gap-2 text-sm font-tajawal font-semibold text-beige/90 hover:text-gold transition underline underline-offset-4 decoration-white/30 hover:decoration-gold/60"
+          >
+            <span aria-hidden="true">↓</span>
+            <span>{t("check_booking") || "تحقق من الحجز"}</span>
+          </a>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+export default HeroSection;
+</file>
+
 <file path="src/components/layout/Footer.jsx">
 import { useTranslation } from "react-i18next";
 import {
@@ -14555,58 +14924,6 @@ function Footer() {
 }
 
 export default Footer;
-</file>
-
-<file path="package.json">
-{
-  "name": "my-app",
-  "private": true,
-  "version": "0.0.0",
-  "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "lint": "eslint .",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "@fontsource/cairo": "^5.2.5",
-    "@fontsource/inter": "^5.2.5",
-    "@fontsource/playfair-display": "^5.2.5",
-    "@fontsource/poppins": "^5.2.6",
-    "aos": "^2.3.4",
-    "date-fns": "^4.1.0",
-    "firebase": "^11.8.1",
-    "firebase-admin": "^13.6.0",
-    "framer-motion": "^12.23.12",
-    "i18next": "^25.1.3",
-    "i18next-browser-languagedetector": "^8.1.0",
-    "lucide-react": "^0.540.0",
-    "react": "^19.1.0",
-    "react-calendar": "^6.0.0",
-    "react-datepicker": "^8.3.0",
-    "react-dom": "^19.1.0",
-    "react-i18next": "^15.5.1",
-    "react-icons": "^5.5.0",
-    "react-router-dom": "^7.6.0",
-    "swiper": "^11.2.6",
-    "xlsx": "^0.18.5"
-  },
-  "devDependencies": {
-    "@eslint/js": "^9.25.0",
-    "@types/react": "^19.1.2",
-    "@types/react-dom": "^19.1.2",
-    "@vitejs/plugin-react": "^4.4.1",
-    "autoprefixer": "^10.4.14",
-    "eslint": "^9.25.0",
-    "eslint-plugin-react-hooks": "^5.2.0",
-    "eslint-plugin-react-refresh": "^0.4.19",
-    "globals": "^16.0.0",
-    "postcss": "^8.4.21",
-    "tailwindcss": "^3.3.2",
-    "vite": "^6.3.5"
-  }
-}
 </file>
 
 <file path="src/components/home/InstagramSlider.jsx">
@@ -15118,6 +15435,59 @@ function CardBox({ color = "gray", title, children }) {
 }
 </file>
 
+<file path="package.json">
+{
+  "name": "my-app",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "lint": "eslint .",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@fontsource/cairo": "^5.2.5",
+    "@fontsource/inter": "^5.2.5",
+    "@fontsource/playfair-display": "^5.2.5",
+    "@fontsource/poppins": "^5.2.6",
+    "aos": "^2.3.4",
+    "date-fns": "^4.1.0",
+    "firebase": "^11.8.1",
+    "firebase-admin": "^13.6.0",
+    "framer-motion": "^12.23.12",
+    "gsap": "^3.14.2",
+    "i18next": "^25.1.3",
+    "i18next-browser-languagedetector": "^8.1.0",
+    "lucide-react": "^0.540.0",
+    "react": "^19.1.0",
+    "react-calendar": "^6.0.0",
+    "react-datepicker": "^8.3.0",
+    "react-dom": "^19.1.0",
+    "react-i18next": "^15.5.1",
+    "react-icons": "^5.5.0",
+    "react-router-dom": "^7.6.0",
+    "swiper": "^11.2.6",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.25.0",
+    "@types/react": "^19.1.2",
+    "@types/react-dom": "^19.1.2",
+    "@vitejs/plugin-react": "^4.4.1",
+    "autoprefixer": "^10.4.14",
+    "eslint": "^9.25.0",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.4.19",
+    "globals": "^16.0.0",
+    "postcss": "^8.4.21",
+    "tailwindcss": "^3.3.2",
+    "vite": "^6.3.5"
+  }
+}
+</file>
+
 <file path="src/components/layout/Header.jsx">
 // ✅ src/components/layout/Header.jsx — Polish بصري (2+3+4+5+6) بدون كسر المنطق
 import { useTranslation } from "react-i18next";
@@ -15196,50 +15566,31 @@ function Header() {
     >
       <a
         href="#main"
-        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 bg-gold text-primary px-3 py-2 rounded-md"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 bg-white text-black px-3 py-2 rounded"
       >
-        {isArabic ? "تخطَّ إلى المحتوى" : "Skip to content"}
+        Skip to content
       </a>
 
-      {/* ✅ ارتفاع أنظف + محاذاة Premium */}
-      <div className="max-w-7xl mx-auto px-6 h-[64px] flex items-center justify-between relative">
-        {/* الشعار */}
-        <Link
-          to="/"
-          className="flex items-center gap-3 text-gold select-none"
-          aria-label="Arfat Barber - Home"
-        >
-          {/* (6) Glow subtle على اللوجو */}
-          <span className="relative">
-            <img
-              src={logo}
-              alt="Arfat Barber Logo"
-              className="w-10 h-10 md:w-11 md:h-11 object-contain rounded-full shadow-[0_0_0_2px_rgba(255,215,0,0.12),0_6px_18px_rgba(0,0,0,0.25)]"
-              loading="eager"
-              fetchPriority="high"
-            />
-          </span>
-
-          {/* (3) Brand typographic polish */}
-          <span className="leading-none">
-            <span className="block text-[18px] md:text-[20px] font-black tracking-tight">
-              Arafat
-            </span>
-            <span className="block -mt-0.5 text-[13px] md:text-[14px] font-semibold tracking-wide text-gold/80">
-              Barber
-            </span>
-          </span>
+      <div className="max-w-7xl mx-auto flex items-center justify-between px-4 py-3">
+        {/* يسار: لوجو */}
+        <Link to="/" className="flex items-center gap-2">
+          <img src={logo} alt="Logo" className="h-10 w-auto" />
         </Link>
 
-        {/* روابط سطح المكتب */}
-        <nav
-          className="hidden md:flex gap-x-10 items-center text-[16px] font-tajawal font-medium tracking-wide"
-          aria-label={isArabic ? "التنقل الرئيسي" : "Main navigation"}
-        >
+        {/* وسط: روابط سطح المكتب */}
+        <nav className="hidden md:flex items-center gap-6 text-sm font-semibold">
           <Link to="/" className={linkClass("/")}>
             {t("home")}
           </Link>
-
+          <Link to="/about" className={linkClass("/about")}>
+            {t("about")}
+          </Link>
+          <Link to="/gallery" className={linkClass("/gallery")}>
+            {t("gallery")}
+          </Link>
+          <Link to="/reviews" className={linkClass("/reviews")}>
+            {t("reviews")}
+          </Link>
           <Link to="/contact" className={linkClass("/contact")}>
             {t("contact")}
           </Link>
@@ -15248,7 +15599,7 @@ function Header() {
         {/* يمين سطح المكتب: احجز الآن + اللغات */}
         <div className="hidden md:flex items-center gap-3">
           <Link
-            to="/?scrollTo=booking"
+            to="/booking-form"
             className="bg-gold text-primary font-tajawal font-black px-4 py-2 rounded-xl shadow-sm hover:bg-darkText hover:text-light transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gold"
           >
             {t("book_now")}
@@ -15265,98 +15616,109 @@ function Header() {
 
         {/* يمين الموبايل: اللغات + زر القائمة */}
         <div className="md:hidden flex items-center gap-2">
-          {/* (2) تهدئة شكل اللغة (Wrapper) */}
           <div className="rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-colors px-2 py-1">
             <LanguageSwitcher />
           </div>
 
-          {/* (5) فاصل خفيف */}
-          <span className="w-px h-7 bg-white/10 mx-1" aria-hidden="true" />
-
-          {/* (4) Hamburger كزر Modern */}
           <button
             ref={buttonRef}
             onClick={() => setMenuOpen((v) => !v)}
-            className="focus:outline-none rounded-xl w-10 h-10 grid place-items-center bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
-            aria-label={
-              menuOpen
-                ? isArabic
-                  ? "إغلاق القائمة"
-                  : "Close menu"
-                : isArabic
-                  ? "فتح القائمة"
-                  : "Open menu"
-            }
+            className="p-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition"
+            aria-label={menuOpen ? "Close menu" : "Open menu"}
             aria-expanded={menuOpen}
-            aria-controls="mobile-menu"
           >
-            <span className="sr-only">{menuOpen ? "Close" : "Open"}</span>
-            <div className="w-6 h-6 relative" aria-hidden="true">
-              <span
-                className={`absolute left-0 top-1 w-6 h-0.5 bg-light transition-transform duration-200 ${
-                  menuOpen ? "rotate-45 translate-y-2" : ""
-                }`}
-              />
-              <span
-                className={`absolute left-0 top-2.5 w-6 h-0.5 bg-light transition-opacity duration-200 ${
-                  menuOpen ? "opacity-0" : "opacity-100"
-                }`}
-              />
-              <span
-                className={`absolute left-0 top-4 w-6 h-0.5 bg-light transition-transform duration-200 ${
-                  menuOpen ? "-rotate-45 -translate-y-2" : ""
-                }`}
-              />
-            </div>
+            <span className="block w-6 h-0.5 bg-white mb-1" />
+            <span className="block w-6 h-0.5 bg-white mb-1" />
+            <span className="block w-6 h-0.5 bg-white" />
           </button>
         </div>
       </div>
 
-      {/* قائمة الموبايل — absolute تحت الهيدر، بلا فراغ عند الإغلاق */}
-      <div
-        id="mobile-menu"
-        ref={menuRef}
-        className={`md:hidden absolute left-0 top-full w-full bg-primary text-light px-6 pb-4 text-sm font-tajawal font-medium origin-top transition-[opacity,transform] duration-200 ${
-          menuOpen
-            ? "opacity-100 translate-y-0 pointer-events-auto"
-            : "opacity-0 -translate-y-2 pointer-events-none select-none"
-        }`}
-      >
-        <Link
-          to="/"
-          className="block py-2 hover:text-gold focus:outline-none focus-visible:ring-2 focus-visible:ring-gold rounded"
-          onClick={() => setMenuOpen(false)}
-          aria-current={location.pathname === "/" ? "page" : undefined}
-        >
-          {t("home")}
-        </Link>
+      {/* قائمة الموبايل */}
+      {menuOpen && (
+        <div className="md:hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-sm">
+          <div
+            ref={menuRef}
+            className="absolute top-0 right-0 w-72 h-full bg-primary text-light shadow-2xl p-5 overflow-y-auto"
+            role="dialog"
+            aria-modal="true"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-lg font-bold">{t("menu") || "Menu"}</span>
+              <button
+                onClick={() => setMenuOpen(false)}
+                className="p-2 rounded-lg hover:bg-white/10 transition"
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
 
-        <Link
-          to="/about"
-          className="block py-2 hover:text-gold focus:outline-none focus-visible:ring-2 focus-visible:ring-gold rounded"
-          onClick={() => setMenuOpen(false)}
-          aria-current={location.pathname === "/about" ? "page" : undefined}
-        >
-          {t("about")}
-        </Link>
+            <div className="mt-6 space-y-2">
+              <Link
+                to="/"
+                className="block py-2 px-3 hover:bg-white/10 rounded"
+                onClick={() => setMenuOpen(false)}
+                aria-current={location.pathname === "/" ? "page" : undefined}
+              >
+                {t("home")}
+              </Link>
 
-        <Link
-          to="/contact"
-          className="block py-2 hover:text-gold focus:outline-none focus-visible:ring-2 focus-visible:ring-gold rounded"
-          onClick={() => setMenuOpen(false)}
-          aria-current={location.pathname === "/contact" ? "page" : undefined}
-        >
-          {t("contact")}
-        </Link>
+              <Link
+                to="/about"
+                className="block py-2 px-3 hover:bg-white/10 rounded"
+                onClick={() => setMenuOpen(false)}
+                aria-current={
+                  location.pathname === "/about" ? "page" : undefined
+                }
+              >
+                {t("about")}
+              </Link>
 
-        <Link
-          to="/?scrollTo=booking"
-          className="block mt-2 bg-gold text-primary text-center font-tajawal font-black px-4 py-2 rounded-xl hover:bg-darkText hover:text-light transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gold"
-          onClick={() => setMenuOpen(false)}
-        >
-          {t("book_now")}
-        </Link>
-      </div>
+              <Link
+                to="/gallery"
+                className="block py-2 px-3 hover:bg-white/10 rounded"
+                onClick={() => setMenuOpen(false)}
+                aria-current={
+                  location.pathname === "/gallery" ? "page" : undefined
+                }
+              >
+                {t("gallery")}
+              </Link>
+
+              <Link
+                to="/reviews"
+                className="block py-2 px-3 hover:bg-white/10 rounded"
+                onClick={() => setMenuOpen(false)}
+                aria-current={
+                  location.pathname === "/reviews" ? "page" : undefined
+                }
+              >
+                {t("reviews")}
+              </Link>
+
+              <Link
+                to="/contact"
+                className="block py-2 px-3 hover:bg-white/10 rounded"
+                onClick={() => setMenuOpen(false)}
+                aria-current={
+                  location.pathname === "/contact" ? "page" : undefined
+                }
+              >
+                {t("contact")}
+              </Link>
+
+              <Link
+                to="/booking-form"
+                className="block mt-2 bg-gold text-primary text-center font-tajawal font-black px-4 py-2 rounded-xl hover:bg-darkText hover:text-light transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gold"
+                onClick={() => setMenuOpen(false)}
+              >
+                {t("book_now")}
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 }
