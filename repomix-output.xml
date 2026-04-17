@@ -14753,88 +14753,6 @@ export default function CheckReservation() {
 }
 </file>
 
-<file path="src/components/home/HeroSection.jsx">
-import { useTranslation } from "react-i18next";
-import { useEffect } from "react";
-import { Link } from "react-router-dom";
-import AOS from "aos";
-import "aos/dist/aos.css";
-
-import "../../styles/heroEnhancements.css";
-
-function HeroSection() {
-  const { t } = useTranslation();
-
-  useEffect(() => {
-    AOS.init({ duration: 1000 });
-  }, []);
-
-  const smoothScrollTo = (id) => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
-
-  const onCheckClick = (e) => {
-    e.preventDefault();
-    smoothScrollTo("check-booking");
-  };
-
-  return (
-    <section className="hero-overlay relative w-full min-h-[100svh] h-screen overflow-hidden flex items-center justify-center">
-      <img
-        src="/barber-hero.jpg"
-        alt="Barber Hero"
-        className="hero-media absolute inset-0 w-full h-full object-cover object-center z-0"
-        loading="eager"
-      />
-
-      <div
-        className="hero-content text-center px-4 max-w-2xl"
-        data-aos="fade-up"
-      >
-        <h1
-          className="font-notokufi text-4xl sm:text-5xl md:text-6xl font-extrabold mb-4 leading-tight tracking-tight text-gold"
-          style={{
-            textShadow:
-              "0 2px 6px rgba(0,0,0,0.85), 0 6px 24px rgba(0,0,0,0.6)",
-          }}
-        >
-          {t("hero_title") || "أسلوب يليق بك، بكل بساطة"}
-        </h1>
-
-        <p className="text-base sm:text-lg md:text-xl mb-6 font-tajawal text-beige max-w-xl mx-auto leading-relaxed">
-          {t("hero_subtitle") || "لمحة مُظهرك، يناسبك ويعبر عنك"}
-        </p>
-
-        <div>
-          <Link
-            to="/booking-form"
-            className="inline-flex items-center justify-center bg-gold hover:bg-yellow-400 text-primary font-semibold px-7 py-3.5 rounded-xl shadow-md transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gold"
-            style={{ minHeight: 44 }}
-          >
-            {t("book_now") || "احجز الآن"}
-          </Link>
-        </div>
-
-        <div className="mt-3">
-          <a
-            href="#check-booking"
-            onClick={onCheckClick}
-            className="inline-flex items-center gap-2 text-sm font-tajawal font-semibold text-beige/90 hover:text-gold transition underline underline-offset-4 decoration-white/30 hover:decoration-gold/60"
-          >
-            <span aria-hidden="true">↓</span>
-            <span>{t("check_booking") || "تحقق من الحجز"}</span>
-          </a>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-export default HeroSection;
-</file>
-
 <file path="src/components/layout/Footer.jsx">
 import { useTranslation } from "react-i18next";
 import {
@@ -14924,6 +14842,102 @@ function Footer() {
 }
 
 export default Footer;
+</file>
+
+<file path="src/components/home/HeroSection.jsx">
+import { useTranslation } from "react-i18next";
+import { useEffect } from "react";
+import AOS from "aos";
+import "aos/dist/aos.css";
+
+import "../../styles/heroEnhancements.css";
+
+function HeroSection() {
+  const { t } = useTranslation();
+
+  useEffect(() => {
+    AOS.init({ duration: 1000 });
+  }, []);
+
+  const smoothScrollTo = (id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const onCheckClick = (e) => {
+    e.preventDefault();
+    smoothScrollTo("check-booking");
+  };
+
+  const onBookClick = (e) => {
+    e.preventDefault();
+    // ✅ بدل ما ينزل على ساعات العمل، ينزل على بداية النموذج داخل الكرت
+    const el = document.getElementById("booking-form-start");
+    if (el) {
+      const y = el.getBoundingClientRect().top + window.pageYOffset - 100; // 👈 نفس الرقم هون
+
+      window.scrollTo({
+        top: y,
+        behavior: "smooth",
+      });
+    }
+  };
+
+  return (
+    <section className="hero-overlay relative w-full min-h-[100svh] h-screen overflow-hidden flex items-center justify-center">
+      <img
+        src="/barber-hero.jpg"
+        alt="Barber Hero"
+        className="hero-media absolute inset-0 w-full h-full object-cover object-center z-0"
+        loading="eager"
+      />
+
+      <div
+        className="hero-content text-center px-4 max-w-2xl"
+        data-aos="fade-up"
+      >
+        <h1
+          className="font-notokufi text-4xl sm:text-5xl md:text-6xl font-extrabold mb-4 leading-tight tracking-tight text-gold"
+          style={{
+            textShadow:
+              "0 2px 6px rgba(0,0,0,0.85), 0 6px 24px rgba(0,0,0,0.6)",
+          }}
+        >
+          {t("hero_title") || "أسلوب يليق بك، بكل بساطة"}
+        </h1>
+
+        <p className="text-base sm:text-lg md:text-xl mb-6 font-tajawal text-beige max-w-xl mx-auto leading-relaxed">
+          {t("hero_subtitle") || "لمحة مُظهرك، يناسبك ويعبر عنك"}
+        </p>
+
+        <div>
+          <a
+            href="#booking-form-start"
+            onClick={onBookClick}
+            className="inline-flex items-center justify-center bg-gold hover:bg-yellow-400 text-primary font-semibold px-7 py-3.5 rounded-xl shadow-md transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gold"
+            style={{ minHeight: 44 }}
+          >
+            {t("book_now") || "احجز الآن"}
+          </a>
+        </div>
+
+        <div className="mt-3">
+          <a
+            href="#check-booking"
+            onClick={onCheckClick}
+            className="inline-flex items-center gap-2 text-sm font-tajawal font-semibold text-beige/90 hover:text-gold transition underline underline-offset-4 decoration-white/30 hover:decoration-gold/60"
+          >
+            <span aria-hidden="true">↓</span>
+            <span>{t("check_booking") || "تحقق من الحجز"}</span>
+          </a>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+export default HeroSection;
 </file>
 
 <file path="src/components/home/InstagramSlider.jsx">
@@ -15566,31 +15580,73 @@ function Header() {
     >
       <a
         href="#main"
-        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 bg-white text-black px-3 py-2 rounded"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 bg-gold text-primary px-3 py-2 rounded-md"
       >
-        Skip to content
+        {isArabic ? "تخطَّ إلى المحتوى" : "Skip to content"}
       </a>
 
-      <div className="max-w-7xl mx-auto flex items-center justify-between px-4 py-3">
-        {/* يسار: لوجو */}
-        <Link to="/" className="flex items-center gap-2">
-          <img src={logo} alt="Logo" className="h-10 w-auto" />
+      {/* ✅ ارتفاع أنظف + محاذاة Premium */}
+      <div className="max-w-7xl mx-auto px-6 h-[64px] flex items-center justify-between relative">
+        {/* الشعار */}
+        <Link
+          to="/"
+          className="flex items-center gap-3 text-gold select-none"
+          aria-label="Arfat Barber - Home"
+        >
+          {/* (6) Glow subtle على اللوجو */}
+          <span className="relative">
+            <img
+              src={logo}
+              alt="Arfat Barber Logo"
+              className="w-10 h-10 md:w-11 md:h-11 object-contain rounded-full shadow-[0_0_0_2px_rgba(255,215,0,0.12),0_6px_18px_rgba(0,0,0,0.25)]"
+              loading="eager"
+              fetchPriority="high"
+            />
+          </span>
+
+          {/* (3) Brand typographic polish (بدون أنيميشن) */}
+          <span className="leading-none">
+            <span className="block text-[18px] md:text-[20px] font-black tracking-tight">
+              Arfat
+            </span>
+            <span className="block -mt-0.5 text-[13px] md:text-[14px] font-semibold tracking-wide text-gold/80">
+              Barber
+            </span>
+          </span>
+
+          {/* ✅ Ramadan badge (راقي، لا يكسر التصميم) */}
+          <span className="flex items-center gap-2 px-2.5 py-1 rounded-full border border-white/10 bg-white/5 text-light/90">
+            <span aria-hidden="true" className="text-[14px]">
+              <svg
+                viewBox="0 0 24 24"
+                className="w-5 h-5 md:w-6 md:h-6 text-gold"
+                fill="currentColor"
+              >
+                <path d="M21 12.79A9 9 0 1111.21 3c.12 0 .24 0 .36.01A7 7 0 1021 12.79z" />
+              </svg>
+            </span>
+
+            {/* على الموبايل نص أقصر */}
+            <span className="text-[12px] font-semibold text-gold md:text-[13px]">
+              رمضان كريم
+            </span>
+
+            {/* الجملة الطويلة فقط على الديسكتوب */}
+            <span className="hidden md:inline text-[12px] text-light/70">
+              حياكم الله… وأوقات مباركة
+            </span>
+          </span>
         </Link>
 
-        {/* وسط: روابط سطح المكتب */}
-        <nav className="hidden md:flex items-center gap-6 text-sm font-semibold">
+        {/* روابط سطح المكتب */}
+        <nav
+          className="hidden md:flex gap-x-10 items-center text-[16px] font-tajawal font-medium tracking-wide"
+          aria-label={isArabic ? "التنقل الرئيسي" : "Main navigation"}
+        >
           <Link to="/" className={linkClass("/")}>
             {t("home")}
           </Link>
-          <Link to="/about" className={linkClass("/about")}>
-            {t("about")}
-          </Link>
-          <Link to="/gallery" className={linkClass("/gallery")}>
-            {t("gallery")}
-          </Link>
-          <Link to="/reviews" className={linkClass("/reviews")}>
-            {t("reviews")}
-          </Link>
+
           <Link to="/contact" className={linkClass("/contact")}>
             {t("contact")}
           </Link>
@@ -15599,7 +15655,7 @@ function Header() {
         {/* يمين سطح المكتب: احجز الآن + اللغات */}
         <div className="hidden md:flex items-center gap-3">
           <Link
-            to="/booking-form"
+            to="/?scrollTo=booking"
             className="bg-gold text-primary font-tajawal font-black px-4 py-2 rounded-xl shadow-sm hover:bg-darkText hover:text-light transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gold"
           >
             {t("book_now")}
@@ -15616,109 +15672,98 @@ function Header() {
 
         {/* يمين الموبايل: اللغات + زر القائمة */}
         <div className="md:hidden flex items-center gap-2">
+          {/* (2) تهدئة شكل اللغة (Wrapper) */}
           <div className="rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-colors px-2 py-1">
             <LanguageSwitcher />
           </div>
 
+          {/* (5) فاصل خفيف */}
+          <span className="w-px h-7 bg-white/10 mx-1" aria-hidden="true" />
+
+          {/* (4) Hamburger كزر Modern */}
           <button
             ref={buttonRef}
             onClick={() => setMenuOpen((v) => !v)}
-            className="p-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition"
-            aria-label={menuOpen ? "Close menu" : "Open menu"}
+            className="focus:outline-none rounded-xl w-10 h-10 grid place-items-center bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
+            aria-label={
+              menuOpen
+                ? isArabic
+                  ? "إغلاق القائمة"
+                  : "Close menu"
+                : isArabic
+                  ? "فتح القائمة"
+                  : "Open menu"
+            }
             aria-expanded={menuOpen}
+            aria-controls="mobile-menu"
           >
-            <span className="block w-6 h-0.5 bg-white mb-1" />
-            <span className="block w-6 h-0.5 bg-white mb-1" />
-            <span className="block w-6 h-0.5 bg-white" />
+            <span className="sr-only">{menuOpen ? "Close" : "Open"}</span>
+            <div className="w-6 h-6 relative" aria-hidden="true">
+              <span
+                className={`absolute left-0 top-1 w-6 h-0.5 bg-light transition-transform duration-200 ${
+                  menuOpen ? "rotate-45 translate-y-2" : ""
+                }`}
+              />
+              <span
+                className={`absolute left-0 top-2.5 w-6 h-0.5 bg-light transition-opacity duration-200 ${
+                  menuOpen ? "opacity-0" : "opacity-100"
+                }`}
+              />
+              <span
+                className={`absolute left-0 top-4 w-6 h-0.5 bg-light transition-transform duration-200 ${
+                  menuOpen ? "-rotate-45 -translate-y-2" : ""
+                }`}
+              />
+            </div>
           </button>
         </div>
       </div>
 
-      {/* قائمة الموبايل */}
-      {menuOpen && (
-        <div className="md:hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-sm">
-          <div
-            ref={menuRef}
-            className="absolute top-0 right-0 w-72 h-full bg-primary text-light shadow-2xl p-5 overflow-y-auto"
-            role="dialog"
-            aria-modal="true"
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-lg font-bold">{t("menu") || "Menu"}</span>
-              <button
-                onClick={() => setMenuOpen(false)}
-                className="p-2 rounded-lg hover:bg-white/10 transition"
-                aria-label="Close"
-              >
-                ✕
-              </button>
-            </div>
+      {/* قائمة الموبايل — absolute تحت الهيدر، بلا فراغ عند الإغلاق */}
+      <div
+        id="mobile-menu"
+        ref={menuRef}
+        className={`md:hidden absolute left-0 top-full w-full bg-primary text-light px-6 pb-4 text-sm font-tajawal font-medium origin-top transition-[opacity,transform] duration-200 ${
+          menuOpen
+            ? "opacity-100 translate-y-0 pointer-events-auto"
+            : "opacity-0 -translate-y-2 pointer-events-none select-none"
+        }`}
+      >
+        <Link
+          to="/"
+          className="block py-2 hover:text-gold focus:outline-none focus-visible:ring-2 focus-visible:ring-gold rounded"
+          onClick={() => setMenuOpen(false)}
+          aria-current={location.pathname === "/" ? "page" : undefined}
+        >
+          {t("home")}
+        </Link>
 
-            <div className="mt-6 space-y-2">
-              <Link
-                to="/"
-                className="block py-2 px-3 hover:bg-white/10 rounded"
-                onClick={() => setMenuOpen(false)}
-                aria-current={location.pathname === "/" ? "page" : undefined}
-              >
-                {t("home")}
-              </Link>
+        <Link
+          to="/about"
+          className="block py-2 hover:text-gold focus:outline-none focus-visible:ring-2 focus-visible:ring-gold rounded"
+          onClick={() => setMenuOpen(false)}
+          aria-current={location.pathname === "/about" ? "page" : undefined}
+        >
+          {t("about")}
+        </Link>
 
-              <Link
-                to="/about"
-                className="block py-2 px-3 hover:bg-white/10 rounded"
-                onClick={() => setMenuOpen(false)}
-                aria-current={
-                  location.pathname === "/about" ? "page" : undefined
-                }
-              >
-                {t("about")}
-              </Link>
+        <Link
+          to="/contact"
+          className="block py-2 hover:text-gold focus:outline-none focus-visible:ring-2 focus-visible:ring-gold rounded"
+          onClick={() => setMenuOpen(false)}
+          aria-current={location.pathname === "/contact" ? "page" : undefined}
+        >
+          {t("contact")}
+        </Link>
 
-              <Link
-                to="/gallery"
-                className="block py-2 px-3 hover:bg-white/10 rounded"
-                onClick={() => setMenuOpen(false)}
-                aria-current={
-                  location.pathname === "/gallery" ? "page" : undefined
-                }
-              >
-                {t("gallery")}
-              </Link>
-
-              <Link
-                to="/reviews"
-                className="block py-2 px-3 hover:bg-white/10 rounded"
-                onClick={() => setMenuOpen(false)}
-                aria-current={
-                  location.pathname === "/reviews" ? "page" : undefined
-                }
-              >
-                {t("reviews")}
-              </Link>
-
-              <Link
-                to="/contact"
-                className="block py-2 px-3 hover:bg-white/10 rounded"
-                onClick={() => setMenuOpen(false)}
-                aria-current={
-                  location.pathname === "/contact" ? "page" : undefined
-                }
-              >
-                {t("contact")}
-              </Link>
-
-              <Link
-                to="/booking-form"
-                className="block mt-2 bg-gold text-primary text-center font-tajawal font-black px-4 py-2 rounded-xl hover:bg-darkText hover:text-light transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gold"
-                onClick={() => setMenuOpen(false)}
-              >
-                {t("book_now")}
-              </Link>
-            </div>
-          </div>
-        </div>
-      )}
+        <Link
+          to="/?scrollTo=booking"
+          className="block mt-2 bg-gold text-primary text-center font-tajawal font-black px-4 py-2 rounded-xl hover:bg-darkText hover:text-light transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gold"
+          onClick={() => setMenuOpen(false)}
+        >
+          {t("book_now")}
+        </Link>
+      </div>
     </header>
   );
 }
@@ -16283,11 +16328,24 @@ function Home() {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const targetId = params.get("scrollTo");
-    if (targetId) {
-      const element = document.getElementById(targetId);
-      if (element) {
-        setTimeout(() => element.scrollIntoView({ behavior: "smooth" }), 100);
-      }
+    if (!targetId) return;
+
+    const realId =
+      targetId === "booking" && document.getElementById("booking-form-start")
+        ? "booking-form-start"
+        : targetId;
+
+    const element = document.getElementById(realId);
+    if (element) {
+      setTimeout(() => {
+        const y =
+          element.getBoundingClientRect().top + window.pageYOffset - 100; // 👈 عدل الرقم هون
+
+        window.scrollTo({
+          top: y,
+          behavior: "smooth",
+        });
+      }, 100);
     }
   }, [location]);
 
@@ -16928,6 +16986,9 @@ function BookingSection() {
             workingHours={workingHours}
           />
         </div>
+
+        {/* ✅ هذا هو الهدف اللي بدك الزر ينزل عليه بالزبط */}
+        <div id="booking-form-start" />
 
         <div className="bg-white shadow-xl rounded-2xl p-8 space-y-6 border border-gray-100">
           <SuccessModal
