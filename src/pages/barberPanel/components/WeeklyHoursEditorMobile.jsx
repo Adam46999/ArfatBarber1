@@ -144,6 +144,7 @@ export default function WeeklyHoursEditorMobile({
   };
 
   const onSave = async () => {
+    console.log("onSave fired");
     if (loading || saving) return;
     if (hasErrors) {
       showToast(t.fixErrors, 2400);
@@ -158,7 +159,7 @@ export default function WeeklyHoursEditorMobile({
       // ✅ ثبّت baseline كنسخة (مش نفس المرجع)
       const n = normalizeWeekly(clone(weekly));
       baseRef.current = n;
-
+      setWeekly(n);
       setLastSavedAt(nowTime());
       showToast(t.savedOk);
     } catch (e) {
