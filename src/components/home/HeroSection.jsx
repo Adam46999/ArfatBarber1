@@ -1,5 +1,7 @@
 import { useTranslation } from "react-i18next";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { doc, onSnapshot } from "firebase/firestore";
+import { db } from "../../firebase";
 import AOS from "aos";
 import "aos/dist/aos.css";
 
@@ -8,8 +10,23 @@ import "../../styles/heroEnhancements.css";
 function HeroSection() {
   const { t } = useTranslation();
 
+  const [heroNote, setHeroNote] = useState(null);
+  const [noteClosed, setNoteClosed] = useState(false);
+
   useEffect(() => {
     AOS.init({ duration: 1000 });
+  }, []);
+
+  useEffect(() => {
+    const ref = doc(db, "barberSettings", "general");
+
+    const unsub = onSnapshot(ref, (snap) => {
+      const data = snap.exists() ? snap.data() : {};
+      setHeroNote(data.heroNote || null);
+      setNoteClosed(false);
+    });
+
+    return () => unsub();
   }, []);
 
   const smoothScrollTo = (id) => {
@@ -25,10 +42,10 @@ function HeroSection() {
 
   const onBookClick = (e) => {
     e.preventDefault();
-    // ✅ بدل ما ينزل على ساعات العمل، ينزل على بداية النموذج داخل الكرت
+
     const el = document.getElementById("booking-form-start");
     if (el) {
-      const y = el.getBoundingClientRect().top + window.pageYOffset - 100; // 👈 نفس الرقم هون
+      const y = el.getBoundingClientRect().top + window.pageYOffset - 100;
 
       window.scrollTo({
         top: y,
@@ -63,6 +80,36 @@ function HeroSection() {
         <p className="text-base sm:text-lg md:text-xl mb-6 font-tajawal text-beige max-w-xl mx-auto leading-relaxed">
           {t("hero_subtitle") || "لمحة مُظهرك، يناسبك ويعبر عنك"}
         </p>
+
+        {heroNote?.enabled && heroNote?.text && !noteClosed && (
+          <div
+            className={`relative mx-auto mb-6 max-w-xl rounded-2xl border px-5 py-3 pr-10 text-sm sm:text-base font-bold shadow-lg animate-pulse ${
+              heroNote.type === "important"
+                ? "bg-rose-100 text-rose-900 border-rose-300"
+                : heroNote.type === "offer"
+                  ? "bg-emerald-100 text-emerald-900 border-emerald-300"
+                  : "bg-yellow-100 text-yellow-900 border-yellow-300"
+            }`}
+            style={{
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+            }}
+          >
+            <span className="ml-2">📌</span>
+            {heroNote.text}
+
+            <button
+              type="button"
+              onClick={() => setNoteClosed(true)}
+              className="absolute top-2 right-3 text-lg leading-none opacity-70 hover:opacity-100"
+              aria-label="إغلاق الملاحظة"
+            >
+              ×
+            </button>
+          </div>
+        )}
 
         <div>
           <a
