@@ -64,6 +64,7 @@ export async function hasActiveConflict(dateYMD, hhmm) {
     where("selectedTime", "==", hhmm),
   );
   const snap = await getDocs(q);
+
   return snap.docs.map((d) => d.data()).some((b) => !b.cancelledAt);
 }
 
@@ -76,7 +77,20 @@ export async function createBooking(payload) {
     const slotSnap = await tx.get(slotRef);
 
     if (slotSnap.exists() && slotSnap.data()?.active === true) {
-      throw new Error("TIME_ALREADY_BOOKED");
+      const oldBookingId = slotSnap.data()?.bookingId;
+
+      if (oldBookingId) {
+        const oldBookingRef = doc(db, "bookings", oldBookingId);
+        const oldBookingSnap = await tx.get(oldBookingRef);
+
+        if (oldBookingSnap.exists()) {
+          const oldBooking = oldBookingSnap.data();
+
+          if (!oldBooking.cancelledAt) {
+            throw new Error("TIME_ALREADY_BOOKED");
+          }
+        }
+      }
     }
 
     tx.set(bookingRef, {
@@ -131,9 +145,9 @@ export async function cancelBooking(bookingId) {
       const slotId = makeSlotId(b.selectedDate, b.selectedTime);
       const slotRef = doc(db, "bookedSlots", slotId);
 
-      const monthKey = String(b.selectedDate || "").slice(0, 7);
-
-      tx.update(bookingRef, { cancelledAt: serverTimestamp() });
+      tx.update(bookingRef, {
+        cancelledAt: serverTimestamp(),
+      });
 
       tx.set(
         slotRef,
@@ -147,13 +161,17 @@ export async function cancelBooking(bookingId) {
         { merge: true },
       );
 
+      const monthKey = String(b.selectedDate || "").slice(0, 7);
       if (!monthKey || monthKey.length !== 7) return;
 
       const monthRef = doc(db, "statsMonthly", monthKey);
 
       tx.set(
         monthRef,
-        { total: increment(-1), updatedAt: serverTimestamp() },
+        {
+          total: increment(-1),
+          updatedAt: serverTimestamp(),
+        },
         { merge: true },
       );
     });
