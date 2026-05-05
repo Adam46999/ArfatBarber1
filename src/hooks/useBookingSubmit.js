@@ -1,15 +1,15 @@
 // src/hooks/useBookingSubmit.js
 import { useState, useEffect, useRef } from "react";
 import { getMessaging, getToken } from "firebase/messaging";
-import { app, db } from "../firebase"; // 👈 أضفنا db هنا
-import { doc, getDoc } from "firebase/firestore"; // 👈 نقرأ إعداد من Firestore مباشرة
+import { app, db } from "../firebase";
+import { doc, getDoc } from "firebase/firestore";
 
 import {
   isPhoneBlocked,
   hasExistingBookings,
   hasActiveConflict,
   createBooking,
-  fetchActiveBookingsByDate, // 👈 نستخدم فانكشن موجودة أصلاً
+  fetchActiveBookingsByDate,
 } from "../services/bookingService";
 
 import { toILPhoneE164, isILPhoneE164 } from "../utils/phone";
@@ -17,8 +17,10 @@ import { toILPhoneE164, isILPhoneE164 } from "../utils/phone";
 export default function useBookingSubmit(form, setForm, t) {
   const [submitted, setSubmitted] = useState(false);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [code, setCode] = useState("");
   const messageRef = useRef(null);
+  const submittingRef = useRef(false);
 
   const { fullName, phoneNumber, selectedDate, selectedTime, selectedService } =
     form;
@@ -45,103 +47,103 @@ export default function useBookingSubmit(form, setForm, t) {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (
-      !fullName ||
-      !phoneNumber ||
-      !selectedDate ||
-      !selectedTime ||
-      !selectedService
-    ) {
-      alert(t("fill_required_fields"));
-      return;
-    }
+    if (submittingRef.current) return;
 
-    // تطبيع الهاتف لصيغة E.164
-    const phoneE164 = toILPhoneE164(phoneNumber);
-    if (!isILPhoneE164(phoneE164)) {
-      alert(t("invalid_phone") || "رقم الهاتف غير صالح");
-      return;
-    }
+    submittingRef.current = true;
+    setIsSubmitting(true);
 
-    // FCM (اختياري)
-    let fcmToken = "";
     try {
-      const messaging = getMessaging(app);
-      fcmToken = await getToken(messaging, {
-        vapidKey:
-          "BMSKYpj6OfL2RinVjw4jUNlL-Hbi1Ev4eiTibIKlvFwqSULUm42ricVJRcKbptmiepuDbl3andf-F2tf7Cmr-U8",
-      });
-    } catch (err) {
-      console.warn("FCM token error", err);
-    }
-
-    // محظور؟
-    if (await isPhoneBlocked(phoneE164)) {
-      alert("🚫 هذا الرقم محظور من الحجز. يرجى التواصل مع الحلاق.");
-      return;
-    }
-
-    // ⚙️ قراءة إعداد "حجز واحد لكل رقم في اليوم" مباشرة من Firestore
-    let limitOnePerDay = false;
-    try {
-      const settingsRef = doc(db, "barberSettings", "global");
-      const settingsSnap = await getDoc(settingsRef);
-      if (settingsSnap.exists()) {
-        const data = settingsSnap.data();
-        limitOnePerDay =
-          typeof data.limitOneBookingPerDayPerPhone === "boolean"
-            ? data.limitOneBookingPerDayPerPhone
-            : !!data.limitOneBookingPerDay;
+      if (
+        !fullName ||
+        !phoneNumber ||
+        !selectedDate ||
+        !selectedTime ||
+        !selectedService
+      ) {
+        alert(t("fill_required_fields"));
+        return;
       }
-    } catch (err) {
-      console.warn("limitOnePerDay settings read error:", err);
-      // لو في خطأ ما نمنع الحجز عشان ما نخرب التجربة
-    }
 
-    if (limitOnePerDay) {
-      // نجيب كل حجوزات هذا اليوم، ثم نتحقق إذا هذا الرقم عنده حجز فعّال
+      const phoneE164 = toILPhoneE164(phoneNumber);
+      if (!isILPhoneE164(phoneE164)) {
+        alert(t("invalid_phone") || "رقم الهاتف غير صالح");
+        return;
+      }
+
+      let fcmToken = "";
       try {
-        const dayBookings = await fetchActiveBookingsByDate(selectedDate);
-        const hasSameDay = dayBookings.some((b) => b.phoneNumber === phoneE164);
-        if (hasSameDay) {
-          alert(
-            t("phone_already_booked_today") ||
-              "لديك حجز مسبق لهذا اليوم بهذا الرقم. إذا أردت تعديل الحجز، يرجى التواصل مع الحلاق."
-          );
-          return;
+        const messaging = getMessaging(app);
+        fcmToken = await getToken(messaging, {
+          vapidKey:
+            "BMSKYpj6OfL2RinVjw4jUNlL-Hbi1Ev4eiTibIKlvFwqSULUm42ricVJRcKbptmiepuDbl3andf-F2tf7Cmr-U8",
+        });
+      } catch (err) {
+        console.warn("FCM token error", err);
+      }
+
+      if (await isPhoneBlocked(phoneE164)) {
+        alert("🚫 هذا الرقم محظور من الحجز. يرجى التواصل مع الحلاق.");
+        return;
+      }
+
+      let limitOnePerDay = false;
+      try {
+        const settingsRef = doc(db, "barberSettings", "global");
+        const settingsSnap = await getDoc(settingsRef);
+        if (settingsSnap.exists()) {
+          const data = settingsSnap.data();
+          limitOnePerDay =
+            typeof data.limitOneBookingPerDayPerPhone === "boolean"
+              ? data.limitOneBookingPerDayPerPhone
+              : !!data.limitOneBookingPerDay;
         }
       } catch (err) {
-        console.warn("same-day booking check error:", err);
-        // لو صار خطأ في التحقق، ما نمنع الحجز
+        console.warn("limitOnePerDay settings read error:", err);
       }
-    }
 
-    // لديه حجوزات سابقة؟ (أي يوم) – نفس السلوك القديم
-    if (await hasExistingBookings(phoneE164)) {
-      const confirmNew = window.confirm(
-        "⚠️ يوجد لديك حجوزات سابقة برقم الهاتف هذا. هل تريد إضافة حجز جديد؟"
-      );
-      if (!confirmNew) return;
-    }
+      if (limitOnePerDay) {
+        try {
+          const dayBookings = await fetchActiveBookingsByDate(selectedDate);
+          const hasSameDay = dayBookings.some(
+            (b) => b.phoneNumber === phoneE164,
+          );
 
-    // تعارض نفس الوقت؟
-    if (await hasActiveConflict(selectedDate, selectedTime)) {
-      alert(
-        t("time_already_booked") ||
-          "هذه الساعة محجوزة بالفعل، يرجى اختيار ساعة أخرى."
-      );
-      return;
-    }
+          if (hasSameDay) {
+            alert(
+              t("phone_already_booked_today") ||
+                "لديك حجز مسبق لهذا اليوم بهذا الرقم. إذا أردت تعديل الحجز، يرجى التواصل مع الحلاق.",
+            );
+            return;
+          }
+        } catch (err) {
+          console.warn("same-day booking check error:", err);
+        }
+      }
 
-    try {
+      if (await hasExistingBookings(phoneE164)) {
+        const confirmNew = window.confirm(
+          "⚠️ يوجد لديك حجوزات سابقة برقم الهاتف هذا. هل تريد إضافة حجز جديد؟",
+        );
+        if (!confirmNew) return;
+      }
+
+      if (await hasActiveConflict(selectedDate, selectedTime)) {
+        alert(
+          t("time_already_booked") ||
+            "هذه الساعة محجوزة بالفعل، يرجى اختيار ساعة أخرى.",
+        );
+        return;
+      }
+
       const bookingCode = Math.random().toString(36).substring(2, 8);
       setCode(bookingCode);
+
       const bookingDateTime = new Date(`${selectedDate}T${selectedTime}:00`);
       const timestamp = bookingDateTime.getTime();
 
       await createBooking({
         fullName,
-        phoneNumber: phoneE164, // نخزّن دائمًا E.164
+        phoneNumber: phoneE164,
         selectedDate,
         selectedTime,
         selectedService,
@@ -165,12 +167,24 @@ export default function useBookingSubmit(form, setForm, t) {
       });
     } catch (err) {
       console.error("createBooking error:", err);
-      alert("حدث خطأ أثناء حفظ الحجز، يرجى المحاولة لاحقًا.");
+
+      if (err?.message === "TIME_ALREADY_BOOKED") {
+        alert(
+          t("time_already_booked") ||
+            "هذه الساعة محجوزة بالفعل، يرجى اختيار ساعة أخرى.",
+        );
+      } else {
+        alert("حدث خطأ أثناء حفظ الحجز، يرجى المحاولة لاحقًا.");
+      }
+    } finally {
+      submittingRef.current = false;
+      setIsSubmitting(false);
     }
   };
 
   return {
     handleSubmit,
+    isSubmitting,
     submitted,
     showSuccessMessage,
     setShowSuccessMessage,

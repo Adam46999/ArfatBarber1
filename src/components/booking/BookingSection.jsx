@@ -108,6 +108,7 @@ function BookingSection() {
 
   const {
     handleSubmit,
+    isSubmitting,
     submitted,
     showSuccessMessage,
     setShowSuccessMessage,
@@ -443,14 +444,14 @@ function BookingSection() {
                   scrollToFirstError(currentErrors);
                 }
               }}
-              disabled={hasErrors}
+              disabled={hasErrors || isSubmitting}
               className={`w-full font-bold py-3 rounded-xl shadow transition ${
-                hasErrors
+                hasErrors || isSubmitting
                   ? "bg-gray-300 text-gray-600 cursor-not-allowed"
                   : "bg-gradient-to-r from-gold to-yellow-400 text-primary hover:scale-[1.02] hover:shadow-lg"
               }`}
             >
-              {t("confirm_booking")}
+              {isSubmitting ? "جاري حفظ الحجز..." : t("confirm_booking")}
             </button>
           </form>
         </div>
