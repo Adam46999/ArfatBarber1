@@ -32,20 +32,13 @@ import { isILPhoneE164, toILPhoneE164 } from "../../utils/phone";
 /* ================== الإعدادات ================== */
 
 const BARBER_ID = "arfat";
-
 const INITIAL_VISIBLE_REVIEWS = 3;
 const PAGE_LIMIT = 6;
-
-/*
- * نحمل آخر 20 تقييمًا عند فتح الصفحة
- * حتى نجد أكثر من تجربة مميزة للتبديل بينها.
- */
 const FEATURED_POOL_LIMIT = 20;
 
-/*
- * تغيير التجربة المميزة كل 5 ثوانٍ.
- */
 const FEATURED_CHANGE_INTERVAL = 5000;
+const FEATURED_FADE_OUT_DURATION = 300;
+const FEATURED_FADE_IN_DURATION = 400;
 
 /* ================== دوال مساعدة ================== */
 
@@ -89,7 +82,6 @@ function formatTimeAgo(createdAt) {
   }
 
   const difference = Math.max(0, Date.now() - date.getTime());
-
   const minutes = Math.floor(difference / 60000);
 
   if (minutes < 1) {
@@ -169,11 +161,8 @@ function StarRow({ value, onChange, readonly = false, size = 24 }) {
       role={readonly ? undefined : "radiogroup"}
       aria-label="اختيار عدد النجوم"
     >
-      {Array.from({
-        length: 5,
-      }).map((_, index) => {
+      {Array.from({ length: 5 }).map((_, index) => {
         const starValue = index + 1;
-
         const active = starValue <= Math.round(selected);
 
         return (
@@ -213,7 +202,6 @@ function RatingBars({ byStar, total }) {
     <div className="mt-4 grid gap-2">
       {[5, 4, 3, 2, 1].map((star) => {
         const amount = Number(byStar?.[star] || 0);
-
         const percentage = Math.round((amount / total) * 100);
 
         return (
@@ -243,9 +231,9 @@ function RatingBars({ byStar, total }) {
   );
 }
 
-/* ================== التقييم المميز ================== */
+/* ================== محتوى التقييم المميز ================== */
 
-function FeaturedReview({ review }) {
+function FeaturedReviewContent({ review }) {
   if (!review) {
     return null;
   }
@@ -257,48 +245,89 @@ function FeaturedReview({ review }) {
   const comment = String(review.comment || "").trim();
 
   return (
-    <article className="featured-review-enter relative h-fit self-start overflow-hidden rounded-[26px] border border-gold/20 bg-gradient-to-bl from-primary via-[#182231] to-[#0c1119] p-5 text-white shadow-xl sm:p-6">
+    <div className="flex h-full min-w-0 flex-col">
+      <div className="flex shrink-0 items-center justify-between gap-3">
+        <div className="inline-flex items-center gap-2 rounded-full border border-gold/25 bg-gold/10 px-2.5 py-1 text-xs font-black text-gold">
+          <Sparkles className="h-3.5 w-3.5" />
+          تجربة مميزة
+        </div>
+
+        <StarRow value={review.rating} readonly size={18} />
+      </div>
+
+      <div className="mt-3 min-h-0 flex-1">
+        <Quote className="mb-2 h-6 w-6 text-gold" />
+
+        <p
+          className="text-right text-base font-bold leading-7 text-white sm:text-lg sm:leading-8"
+          style={{
+            display: "-webkit-box",
+            WebkitLineClamp: 3,
+            WebkitBoxOrient: "vertical",
+            overflow: "hidden",
+          }}
+        >
+          “{comment || "تجربة ممتازة وخدمة مرتبة."}”
+        </p>
+      </div>
+
+      <div className="mt-3 flex shrink-0 items-center gap-3">
+        <div className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/10 text-xs font-black text-gold">
+          {getInitials(name)}
+        </div>
+
+        <div className="min-w-0 text-right">
+          <div className="truncate text-sm font-black">{name}</div>
+
+          <div className="mt-0.5 text-[11px] text-white/55">
+            {formatTimeAgo(review.createdAt)}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ================== بطاقة التجربة المميزة ================== */
+
+function FeaturedReview({ review, visible, onPause, onResume }) {
+  if (!review) {
+    return null;
+  }
+
+  return (
+    <article
+      tabIndex={0}
+      onMouseEnter={onPause}
+      onMouseLeave={onResume}
+      onFocus={onPause}
+      onBlur={onResume}
+      onTouchStart={onPause}
+      className="relative h-[230px] self-start overflow-hidden rounded-[26px] border border-gold/20 bg-gradient-to-bl from-primary via-[#182231] to-[#0c1119] p-5 text-white shadow-xl outline-none focus:ring-2 focus:ring-gold/30 sm:h-[240px] sm:p-6"
+    >
       <div className="pointer-events-none absolute -left-8 -top-12 h-32 w-32 rounded-full bg-gold/20 blur-3xl" />
 
       <div className="pointer-events-none absolute bottom-2 left-4 opacity-[0.07]">
         <Quote className="h-16 w-16" />
       </div>
 
-      <div className="relative">
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <div className="inline-flex items-center gap-2 rounded-full border border-gold/25 bg-gold/10 px-2.5 py-1 text-xs font-black text-gold">
-            <Sparkles className="h-3.5 w-3.5" />
-            تجربة مميزة
-          </div>
-
-          <StarRow value={review.rating} readonly size={18} />
-        </div>
-
-        <Quote className="mb-2 h-6 w-6 text-gold" />
-
-        <p className="max-w-2xl text-right text-base font-bold leading-7 text-white sm:text-lg sm:leading-8">
-          “{comment || "تجربة ممتازة وخدمة مرتبة."}”
-        </p>
-
-        <div className="mt-4 flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/10 text-xs font-black text-gold">
-            {getInitials(name)}
-          </div>
-
-          <div className="text-right">
-            <div className="text-sm font-black">{name}</div>
-
-            <div className="mt-0.5 text-[11px] text-white/55">
-              {formatTimeAgo(review.createdAt)}
-            </div>
-          </div>
-        </div>
+      <div
+        className={`relative h-full transition-opacity ease-in-out ${
+          visible ? "opacity-100" : "opacity-0"
+        }`}
+        style={{
+          transitionDuration: visible
+            ? `${FEATURED_FADE_IN_DURATION}ms`
+            : `${FEATURED_FADE_OUT_DURATION}ms`,
+        }}
+      >
+        <FeaturedReviewContent review={review} />
       </div>
     </article>
   );
 }
 
-/* ================== بطاقة تقييم ================== */
+/* ================== بطاقة تقييم عادية ================== */
 
 function ReviewCard({ review, expanded, onToggle, index }) {
   const name = getPublicName(
@@ -306,7 +335,6 @@ function ReviewCard({ review, expanded, onToggle, index }) {
   );
 
   const comment = String(review.comment || "").trim();
-
   const longComment = comment.length > 135;
 
   return (
@@ -339,7 +367,7 @@ function ReviewCard({ review, expanded, onToggle, index }) {
       {comment ? (
         <div className="mt-4 text-right">
           <p
-            className="text-sm font-medium leading-7 text-gray-650"
+            className="text-sm font-medium leading-7 text-gray-600"
             style={
               expanded
                 ? undefined
@@ -380,10 +408,11 @@ export default function BarberRatingSection() {
   const formRef = useRef(null);
   const listTopRef = useRef(null);
 
+  const fadeTimeoutRef = useRef(null);
+  const fadeAnimationFrameRef = useRef(null);
+
   const [sectionVisible, setSectionVisible] = useState(false);
-
   const [loading, setLoading] = useState(true);
-
   const [loadingMore, setLoadingMore] = useState(false);
 
   const [summary, setSummary] = useState({
@@ -399,31 +428,22 @@ export default function BarberRatingSection() {
   });
 
   const [reviews, setReviews] = useState([]);
-
   const [lastDocument, setLastDocument] = useState(null);
-
   const [hasMore, setHasMore] = useState(false);
-
   const [expandedList, setExpandedList] = useState(false);
-
   const [openReviewId, setOpenReviewId] = useState(null);
 
   const [featuredReviewIndex, setFeaturedReviewIndex] = useState(0);
+  const [featuredVisible, setFeaturedVisible] = useState(true);
+  const [featuredPaused, setFeaturedPaused] = useState(false);
 
   const [formOpen, setFormOpen] = useState(false);
-
   const [rating, setRating] = useState(0);
-
   const [customerName, setCustomerName] = useState("");
-
   const [phone, setPhone] = useState("");
-
   const [comment, setComment] = useState("");
-
   const [submitting, setSubmitting] = useState(false);
-
   const [formError, setFormError] = useState("");
-
   const [successMessage, setSuccessMessage] = useState("");
 
   const summaryReference = doc(
@@ -440,25 +460,15 @@ export default function BarberRatingSection() {
 
   const average = count > 0 ? Number(summary.sum || 0) / count : 0;
 
-  /*
-   * التقييمات التي تدخل في
-   * التبديل كتجارب مميزة.
-   */
   const featuredReviews = useMemo(() => {
     return reviews.filter((review) => {
       const reviewRating = Number(review.rating || 0);
-
       const reviewComment = String(review.comment || "").trim();
 
       return reviewRating >= 4 && reviewComment.length >= 8;
     });
   }, [reviews]);
 
-  /*
-   * إذا لم يوجد تقييم 4 أو 5
-   * مع تعليق، نعرض أول تعليق
-   * كحل احتياطي.
-   */
   const fallbackFeaturedReview = useMemo(() => {
     const reviewWithComment = reviews.find(
       (review) => String(review.comment || "").trim().length >= 8,
@@ -467,7 +477,7 @@ export default function BarberRatingSection() {
     return reviewWithComment || reviews[0] || null;
   }, [reviews]);
 
-  const featuredReview = useMemo(() => {
+  const currentFeaturedReview = useMemo(() => {
     if (featuredReviews.length === 0) {
       return fallbackFeaturedReview;
     }
@@ -478,39 +488,20 @@ export default function BarberRatingSection() {
   }, [featuredReviews, featuredReviewIndex, fallbackFeaturedReview]);
 
   /*
-   * عند تحميل قائمة جديدة،
-   * نبدأ من أول تجربة مميزة.
+   * نثبت التقييم المستثنى من القائمة السفلية،
+   * حتى لا تتغير أماكن البطاقات مع كل تقليب.
    */
-  useEffect(() => {
-    setFeaturedReviewIndex(0);
-  }, [featuredReviews.length]);
-
-  /*
-   * تبديل التجربة كل 5 ثوانٍ.
-   */
-  useEffect(() => {
-    if (featuredReviews.length <= 1) {
-      return undefined;
-    }
-
-    const intervalId = window.setInterval(() => {
-      setFeaturedReviewIndex(
-        (currentIndex) => (currentIndex + 1) % featuredReviews.length,
-      );
-    }, FEATURED_CHANGE_INTERVAL);
-
-    return () => {
-      window.clearInterval(intervalId);
-    };
-  }, [featuredReviews.length]);
+  const fixedFeaturedReview = useMemo(() => {
+    return featuredReviews[0] || fallbackFeaturedReview;
+  }, [featuredReviews, fallbackFeaturedReview]);
 
   const regularReviews = useMemo(() => {
-    if (!featuredReview) {
+    if (!fixedFeaturedReview) {
       return reviews;
     }
 
-    return reviews.filter((review) => review.id !== featuredReview.id);
-  }, [reviews, featuredReview]);
+    return reviews.filter((review) => review.id !== fixedFeaturedReview.id);
+  }, [reviews, fixedFeaturedReview]);
 
   const visibleReviews = useMemo(() => {
     if (expandedList) {
@@ -519,6 +510,77 @@ export default function BarberRatingSection() {
 
     return regularReviews.slice(0, INITIAL_VISIBLE_REVIEWS);
   }, [expandedList, regularReviews]);
+
+  function clearFeaturedFadeTimers() {
+    if (fadeTimeoutRef.current) {
+      window.clearTimeout(fadeTimeoutRef.current);
+      fadeTimeoutRef.current = null;
+    }
+
+    if (fadeAnimationFrameRef.current) {
+      window.cancelAnimationFrame(fadeAnimationFrameRef.current);
+      fadeAnimationFrameRef.current = null;
+    }
+  }
+
+  /*
+   * طبقة واحدة:
+   * 1. إخفاء المحتوى الحالي.
+   * 2. بعد اختفائه نغير التقييم.
+   * 3. نظهر التقييم الجديد.
+   */
+  function moveToNextFeaturedReview() {
+    if (featuredReviews.length <= 1) {
+      return;
+    }
+
+    clearFeaturedFadeTimers();
+
+    setFeaturedVisible(false);
+
+    fadeTimeoutRef.current = window.setTimeout(() => {
+      setFeaturedReviewIndex((currentIndex) => {
+        return (currentIndex + 1) % featuredReviews.length;
+      });
+
+      fadeAnimationFrameRef.current = window.requestAnimationFrame(() => {
+        fadeAnimationFrameRef.current = window.requestAnimationFrame(() => {
+          setFeaturedVisible(true);
+          fadeAnimationFrameRef.current = null;
+        });
+      });
+
+      fadeTimeoutRef.current = null;
+    }, FEATURED_FADE_OUT_DURATION);
+  }
+
+  useEffect(() => {
+    clearFeaturedFadeTimers();
+    setFeaturedReviewIndex(0);
+    setFeaturedVisible(true);
+  }, [featuredReviews.length]);
+
+  useEffect(() => {
+    if (featuredReviews.length <= 1 || featuredPaused) {
+      return undefined;
+    }
+
+    const intervalId = window.setInterval(() => {
+      moveToNextFeaturedReview();
+    }, FEATURED_CHANGE_INTERVAL);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [featuredReviews.length, featuredPaused]);
+
+  useEffect(() => {
+    return () => {
+      clearFeaturedFadeTimers();
+    };
+  }, []);
 
   useEffect(() => {
     const element = sectionRef.current;
@@ -580,13 +642,6 @@ export default function BarberRatingSection() {
         return;
       }
 
-      /*
-       * عند فتح الصفحة:
-       * نحمل آخر 20 تقييمًا.
-       *
-       * عند تحميل المزيد:
-       * نحمل 6 تقييمات إضافية.
-       */
       const reviewsQuery = reset
         ? query(
             reviewsCollection,
@@ -633,6 +688,7 @@ export default function BarberRatingSection() {
         setExpandedList(false);
         setOpenReviewId(null);
         setFeaturedReviewIndex(0);
+        setFeaturedVisible(true);
       }
     } catch (error) {
       console.error("Failed to load reviews:", error);
@@ -712,7 +768,6 @@ export default function BarberRatingSection() {
 
     if (validationError) {
       setFormError(validationError);
-
       return;
     }
 
@@ -738,16 +793,11 @@ export default function BarberRatingSection() {
         transaction.set(newReviewReference, {
           rating,
           comment: comment.trim(),
-
           customerName: customerName.trim(),
-
           phoneKey: normalizedPhone,
-
           phonePrivate: true,
-
           status: "active",
           isNew: true,
-
           createdAt: serverTimestamp(),
         });
 
@@ -802,11 +852,6 @@ export default function BarberRatingSection() {
   async function showMoreReviews() {
     if (!expandedList) {
       setExpandedList(true);
-
-      /*
-       * أول ضغطة تعرض كل التقييمات
-       * المحملة حاليًا.
-       */
       return;
     }
 
@@ -835,32 +880,6 @@ export default function BarberRatingSection() {
       dir="rtl"
       className="relative overflow-hidden bg-gradient-to-b from-white via-[#fffdfa] to-[#faf7f1] px-4 py-16 font-body sm:py-20"
     >
-      <style>
-        {`
-          @keyframes featuredReviewEnter {
-            from {
-              opacity: 0;
-              transform: translateY(10px);
-            }
-
-            to {
-              opacity: 1;
-              transform: translateY(0);
-            }
-          }
-
-          .featured-review-enter {
-            animation: featuredReviewEnter 500ms ease-out;
-          }
-
-          @media (prefers-reduced-motion: reduce) {
-            .featured-review-enter {
-              animation: none;
-            }
-          }
-        `}
-      </style>
-
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute -right-20 top-10 h-72 w-72 rounded-full bg-gold/10 blur-3xl" />
 
@@ -925,13 +944,18 @@ export default function BarberRatingSection() {
           </div>
 
           {loading ? (
-            <div className="flex min-h-[210px] items-center justify-center rounded-[26px] border border-gray-100 bg-white p-5 text-sm font-bold text-gray-500 shadow-sm">
+            <div className="flex h-[230px] items-center justify-center rounded-[26px] border border-gray-100 bg-white p-5 text-sm font-bold text-gray-500 shadow-sm sm:h-[240px]">
               جارٍ تحميل تجربة الزبائن...
             </div>
-          ) : featuredReview ? (
-            <FeaturedReview key={featuredReview.id} review={featuredReview} />
+          ) : currentFeaturedReview ? (
+            <FeaturedReview
+              review={currentFeaturedReview}
+              visible={featuredVisible}
+              onPause={() => setFeaturedPaused(true)}
+              onResume={() => setFeaturedPaused(false)}
+            />
           ) : (
-            <div className="flex min-h-[210px] flex-col items-center justify-center rounded-[26px] border border-dashed border-gold/30 bg-white p-6 text-center shadow-sm">
+            <div className="flex h-[230px] flex-col items-center justify-center rounded-[26px] border border-dashed border-gold/30 bg-white p-6 text-center shadow-sm sm:h-[240px]">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gold/10 text-xl text-gold">
                 ★
               </div>
@@ -992,7 +1016,7 @@ export default function BarberRatingSection() {
         {formOpen && (
           <div
             ref={formRef}
-            className="mx-auto mt-7 max-w-2xl animate-[fadeIn_.3s_ease-out] rounded-[28px] border border-gold/20 bg-white p-5 shadow-xl shadow-black/5 sm:p-7"
+            className="mx-auto mt-7 max-w-2xl rounded-[28px] border border-gold/20 bg-white p-5 shadow-xl shadow-black/5 sm:p-7"
           >
             <div className="flex items-start justify-between gap-4">
               <div className="text-right">
@@ -1107,7 +1131,7 @@ export default function BarberRatingSection() {
           <div className="mt-8 rounded-3xl border border-gray-100 bg-white p-8 text-center text-sm font-bold text-gray-500 shadow-sm">
             جارٍ تحميل التقييمات...
           </div>
-        ) : visibleReviews.length === 0 && featuredReview ? (
+        ) : visibleReviews.length === 0 && currentFeaturedReview ? (
           <div className="mt-8 rounded-3xl border border-dashed border-gray-200 bg-white p-7 text-center text-sm font-medium text-gray-500">
             سيتم عرض المزيد من تجارب الزبائن هنا.
           </div>
