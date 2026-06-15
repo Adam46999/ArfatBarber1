@@ -141,6 +141,7 @@ src/pages/BarberPanel.old.jsx
 src/pages/barberPanel/BarberPanel.jsx
 src/pages/barberPanel/components/DateDropdown.jsx
 src/pages/barberPanel/components/ExtraSlotsCard.jsx
+src/pages/barberPanel/components/HeroNoteCard.jsx
 src/pages/barberPanel/components/LimitOnePerDayCard.jsx
 src/pages/barberPanel/components/NotificationTestCard.jsx
 src/pages/barberPanel/components/RecentBookingsCard.jsx
@@ -4364,6 +4365,174 @@ export default function ExtraSlotsCard({
         <br />
         إذا كان هناك <b>حجز</b> على دور سيتم حذفه، النظام يمنع التقليل حتى لا
         ينكسر شيء.
+      </div>
+    </div>
+  );
+}
+</file>
+
+<file path="src/pages/barberPanel/components/HeroNoteCard.jsx">
+import { useEffect, useState } from "react";
+import { doc, onSnapshot, setDoc } from "firebase/firestore";
+import { db } from "../../../firebase";
+
+const DEFAULT_NOTE = {
+  enabled: false,
+  text: "",
+  type: "normal",
+};
+
+const TYPE_STYLES = {
+  normal: "bg-yellow-100 text-yellow-900 border-yellow-300",
+  important: "bg-rose-100 text-rose-900 border-rose-300",
+  offer: "bg-emerald-100 text-emerald-900 border-emerald-300",
+};
+
+export default function HeroNoteCard() {
+  const [note, setNote] = useState(DEFAULT_NOTE);
+  const [saving, setSaving] = useState(false);
+  const [savedMsg, setSavedMsg] = useState("");
+
+  useEffect(() => {
+    const ref = doc(db, "barberSettings", "general");
+
+    const unsub = onSnapshot(ref, (snap) => {
+      const data = snap.exists() ? snap.data() : {};
+      setNote({
+        enabled: Boolean(data.heroNote?.enabled),
+        text: data.heroNote?.text || "",
+        type: data.heroNote?.type || "normal",
+      });
+    });
+
+    return () => unsub();
+  }, []);
+
+  const saveNote = async () => {
+    setSaving(true);
+    setSavedMsg("");
+
+    await setDoc(
+      doc(db, "barberSettings", "general"),
+      {
+        heroNote: {
+          enabled: note.enabled,
+          text: note.text.trim(),
+          type: note.type,
+          updatedAt: Date.now(),
+        },
+      },
+      { merge: true },
+    );
+
+    setSaving(false);
+    setSavedMsg("تم حفظ الملاحظة بنجاح");
+    setTimeout(() => setSavedMsg(""), 2500);
+  };
+
+  const previewStyle = TYPE_STYLES[note.type] || TYPE_STYLES.normal;
+
+  return (
+    <div className="max-w-3xl mx-auto mt-6">
+      <div className="bg-white rounded-2xl shadow p-4 border border-gray-200 text-right">
+        <div className="flex items-center justify-between gap-3 mb-4">
+          <div>
+            <h2 className="text-base font-black text-gray-900">
+              ملاحظة الهيرو
+            </h2>
+            <p className="text-xs text-gray-500 mt-1">
+              تظهر للزبون في أعلى الصفحة الرئيسية.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() =>
+              setNote((prev) => ({ ...prev, enabled: !prev.enabled }))
+            }
+            className="shrink-0"
+          >
+            <div
+              className={`relative w-16 h-8 rounded-full transition-colors ${
+                note.enabled ? "bg-emerald-500" : "bg-gray-300"
+              }`}
+            >
+              <div
+                className={`absolute top-0.5 left-0.5 w-7 h-7 rounded-full bg-white shadow-md transition-transform ${
+                  note.enabled ? "translate-x-8" : "translate-x-0"
+                }`}
+              />
+            </div>
+          </button>
+        </div>
+
+        <label className="block text-sm font-bold text-gray-700 mb-2">
+          نوع الملاحظة
+        </label>
+
+        <select
+          value={note.type}
+          onChange={(e) =>
+            setNote((prev) => ({ ...prev, type: e.target.value }))
+          }
+          className="w-full border border-gray-300 rounded-xl p-3 mb-4 focus:ring-2 focus:ring-yellow-300 outline-none"
+        >
+          <option value="normal">عادية</option>
+          <option value="important">مهمة</option>
+          <option value="offer">عرض</option>
+        </select>
+
+        <label className="block text-sm font-bold text-gray-700 mb-2">
+          نص الملاحظة
+        </label>
+
+        <textarea
+          value={note.text}
+          maxLength={120}
+          rows={3}
+          onChange={(e) =>
+            setNote((prev) => ({ ...prev, text: e.target.value }))
+          }
+          placeholder="مثال: اليوم يوجد ضغط عالي، يرجى الحجز مسبقاً."
+          className="w-full border border-gray-300 rounded-xl p-3 resize-none focus:ring-2 focus:ring-yellow-300 outline-none"
+        />
+
+        <div className="flex items-center justify-between mt-2 text-xs text-gray-500">
+          <span>الحد المناسب: سطرين تقريباً</span>
+          <span>{note.text.length}/120</span>
+        </div>
+
+        <div className="mt-4">
+          <p className="text-xs font-bold text-gray-500 mb-2">المعاينة:</p>
+
+          {note.enabled && note.text.trim() ? (
+            <div
+              className={`border rounded-2xl px-4 py-3 text-sm font-bold animate-pulse ${previewStyle}`}
+            >
+              <span className="ml-2">📌</span>
+              {note.text}
+            </div>
+          ) : (
+            <div className="border rounded-2xl px-4 py-3 text-sm text-gray-400 bg-gray-50">
+              الملاحظة غير مفعّلة أو فارغة.
+            </div>
+          )}
+        </div>
+
+        <button
+          type="button"
+          onClick={saveNote}
+          disabled={saving}
+          className="mt-4 w-full bg-gray-900 text-white py-3 rounded-xl font-bold disabled:opacity-60"
+        >
+          {saving ? "جاري الحفظ..." : "حفظ الملاحظة"}
+        </button>
+
+        {savedMsg && (
+          <p className="text-center text-emerald-600 text-sm font-bold mt-3">
+            {savedMsg}
+          </p>
+        )}
       </div>
     </div>
   );
@@ -9188,191 +9357,6 @@ function SecretBarberButton() {
 export default SecretBarberButton;
 </file>
 
-<file path="src/hooks/useBookingSubmit.js">
-// src/hooks/useBookingSubmit.js
-import { useState, useEffect, useRef } from "react";
-import { getMessaging, getToken } from "firebase/messaging";
-import { app, db } from "../firebase"; // 👈 أضفنا db هنا
-import { doc, getDoc } from "firebase/firestore"; // 👈 نقرأ إعداد من Firestore مباشرة
-
-import {
-  isPhoneBlocked,
-  hasExistingBookings,
-  hasActiveConflict,
-  createBooking,
-  fetchActiveBookingsByDate, // 👈 نستخدم فانكشن موجودة أصلاً
-} from "../services/bookingService";
-
-import { toILPhoneE164, isILPhoneE164 } from "../utils/phone";
-
-export default function useBookingSubmit(form, setForm, t) {
-  const [submitted, setSubmitted] = useState(false);
-  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
-  const [code, setCode] = useState("");
-  const messageRef = useRef(null);
-
-  const { fullName, phoneNumber, selectedDate, selectedTime, selectedService } =
-    form;
-  const [step, setStep] = useState(0);
-  const [progress, setProgress] = useState(0);
-
-  useEffect(() => {
-    let current = 0;
-    if (fullName) current++;
-    if (phoneNumber) current++;
-    if (selectedDate) current++;
-    if (selectedTime) current++;
-    if (selectedService) current++;
-    setStep(current);
-    setProgress((current / 5) * 100);
-  }, [fullName, phoneNumber, selectedDate, selectedTime, selectedService]);
-
-  useEffect(() => {
-    if (submitted && messageRef.current) {
-      messageRef.current.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [submitted]);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    if (
-      !fullName ||
-      !phoneNumber ||
-      !selectedDate ||
-      !selectedTime ||
-      !selectedService
-    ) {
-      alert(t("fill_required_fields"));
-      return;
-    }
-
-    // تطبيع الهاتف لصيغة E.164
-    const phoneE164 = toILPhoneE164(phoneNumber);
-    if (!isILPhoneE164(phoneE164)) {
-      alert(t("invalid_phone") || "رقم الهاتف غير صالح");
-      return;
-    }
-
-    // FCM (اختياري)
-    let fcmToken = "";
-    try {
-      const messaging = getMessaging(app);
-      fcmToken = await getToken(messaging, {
-        vapidKey:
-          "BMSKYpj6OfL2RinVjw4jUNlL-Hbi1Ev4eiTibIKlvFwqSULUm42ricVJRcKbptmiepuDbl3andf-F2tf7Cmr-U8",
-      });
-    } catch (err) {
-      console.warn("FCM token error", err);
-    }
-
-    // محظور؟
-    if (await isPhoneBlocked(phoneE164)) {
-      alert("🚫 هذا الرقم محظور من الحجز. يرجى التواصل مع الحلاق.");
-      return;
-    }
-
-    // ⚙️ قراءة إعداد "حجز واحد لكل رقم في اليوم" مباشرة من Firestore
-    let limitOnePerDay = false;
-    try {
-      const settingsRef = doc(db, "barberSettings", "global");
-      const settingsSnap = await getDoc(settingsRef);
-      if (settingsSnap.exists()) {
-        const data = settingsSnap.data();
-        limitOnePerDay =
-          typeof data.limitOneBookingPerDayPerPhone === "boolean"
-            ? data.limitOneBookingPerDayPerPhone
-            : !!data.limitOneBookingPerDay;
-      }
-    } catch (err) {
-      console.warn("limitOnePerDay settings read error:", err);
-      // لو في خطأ ما نمنع الحجز عشان ما نخرب التجربة
-    }
-
-    if (limitOnePerDay) {
-      // نجيب كل حجوزات هذا اليوم، ثم نتحقق إذا هذا الرقم عنده حجز فعّال
-      try {
-        const dayBookings = await fetchActiveBookingsByDate(selectedDate);
-        const hasSameDay = dayBookings.some((b) => b.phoneNumber === phoneE164);
-        if (hasSameDay) {
-          alert(
-            t("phone_already_booked_today") ||
-              "لديك حجز مسبق لهذا اليوم بهذا الرقم. إذا أردت تعديل الحجز، يرجى التواصل مع الحلاق."
-          );
-          return;
-        }
-      } catch (err) {
-        console.warn("same-day booking check error:", err);
-        // لو صار خطأ في التحقق، ما نمنع الحجز
-      }
-    }
-
-    // لديه حجوزات سابقة؟ (أي يوم) – نفس السلوك القديم
-    if (await hasExistingBookings(phoneE164)) {
-      const confirmNew = window.confirm(
-        "⚠️ يوجد لديك حجوزات سابقة برقم الهاتف هذا. هل تريد إضافة حجز جديد؟"
-      );
-      if (!confirmNew) return;
-    }
-
-    // تعارض نفس الوقت؟
-    if (await hasActiveConflict(selectedDate, selectedTime)) {
-      alert(
-        t("time_already_booked") ||
-          "هذه الساعة محجوزة بالفعل، يرجى اختيار ساعة أخرى."
-      );
-      return;
-    }
-
-    try {
-      const bookingCode = Math.random().toString(36).substring(2, 8);
-      setCode(bookingCode);
-      const bookingDateTime = new Date(`${selectedDate}T${selectedTime}:00`);
-      const timestamp = bookingDateTime.getTime();
-
-      await createBooking({
-        fullName,
-        phoneNumber: phoneE164, // نخزّن دائمًا E.164
-        selectedDate,
-        selectedTime,
-        selectedService,
-        bookingCode,
-        timestamp,
-        reminderSent_60: false,
-        reminderSent_30: false,
-        fcmToken,
-      });
-
-      setSubmitted(true);
-      setShowSuccessMessage(true);
-      setTimeout(() => setShowSuccessMessage(false), 16000);
-
-      setForm({
-        fullName: "",
-        phoneNumber: "",
-        selectedDate: "",
-        selectedTime: "",
-        selectedService: "",
-      });
-    } catch (err) {
-      console.error("createBooking error:", err);
-      alert("حدث خطأ أثناء حفظ الحجز، يرجى المحاولة لاحقًا.");
-    }
-  };
-
-  return {
-    handleSubmit,
-    submitted,
-    showSuccessMessage,
-    setShowSuccessMessage,
-    code,
-    step,
-    progress,
-    messageRef,
-  };
-}
-</file>
-
 <file path="src/index.css">
 @tailwind base;
 @tailwind components;
@@ -11813,6 +11797,205 @@ export default function RamadanCurve({
 }
 </file>
 
+<file path="src/hooks/useBookingSubmit.js">
+// src/hooks/useBookingSubmit.js
+import { useState, useEffect, useRef } from "react";
+import { getMessaging, getToken } from "firebase/messaging";
+import { app, db } from "../firebase";
+import { doc, getDoc } from "firebase/firestore";
+
+import {
+  isPhoneBlocked,
+  hasExistingBookings,
+  hasActiveConflict,
+  createBooking,
+  fetchActiveBookingsByDate,
+} from "../services/bookingService";
+
+import { toILPhoneE164, isILPhoneE164 } from "../utils/phone";
+
+export default function useBookingSubmit(form, setForm, t) {
+  const [submitted, setSubmitted] = useState(false);
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [code, setCode] = useState("");
+  const messageRef = useRef(null);
+  const submittingRef = useRef(false);
+
+  const { fullName, phoneNumber, selectedDate, selectedTime, selectedService } =
+    form;
+  const [step, setStep] = useState(0);
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    let current = 0;
+    if (fullName) current++;
+    if (phoneNumber) current++;
+    if (selectedDate) current++;
+    if (selectedTime) current++;
+    if (selectedService) current++;
+    setStep(current);
+    setProgress((current / 5) * 100);
+  }, [fullName, phoneNumber, selectedDate, selectedTime, selectedService]);
+
+  useEffect(() => {
+    if (submitted && messageRef.current) {
+      messageRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [submitted]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (submittingRef.current) return;
+
+    submittingRef.current = true;
+    setIsSubmitting(true);
+
+    try {
+      if (
+        !fullName ||
+        !phoneNumber ||
+        !selectedDate ||
+        !selectedTime ||
+        !selectedService
+      ) {
+        alert(t("fill_required_fields"));
+        return;
+      }
+
+      const phoneE164 = toILPhoneE164(phoneNumber);
+      if (!isILPhoneE164(phoneE164)) {
+        alert(t("invalid_phone") || "رقم الهاتف غير صالح");
+        return;
+      }
+
+      let fcmToken = "";
+      try {
+        const messaging = getMessaging(app);
+        fcmToken = await getToken(messaging, {
+          vapidKey:
+            "BMSKYpj6OfL2RinVjw4jUNlL-Hbi1Ev4eiTibIKlvFwqSULUm42ricVJRcKbptmiepuDbl3andf-F2tf7Cmr-U8",
+        });
+      } catch (err) {
+        console.warn("FCM token error", err);
+      }
+
+      if (await isPhoneBlocked(phoneE164)) {
+        alert("🚫 هذا الرقم محظور من الحجز. يرجى التواصل مع الحلاق.");
+        return;
+      }
+
+      let limitOnePerDay = false;
+      try {
+        const settingsRef = doc(db, "barberSettings", "global");
+        const settingsSnap = await getDoc(settingsRef);
+        if (settingsSnap.exists()) {
+          const data = settingsSnap.data();
+          limitOnePerDay =
+            typeof data.limitOneBookingPerDayPerPhone === "boolean"
+              ? data.limitOneBookingPerDayPerPhone
+              : !!data.limitOneBookingPerDay;
+        }
+      } catch (err) {
+        console.warn("limitOnePerDay settings read error:", err);
+      }
+
+      if (limitOnePerDay) {
+        try {
+          const dayBookings = await fetchActiveBookingsByDate(selectedDate);
+          const hasSameDay = dayBookings.some(
+            (b) => b.phoneNumber === phoneE164,
+          );
+
+          if (hasSameDay) {
+            alert(
+              t("phone_already_booked_today") ||
+                "لديك حجز مسبق لهذا اليوم بهذا الرقم. إذا أردت تعديل الحجز، يرجى التواصل مع الحلاق.",
+            );
+            return;
+          }
+        } catch (err) {
+          console.warn("same-day booking check error:", err);
+        }
+      }
+
+      if (await hasExistingBookings(phoneE164)) {
+        const confirmNew = window.confirm(
+          "⚠️ يوجد لديك حجوزات سابقة برقم الهاتف هذا. هل تريد إضافة حجز جديد؟",
+        );
+        if (!confirmNew) return;
+      }
+
+      if (await hasActiveConflict(selectedDate, selectedTime)) {
+        alert(
+          t("time_already_booked") ||
+            "هذه الساعة محجوزة بالفعل، يرجى اختيار ساعة أخرى.",
+        );
+        return;
+      }
+
+      const bookingCode = Math.random().toString(36).substring(2, 8);
+      setCode(bookingCode);
+
+      const bookingDateTime = new Date(`${selectedDate}T${selectedTime}:00`);
+      const timestamp = bookingDateTime.getTime();
+
+      await createBooking({
+        fullName,
+        phoneNumber: phoneE164,
+        selectedDate,
+        selectedTime,
+        selectedService,
+        bookingCode,
+        timestamp,
+        reminderSent_60: false,
+        reminderSent_30: false,
+        fcmToken,
+      });
+
+      setSubmitted(true);
+      setShowSuccessMessage(true);
+      setTimeout(() => setShowSuccessMessage(false), 16000);
+
+      setForm({
+        fullName: "",
+        phoneNumber: "",
+        selectedDate: "",
+        selectedTime: "",
+        selectedService: "",
+      });
+    } catch (err) {
+      console.error("createBooking error:", err);
+
+      if (err?.message === "TIME_ALREADY_BOOKED") {
+        alert(
+          t("time_already_booked") ||
+            "هذه الساعة محجوزة بالفعل، يرجى اختيار ساعة أخرى.",
+        );
+      } else {
+        alert("حدث خطأ أثناء حفظ الحجز، يرجى المحاولة لاحقًا.");
+      }
+    } finally {
+      submittingRef.current = false;
+      setIsSubmitting(false);
+    }
+  };
+
+  return {
+    handleSubmit,
+    isSubmitting,
+    submitted,
+    showSuccessMessage,
+    setShowSuccessMessage,
+    code,
+    step,
+    progress,
+    messageRef,
+  };
+}
+</file>
+
 <file path="src/i18n.js">
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
@@ -12219,155 +12402,6 @@ export default function Login() {
       </div>
     </div>
   );
-}
-</file>
-
-<file path="src/services/bookingService.js">
-// src/services/bookingService.js
-import { db } from "../firebase";
-import {
-  doc,
-  getDoc,
-  collection,
-  addDoc,
-  serverTimestamp,
-  query,
-  where,
-  getDocs,
-  setDoc,
-  increment,
-  runTransaction,
-} from "firebase/firestore";
-
-import { toILPhoneE164 } from "../utils/phone";
-
-// يوم محجوب بالكامل؟
-export async function fetchBlockedDay(dateYMD) {
-  const snap = await getDoc(doc(db, "blockedDays", dateYMD));
-  return snap.exists();
-}
-
-// أوقات محجوبة لليوم
-export async function fetchBlockedTimes(dateYMD) {
-  const snap = await getDoc(doc(db, "blockedTimes", dateYMD));
-  return snap.exists() ? snap.data().times || [] : [];
-}
-
-// حجوزات فعّالة لليوم
-export async function fetchActiveBookingsByDate(dateYMD) {
-  const q = query(
-    collection(db, "bookings"),
-    where("selectedDate", "==", dateYMD),
-  );
-  const snap = await getDocs(q);
-
-  // ✅ تعديل آمن: رجّع id كمان (مفيد للإدارة/الإشعارات لاحقًا)
-  return snap.docs
-    .map((d) => ({ id: d.id, ...d.data() }))
-    .filter((b) => !b.cancelledAt);
-}
-
-// رقم محظور؟ (E.164)
-export async function isPhoneBlocked(inputPhone) {
-  const phoneE164 = toILPhoneE164(inputPhone);
-  const snap = await getDoc(doc(db, "blockedPhones", phoneE164));
-  return snap.exists();
-}
-
-// هل له حجوزات سابقة؟ (E.164)
-export async function hasExistingBookings(inputPhone) {
-  const phoneE164 = toILPhoneE164(inputPhone);
-  const q = query(
-    collection(db, "bookings"),
-    where("phoneNumber", "==", phoneE164),
-  );
-  const snap = await getDocs(q);
-  return !snap.empty;
-}
-
-// تضارب على نفس التاريخ/الوقت؟
-export async function hasActiveConflict(dateYMD, hhmm) {
-  const q = query(
-    collection(db, "bookings"),
-    where("selectedDate", "==", dateYMD),
-    where("selectedTime", "==", hhmm),
-  );
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => d.data()).some((b) => !b.cancelledAt);
-}
-
-// إنشاء الحجز + محاولة تحديث عدّاد الشهر (بدون ما نخرب الحجز لو فشل العداد)
-export async function createBooking(payload) {
-  // 1) احفظ الحجز (هذا هو الأهم)
-  const ref = await addDoc(collection(db, "bookings"), {
-    ...payload,
-    cancelledAt: payload?.cancelledAt ?? null, // تأكيد وجوده
-    createdAt: serverTimestamp(),
-  });
-
-  // 2) حاول حدّث العداد (إذا فشل ما نوقف المستخدم)
-  try {
-    const monthKey = String(payload?.selectedDate || "").slice(0, 7); // YYYY-MM
-    if (!monthKey || monthKey.length !== 7) return ref.id;
-
-    const monthRef = doc(db, "statsMonthly", monthKey);
-
-    // total = عدد الحجوزات الفعّالة للشهر (Active)
-    await setDoc(
-      monthRef,
-      { total: increment(1), updatedAt: serverTimestamp() },
-      { merge: true },
-    );
-  } catch (err) {
-    console.warn("statsMonthly increment failed (ignored):", err);
-    // لا نرمي خطأ عشان ما نخرب تجربة الحجز
-  }
-
-  // ✅ جديد: رجّع bookingId (مفيد للإشعارات/الإدارة لاحقًا)
-  return ref.id;
-}
-
-/**
- * إلغاء حجز: ينقص العداد فقط إذا الحجز كان فعّال (مش ملغي).
- * لازم تمرّر bookingId (doc id).
- */
-export async function cancelBooking(bookingId) {
-  const bookingRef = doc(db, "bookings", bookingId);
-
-  try {
-    await runTransaction(db, async (tx) => {
-      const snap = await tx.get(bookingRef);
-      if (!snap.exists()) throw new Error("Booking not found");
-
-      const b = snap.data();
-
-      // إذا ملغي أصلاً: لا تعمل شي (عشان ما ينقص مرتين)
-      if (b.cancelledAt) return;
-
-      const monthKey = String(b.selectedDate || "").slice(0, 7); // YYYY-MM
-      if (!monthKey || monthKey.length !== 7) {
-        // نلغي الحجز بدون ما نلمس العداد إذا الداتا ناقصة
-        tx.update(bookingRef, { cancelledAt: serverTimestamp() });
-        return;
-      }
-
-      const monthRef = doc(db, "statsMonthly", monthKey);
-
-      // 1) علّم الحجز كملغي
-      tx.update(bookingRef, { cancelledAt: serverTimestamp() });
-
-      // 2) أنقص العداد الفعّال
-      tx.set(
-        monthRef,
-        { total: increment(-1), updatedAt: serverTimestamp() },
-        { merge: true },
-      );
-    });
-  } catch (err) {
-    // مهم: لو فشل الترانزاكشن، لا تسكت… لأنه ممكن يضل العداد غلط
-    console.error("cancelBooking failed:", err);
-    throw err;
-  }
 }
 </file>
 
@@ -13341,417 +13375,6 @@ export const auth = getAuth(app);
 export { app };
 </file>
 
-<file path="src/pages/barberPanel/BarberPanel.jsx">
-// src/pages/barberPanel/BarberPanel.jsx
-import { useEffect, useMemo, useState } from "react";
-import { useTranslation } from "react-i18next";
-import { useNavigate, Link, useLocation } from "react-router-dom";
-import NotificationTestCard from "./components/NotificationTestCard";
-
-// ✅ fallback workingHours — إذا ما في بيانات من Firestore
-import fallbackWorkingHours from "../../components/booking/workingHours";
-
-// ✅ Firestore weekly hours (SYNC بين الزبون والحلاق)
-import useWeeklyWorkingHours from "../../hooks/useWeeklyWorkingHours";
-
-// utils slots (مصدر واحد للحقيقة)
-import { generateSlots30Min, applyExtraSlots } from "../../utils/slots";
-import { todayYMD, getWeekdayNameEN } from "./utils/dates";
-
-// hooks
-import useBookingsLive from "./hooks/useBookingsLive";
-import useBlockedDay from "./hooks/useBlockedDay";
-import useBlockedTimes from "./hooks/useBlockedTimes";
-import useLimitOnePerDaySetting from "./hooks/useLimitOnePerDaySetting";
-import useSlotExtrasLive from "./hooks/useSlotExtrasLive";
-
-// components
-import DateDropdown from "./components/DateDropdown";
-import TimesGrid from "./components/TimesGrid";
-import ExtraSlotsCard from "./components/ExtraSlotsCard";
-import RecentBookingsCard from "./components/RecentBookingsCard";
-import LimitOnePerDayCard from "./components/LimitOnePerDayCard";
-
-export default function BarberPanel() {
-  const { t, i18n } = useTranslation();
-  const navigate = useNavigate();
-  const { pathname } = useLocation();
-
-  const isArabic = i18n.language === "ar";
-  const fontClass = isArabic ? "font-ar" : "font-body";
-
-  const [selectedDate, setSelectedDate] = useState("");
-  const [statusMessage, setStatusMessage] = useState("");
-
-  // نطاق تطبيق extraSlots
-  const [applyMode, setApplyMode] = useState("THIS_DATE"); // THIS_DATE | SAME_WEEKDAY_UNTIL | EVERY_DAY_UNTIL
-  const [applyUntil, setApplyUntil] = useState("");
-
-  // ✅ weekly hours live (SYNC)
-  const { weeklyHours, loadingWeekly } = useWeeklyWorkingHours({ live: true });
-  const workingHours = weeklyHours || fallbackWorkingHours;
-
-  // bookings live
-  const { bookings, activeBookings, recentBookings } = useBookingsLive();
-
-  // day block
-  const { isDayBlocked, loadingBlock, toggleDay } = useBlockedDay(selectedDate);
-
-  // blocked times
-  const { blockedTimes, selectedTimes, handleToggleTime, handleApplyBlock } =
-    useBlockedTimes({ selectedDate, bookings, setStatusMessage });
-
-  // settings
-  const {
-    limitOnePerDay,
-    loadingSettings,
-    savingSettings,
-    toggleLimitOnePerDay,
-  } = useLimitOnePerDaySetting();
-
-  // slotExtras live (SYNC)
-  const { extraSlots, loadingExtras, savingExtras, applyExtraSlotsChange } =
-    useSlotExtrasLive({ selectedDate, workingHours, activeBookings });
-
-  // ====== auto logout ======
-  useEffect(() => {
-    let timer;
-
-    const resetTimer = () => {
-      if (timer) clearTimeout(timer);
-      timer = setTimeout(
-        () => {
-          localStorage.removeItem("barberUser");
-          alert("⚠️ تم تسجيل الخروج بسبب عدم النشاط لمدة ساعتين.");
-          navigate("/login");
-        },
-        2 * 60 * 60 * 1000,
-      );
-    };
-
-    resetTimer();
-    const handleActivity = () => resetTimer();
-
-    window.addEventListener("click", handleActivity);
-    window.addEventListener("keydown", handleActivity);
-
-    return () => {
-      clearTimeout(timer);
-      window.removeEventListener("click", handleActivity);
-      window.removeEventListener("keydown", handleActivity);
-    };
-  }, [navigate]);
-
-  // ====== times grid: workingHours + extraSlots ======
-  const timesForBarberGrid = useMemo(() => {
-    if (!selectedDate) return [];
-    const weekday = getWeekdayNameEN(selectedDate);
-    const hours = workingHours?.[weekday] || null;
-    if (!hours?.from || !hours?.to) return [];
-    const base = generateSlots30Min(hours.from, hours.to);
-    return applyExtraSlots(base, extraSlots);
-  }, [selectedDate, extraSlots, workingHours]);
-
-  const isToday = selectedDate && selectedDate === todayYMD();
-
-  const gridTimesFiltered = useMemo(() => {
-    if (!timesForBarberGrid.length) return [];
-    if (!isToday) return timesForBarberGrid;
-    const now = new Date();
-    return timesForBarberGrid.filter(
-      (time) => new Date(`${selectedDate}T${time}:00`) > now,
-    );
-  }, [timesForBarberGrid, isToday, selectedDate]);
-
-  const dayIsClosedByHours = useMemo(() => {
-    if (!selectedDate) return false;
-    const weekday = getWeekdayNameEN(selectedDate);
-    const hours = workingHours?.[weekday] || null;
-    return !hours?.from || !hours?.to;
-  }, [selectedDate, workingHours]);
-
-  // ====== Header Buttons (موبايل-أول) ======
-  const isActive = (to) =>
-    pathname === to || (to !== "/" && pathname.startsWith(to + "/"));
-
-  const navBtnClass = (active, tone = "normal") => {
-    const base =
-      "px-4 py-2 rounded-full text-sm font-black transition border whitespace-nowrap";
-    if (tone === "danger") {
-      return [
-        base,
-        active
-          ? "bg-rose-600 text-white border-rose-600 shadow"
-          : "bg-white text-rose-700 border-rose-200 hover:bg-rose-50",
-      ].join(" ");
-    }
-    return [
-      base,
-      active
-        ? "bg-emerald-600 text-white border-emerald-600 shadow"
-        : "bg-white text-slate-800 border-slate-200 hover:bg-slate-50",
-    ].join(" ");
-  };
-
-  const handleLogout = () => {
-    if (window.confirm("هل أنت متأكد أنك تريد تسجيل الخروج؟")) {
-      localStorage.removeItem("barberUser");
-      navigate("/login");
-    }
-  };
-
-  return (
-    <div
-      className={`min-h-screen bg-gray-100 p-4 sm:p-6 ${fontClass}`}
-      dir="rtl"
-    >
-      <div className="h-12 sm:h-16" />
-
-      <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden">
-        {/* Header */}
-        <div className="bg-white px-5 sm:px-8 py-5 border-b">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-black text-gray-800">
-                إدارة الساعات
-              </h1>
-              <p className="text-xs sm:text-sm text-gray-500 font-semibold mt-1">
-                كل شيء واضح وسريع — اختار تاريخ واشتغل مباشرة.
-              </p>
-            </div>
-
-            {/* حالة سريعة (اختياري) */}
-            <div className="text-xs font-black text-gray-500">
-              {loadingWeekly ? "جاري مزامنة ساعات الأسبوع..." : " "}
-            </div>
-          </div>
-
-          {/* أزرار الإدارة: سكرول أفقي للموبايل */}
-          <div className="mt-4 -mx-1 px-1">
-            <div className="flex items-center gap-2 overflow-x-auto pb-1">
-              <button
-                onClick={() => navigate("/admin-bookings")}
-                className={navBtnClass(isActive("/admin-bookings"))}
-              >
-                لوحة الحجوزات
-              </button>
-
-              <button
-                onClick={() => navigate("/barber/weekly-hours")}
-                className={navBtnClass(isActive("/barber/weekly-hours"))}
-              >
-                ساعات العمل الأسبوعية
-              </button>
-              <button
-                onClick={() => navigate("/barber/reviews")}
-                className={navBtnClass(isActive("/barber/reviews"))}
-              >
-                إدارة التقييمات
-              </button>
-
-              <Link
-                to="/blocked-phones"
-                className={navBtnClass(isActive("/blocked-phones"))}
-              >
-                الأرقام المحظورة
-              </Link>
-
-              <button
-                onClick={() => navigate("/dashboard")}
-                className={navBtnClass(isActive("/dashboard"))}
-              >
-                الإحصائيات
-              </button>
-
-              <button
-                onClick={handleLogout}
-                className={navBtnClass(false, "danger")}
-              >
-                تسجيل الخروج
-              </button>
-            </div>
-          </div>
-        </div>
-        {/* 🔔 Notification Test (Barber) */}
-        <div className="px-5 sm:px-8 py-6 border-b bg-gray-50">
-          <NotificationTestCard />
-        </div>
-        {/* Date */}
-        <div className="p-5 sm:p-8">
-          <label className="block mb-3 text-lg font-black text-gray-700">
-            اختر التاريخ
-          </label>
-
-          {/* خلي تجربة الاختيار سهلة للموبايل */}
-          <div className="space-y-3">
-            <DateDropdown
-              selectedDate={selectedDate}
-              onChange={setSelectedDate}
-            />
-
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="w-full border border-gray-300 rounded-xl px-4 py-3 bg-gray-50 text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-300 transition"
-              min={new Date().toISOString().split("T")[0]}
-            />
-          </div>
-
-          {!selectedDate && (
-            <p className="mt-3 text-sm text-gray-500 font-semibold">
-              اختر تاريخ لتظهر لك ساعات اليوم وتعديلات الحظر والإضافات.
-            </p>
-          )}
-
-          {/* حالة اليوم */}
-          {selectedDate && (
-            <div className="mt-5 rounded-2xl border border-gray-200 bg-white p-4">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <div className="text-sm font-black text-gray-800">
-                    حالة اليوم
-                  </div>
-                  <div className="text-xs font-black mt-1">
-                    {dayIsClosedByHours ? (
-                      <span className="text-rose-600">
-                        مغلق حسب ساعات الأسبوع (عدّل من صفحة ساعات العمل
-                        الأسبوعية)
-                      </span>
-                    ) : isDayBlocked ? (
-                      <span className="text-rose-600">
-                        معطّل بالكامل (تم تعطيله يدويًا)
-                      </span>
-                    ) : (
-                      <span className="text-emerald-700">مفتوح</span>
-                    )}
-                  </div>
-                </div>
-
-                <button
-                  onClick={toggleDay}
-                  disabled={loadingBlock || dayIsClosedByHours}
-                  className={[
-                    "px-4 py-2 rounded-xl text-white font-black transition",
-                    dayIsClosedByHours
-                      ? "bg-gray-300 cursor-not-allowed"
-                      : isDayBlocked
-                        ? "bg-rose-600 hover:bg-rose-700"
-                        : "bg-emerald-600 hover:bg-emerald-700",
-                  ].join(" ")}
-                >
-                  {loadingBlock
-                    ? "جاري..."
-                    : dayIsClosedByHours
-                      ? "اليوم مغلق"
-                      : isDayBlocked
-                        ? "تفعيل اليوم"
-                        : "تعطيل اليوم"}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {selectedDate && dayIsClosedByHours && (
-            <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 p-4">
-              <div className="text-sm font-black text-rose-700">
-                هذا اليوم مغلق حسب ساعات الأسبوع.
-              </div>
-              <div className="text-xs font-black text-rose-700/80 mt-1">
-                إذا بدك تفتحه: روح على “ساعات العمل الأسبوعية” وعدّل هذا اليوم.
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Times */}
-        {selectedDate && !dayIsClosedByHours && !isDayBlocked && (
-          <div className="p-5 sm:p-8 pt-4 border-t bg-gray-50">
-            <h2 className="text-xl font-black text-gray-800 mb-3">
-              الأوقات (مطابقة للزبون)
-            </h2>
-
-            <TimesGrid
-              times={gridTimesFiltered}
-              selectedDate={selectedDate}
-              bookings={bookings}
-              blockedTimes={blockedTimes}
-              selectedTimes={selectedTimes}
-              onToggleTime={handleToggleTime}
-            />
-
-            <div className="mt-4">
-              {selectedTimes.length > 0 ? (
-                <button
-                  onClick={handleApplyBlock}
-                  className="w-full bg-rose-600 text-white py-3 rounded-xl font-black hover:bg-rose-700 transition-colors focus:outline-none focus:ring-2 focus:ring-rose-300"
-                >
-                  {t("remove_selected_times") ||
-                    "تطبيق الحظر على الساعات المحددة"}
-                </button>
-              ) : (
-                <p className="text-sm text-gray-500 font-semibold">
-                  اختر ساعة أو أكثر ثم اضغط لحظرها.
-                </p>
-              )}
-            </div>
-          </div>
-        )}
-
-        {selectedDate && isDayBlocked && (
-          <div className="p-5 sm:p-8 pt-4 border-t bg-yellow-50 text-center text-rose-700 font-black text-base">
-            تم تعطيل هذا اليوم بالكامل. لا يمكن تعديل أو حظر الساعات حتى يتم
-            تفعيله من جديد.
-          </div>
-        )}
-
-        {/* Extra Slots */}
-        {selectedDate && !dayIsClosedByHours && !isDayBlocked && (
-          <div className="px-5 sm:px-8 pb-8">
-            <ExtraSlotsCard
-              selectedDate={selectedDate}
-              extraSlots={extraSlots}
-              loadingExtras={loadingExtras}
-              savingExtras={savingExtras}
-              applyMode={applyMode}
-              setApplyMode={setApplyMode}
-              applyUntil={applyUntil}
-              setApplyUntil={setApplyUntil}
-              onApply={(nextValue) =>
-                applyExtraSlotsChange({
-                  nextValue,
-                  applyMode,
-                  applyUntil,
-                  setStatusMessage,
-                  selectedDate,
-                })
-              }
-            />
-          </div>
-        )}
-
-        {statusMessage && (
-          <div className="p-4 bg-emerald-100 border border-emerald-300 text-emerald-800 text-center font-black">
-            {statusMessage}
-          </div>
-        )}
-      </div>
-
-      {/* Recent */}
-      <RecentBookingsCard recentBookings={recentBookings} />
-
-      {/* Limit one per day */}
-      <LimitOnePerDayCard
-        limitOnePerDay={limitOnePerDay}
-        loadingSettings={loadingSettings}
-        savingSettings={savingSettings}
-        onToggle={toggleLimitOnePerDay}
-      />
-    </div>
-  );
-}
-</file>
-
 <file path="src/pages/barberPanel/components/WeeklyHoursEditorMobile.jsx">
 // src/pages/barberPanel/components/WeeklyHoursEditorMobile.jsx
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -14190,6 +13813,416 @@ html[dir="rtl"] .hero-ramadan-text {
 }
 </file>
 
+<file path="src/pages/barberPanel/BarberPanel.jsx">
+// src/pages/barberPanel/BarberPanel.jsx
+import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { useNavigate, Link, useLocation } from "react-router-dom";
+import HeroNoteCard from "./components/HeroNoteCard";
+// ✅ fallback workingHours — إذا ما في بيانات من Firestore
+import fallbackWorkingHours from "../../components/booking/workingHours";
+
+// ✅ Firestore weekly hours (SYNC بين الزبون والحلاق)
+import useWeeklyWorkingHours from "../../hooks/useWeeklyWorkingHours";
+
+// utils slots (مصدر واحد للحقيقة)
+import { generateSlots30Min, applyExtraSlots } from "../../utils/slots";
+import { todayYMD, getWeekdayNameEN } from "./utils/dates";
+
+// hooks
+import useBookingsLive from "./hooks/useBookingsLive";
+import useBlockedDay from "./hooks/useBlockedDay";
+import useBlockedTimes from "./hooks/useBlockedTimes";
+import useLimitOnePerDaySetting from "./hooks/useLimitOnePerDaySetting";
+import useSlotExtrasLive from "./hooks/useSlotExtrasLive";
+
+// components
+import DateDropdown from "./components/DateDropdown";
+import TimesGrid from "./components/TimesGrid";
+import ExtraSlotsCard from "./components/ExtraSlotsCard";
+import RecentBookingsCard from "./components/RecentBookingsCard";
+import LimitOnePerDayCard from "./components/LimitOnePerDayCard";
+
+export default function BarberPanel() {
+  const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
+
+  const isArabic = i18n.language === "ar";
+  const fontClass = isArabic ? "font-ar" : "font-body";
+
+  const [selectedDate, setSelectedDate] = useState("");
+  const [statusMessage, setStatusMessage] = useState("");
+
+  // نطاق تطبيق extraSlots
+  const [applyMode, setApplyMode] = useState("THIS_DATE"); // THIS_DATE | SAME_WEEKDAY_UNTIL | EVERY_DAY_UNTIL
+  const [applyUntil, setApplyUntil] = useState("");
+
+  // ✅ weekly hours live (SYNC)
+  const { weeklyHours, loadingWeekly } = useWeeklyWorkingHours({ live: true });
+  const workingHours = weeklyHours || fallbackWorkingHours;
+
+  // bookings live
+  const { bookings, activeBookings, recentBookings } = useBookingsLive();
+
+  // day block
+  const { isDayBlocked, loadingBlock, toggleDay } = useBlockedDay(selectedDate);
+
+  // blocked times
+  const { blockedTimes, selectedTimes, handleToggleTime, handleApplyBlock } =
+    useBlockedTimes({ selectedDate, bookings, setStatusMessage });
+
+  // settings
+  const {
+    limitOnePerDay,
+    loadingSettings,
+    savingSettings,
+    toggleLimitOnePerDay,
+  } = useLimitOnePerDaySetting();
+
+  // slotExtras live (SYNC)
+  const { extraSlots, loadingExtras, savingExtras, applyExtraSlotsChange } =
+    useSlotExtrasLive({ selectedDate, workingHours, activeBookings });
+
+  // ====== auto logout ======
+  useEffect(() => {
+    let timer;
+
+    const resetTimer = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(
+        () => {
+          localStorage.removeItem("barberUser");
+          alert("⚠️ تم تسجيل الخروج بسبب عدم النشاط لمدة ساعتين.");
+          navigate("/login");
+        },
+        2 * 60 * 60 * 1000,
+      );
+    };
+
+    resetTimer();
+    const handleActivity = () => resetTimer();
+
+    window.addEventListener("click", handleActivity);
+    window.addEventListener("keydown", handleActivity);
+
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("click", handleActivity);
+      window.removeEventListener("keydown", handleActivity);
+    };
+  }, [navigate]);
+
+  // ====== times grid: workingHours + extraSlots ======
+  const timesForBarberGrid = useMemo(() => {
+    if (!selectedDate) return [];
+    const weekday = getWeekdayNameEN(selectedDate);
+    const hours = workingHours?.[weekday] || null;
+    if (!hours?.from || !hours?.to) return [];
+    const base = generateSlots30Min(hours.from, hours.to);
+    return applyExtraSlots(base, extraSlots);
+  }, [selectedDate, extraSlots, workingHours]);
+
+  const isToday = selectedDate && selectedDate === todayYMD();
+
+  const gridTimesFiltered = useMemo(() => {
+    if (!timesForBarberGrid.length) return [];
+    if (!isToday) return timesForBarberGrid;
+    const now = new Date();
+    return timesForBarberGrid.filter(
+      (time) => new Date(`${selectedDate}T${time}:00`) > now,
+    );
+  }, [timesForBarberGrid, isToday, selectedDate]);
+
+  const dayIsClosedByHours = useMemo(() => {
+    if (!selectedDate) return false;
+    const weekday = getWeekdayNameEN(selectedDate);
+    const hours = workingHours?.[weekday] || null;
+    return !hours?.from || !hours?.to;
+  }, [selectedDate, workingHours]);
+
+  // ====== Header Buttons (موبايل-أول) ======
+  const isActive = (to) =>
+    pathname === to || (to !== "/" && pathname.startsWith(to + "/"));
+
+  const navBtnClass = (active, tone = "normal") => {
+    const base =
+      "px-4 py-2 rounded-full text-sm font-black transition border whitespace-nowrap";
+    if (tone === "danger") {
+      return [
+        base,
+        active
+          ? "bg-rose-600 text-white border-rose-600 shadow"
+          : "bg-white text-rose-700 border-rose-200 hover:bg-rose-50",
+      ].join(" ");
+    }
+    return [
+      base,
+      active
+        ? "bg-emerald-600 text-white border-emerald-600 shadow"
+        : "bg-white text-slate-800 border-slate-200 hover:bg-slate-50",
+    ].join(" ");
+  };
+
+  const handleLogout = () => {
+    if (window.confirm("هل أنت متأكد أنك تريد تسجيل الخروج؟")) {
+      localStorage.removeItem("barberUser");
+      navigate("/login");
+    }
+  };
+
+  return (
+    <div
+      className={`min-h-screen bg-gray-100 p-4 sm:p-6 ${fontClass}`}
+      dir="rtl"
+    >
+      <div className="h-12 sm:h-16" />
+
+      <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden">
+        {/* Header */}
+        <div className="bg-white px-5 sm:px-8 py-5 border-b">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-black text-gray-800">
+                إدارة الساعات
+              </h1>
+              <p className="text-xs sm:text-sm text-gray-500 font-semibold mt-1">
+                كل شيء واضح وسريع — اختار تاريخ واشتغل مباشرة.
+              </p>
+            </div>
+
+            {/* حالة سريعة (اختياري) */}
+            <div className="text-xs font-black text-gray-500">
+              {loadingWeekly ? "جاري مزامنة ساعات الأسبوع..." : " "}
+            </div>
+          </div>
+
+          {/* أزرار الإدارة: سكرول أفقي للموبايل */}
+          <div className="mt-4 -mx-1 px-1">
+            <div className="flex items-center gap-2 overflow-x-auto pb-1">
+              <button
+                onClick={() => navigate("/admin-bookings")}
+                className={navBtnClass(isActive("/admin-bookings"))}
+              >
+                لوحة الحجوزات
+              </button>
+
+              <button
+                onClick={() => navigate("/barber/weekly-hours")}
+                className={navBtnClass(isActive("/barber/weekly-hours"))}
+              >
+                ساعات العمل الأسبوعية
+              </button>
+              <button
+                onClick={() => navigate("/barber/reviews")}
+                className={navBtnClass(isActive("/barber/reviews"))}
+              >
+                إدارة التقييمات
+              </button>
+
+              <Link
+                to="/blocked-phones"
+                className={navBtnClass(isActive("/blocked-phones"))}
+              >
+                الأرقام المحظورة
+              </Link>
+
+              <button
+                onClick={() => navigate("/dashboard")}
+                className={navBtnClass(isActive("/dashboard"))}
+              >
+                الإحصائيات
+              </button>
+
+              <button
+                onClick={handleLogout}
+                className={navBtnClass(false, "danger")}
+              >
+                تسجيل الخروج
+              </button>
+            </div>
+          </div>
+        </div>
+        {/* 🔔 Notification Test (Barber) */}
+        <div className="px-5 sm:px-8 py-6 border-b bg-gray-50">
+          <HeroNoteCard />{" "}
+        </div>
+        {/* Date */}
+        <div className="p-5 sm:p-8">
+          <label className="block mb-3 text-lg font-black text-gray-700">
+            اختر التاريخ
+          </label>
+
+          {/* خلي تجربة الاختيار سهلة للموبايل */}
+          <div className="space-y-3">
+            <DateDropdown
+              selectedDate={selectedDate}
+              onChange={setSelectedDate}
+            />
+
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="w-full border border-gray-300 rounded-xl px-4 py-3 bg-gray-50 text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-300 transition"
+              min={new Date().toISOString().split("T")[0]}
+            />
+          </div>
+
+          {!selectedDate && (
+            <p className="mt-3 text-sm text-gray-500 font-semibold">
+              اختر تاريخ لتظهر لك ساعات اليوم وتعديلات الحظر والإضافات.
+            </p>
+          )}
+
+          {/* حالة اليوم */}
+          {selectedDate && (
+            <div className="mt-5 rounded-2xl border border-gray-200 bg-white p-4">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <div className="text-sm font-black text-gray-800">
+                    حالة اليوم
+                  </div>
+                  <div className="text-xs font-black mt-1">
+                    {dayIsClosedByHours ? (
+                      <span className="text-rose-600">
+                        مغلق حسب ساعات الأسبوع (عدّل من صفحة ساعات العمل
+                        الأسبوعية)
+                      </span>
+                    ) : isDayBlocked ? (
+                      <span className="text-rose-600">
+                        معطّل بالكامل (تم تعطيله يدويًا)
+                      </span>
+                    ) : (
+                      <span className="text-emerald-700">مفتوح</span>
+                    )}
+                  </div>
+                </div>
+
+                <button
+                  onClick={toggleDay}
+                  disabled={loadingBlock || dayIsClosedByHours}
+                  className={[
+                    "px-4 py-2 rounded-xl text-white font-black transition",
+                    dayIsClosedByHours
+                      ? "bg-gray-300 cursor-not-allowed"
+                      : isDayBlocked
+                        ? "bg-rose-600 hover:bg-rose-700"
+                        : "bg-emerald-600 hover:bg-emerald-700",
+                  ].join(" ")}
+                >
+                  {loadingBlock
+                    ? "جاري..."
+                    : dayIsClosedByHours
+                      ? "اليوم مغلق"
+                      : isDayBlocked
+                        ? "تفعيل اليوم"
+                        : "تعطيل اليوم"}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {selectedDate && dayIsClosedByHours && (
+            <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 p-4">
+              <div className="text-sm font-black text-rose-700">
+                هذا اليوم مغلق حسب ساعات الأسبوع.
+              </div>
+              <div className="text-xs font-black text-rose-700/80 mt-1">
+                إذا بدك تفتحه: روح على “ساعات العمل الأسبوعية” وعدّل هذا اليوم.
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Times */}
+        {selectedDate && !dayIsClosedByHours && !isDayBlocked && (
+          <div className="p-5 sm:p-8 pt-4 border-t bg-gray-50">
+            <h2 className="text-xl font-black text-gray-800 mb-3">
+              الأوقات (مطابقة للزبون)
+            </h2>
+
+            <TimesGrid
+              times={gridTimesFiltered}
+              selectedDate={selectedDate}
+              bookings={bookings}
+              blockedTimes={blockedTimes}
+              selectedTimes={selectedTimes}
+              onToggleTime={handleToggleTime}
+            />
+
+            <div className="mt-4">
+              {selectedTimes.length > 0 ? (
+                <button
+                  onClick={handleApplyBlock}
+                  className="w-full bg-rose-600 text-white py-3 rounded-xl font-black hover:bg-rose-700 transition-colors focus:outline-none focus:ring-2 focus:ring-rose-300"
+                >
+                  {t("remove_selected_times") ||
+                    "تطبيق الحظر على الساعات المحددة"}
+                </button>
+              ) : (
+                <p className="text-sm text-gray-500 font-semibold">
+                  اختر ساعة أو أكثر ثم اضغط لحظرها.
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {selectedDate && isDayBlocked && (
+          <div className="p-5 sm:p-8 pt-4 border-t bg-yellow-50 text-center text-rose-700 font-black text-base">
+            تم تعطيل هذا اليوم بالكامل. لا يمكن تعديل أو حظر الساعات حتى يتم
+            تفعيله من جديد.
+          </div>
+        )}
+
+        {/* Extra Slots */}
+        {selectedDate && !dayIsClosedByHours && !isDayBlocked && (
+          <div className="px-5 sm:px-8 pb-8">
+            <ExtraSlotsCard
+              selectedDate={selectedDate}
+              extraSlots={extraSlots}
+              loadingExtras={loadingExtras}
+              savingExtras={savingExtras}
+              applyMode={applyMode}
+              setApplyMode={setApplyMode}
+              applyUntil={applyUntil}
+              setApplyUntil={setApplyUntil}
+              onApply={(nextValue) =>
+                applyExtraSlotsChange({
+                  nextValue,
+                  applyMode,
+                  applyUntil,
+                  setStatusMessage,
+                  selectedDate,
+                })
+              }
+            />
+          </div>
+        )}
+
+        {statusMessage && (
+          <div className="p-4 bg-emerald-100 border border-emerald-300 text-emerald-800 text-center font-black">
+            {statusMessage}
+          </div>
+        )}
+      </div>
+
+      {/* Recent */}
+      <RecentBookingsCard recentBookings={recentBookings} />
+
+      {/* Limit one per day */}
+      <LimitOnePerDayCard
+        limitOnePerDay={limitOnePerDay}
+        loadingSettings={loadingSettings}
+        savingSettings={savingSettings}
+        onToggle={toggleLimitOnePerDay}
+      />
+    </div>
+  );
+}
+</file>
+
 <file path="src/pages/Contact.jsx">
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
@@ -14297,6 +14330,191 @@ function Contact() {
 }
 
 export default Contact;
+</file>
+
+<file path="src/services/bookingService.js">
+// src/services/bookingService.js
+import { db } from "../firebase";
+import {
+  doc,
+  getDoc,
+  collection,
+  serverTimestamp,
+  query,
+  where,
+  getDocs,
+  setDoc,
+  increment,
+  runTransaction,
+} from "firebase/firestore";
+
+import { toILPhoneE164 } from "../utils/phone";
+
+function makeSlotId(dateYMD, hhmm) {
+  return `${dateYMD}_${String(hhmm || "").replace(":", "-")}`;
+}
+
+export async function fetchBlockedDay(dateYMD) {
+  const snap = await getDoc(doc(db, "blockedDays", dateYMD));
+  return snap.exists();
+}
+
+export async function fetchBlockedTimes(dateYMD) {
+  const snap = await getDoc(doc(db, "blockedTimes", dateYMD));
+  return snap.exists() ? snap.data().times || [] : [];
+}
+
+export async function fetchActiveBookingsByDate(dateYMD) {
+  const q = query(
+    collection(db, "bookings"),
+    where("selectedDate", "==", dateYMD),
+  );
+  const snap = await getDocs(q);
+
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .filter((b) => !b.cancelledAt);
+}
+
+export async function isPhoneBlocked(inputPhone) {
+  const phoneE164 = toILPhoneE164(inputPhone);
+  const snap = await getDoc(doc(db, "blockedPhones", phoneE164));
+  return snap.exists();
+}
+
+export async function hasExistingBookings(inputPhone) {
+  const phoneE164 = toILPhoneE164(inputPhone);
+  const q = query(
+    collection(db, "bookings"),
+    where("phoneNumber", "==", phoneE164),
+  );
+  const snap = await getDocs(q);
+  return !snap.empty;
+}
+
+export async function hasActiveConflict(dateYMD, hhmm) {
+  const q = query(
+    collection(db, "bookings"),
+    where("selectedDate", "==", dateYMD),
+    where("selectedTime", "==", hhmm),
+  );
+  const snap = await getDocs(q);
+
+  return snap.docs.map((d) => d.data()).some((b) => !b.cancelledAt);
+}
+
+export async function createBooking(payload) {
+  const slotId = makeSlotId(payload.selectedDate, payload.selectedTime);
+  const slotRef = doc(db, "bookedSlots", slotId);
+  const bookingRef = doc(collection(db, "bookings"));
+
+  await runTransaction(db, async (tx) => {
+    const slotSnap = await tx.get(slotRef);
+
+    if (slotSnap.exists() && slotSnap.data()?.active === true) {
+      const oldBookingId = slotSnap.data()?.bookingId;
+
+      if (oldBookingId) {
+        const oldBookingRef = doc(db, "bookings", oldBookingId);
+        const oldBookingSnap = await tx.get(oldBookingRef);
+
+        if (oldBookingSnap.exists()) {
+          const oldBooking = oldBookingSnap.data();
+
+          if (!oldBooking.cancelledAt) {
+            throw new Error("TIME_ALREADY_BOOKED");
+          }
+        }
+      }
+    }
+
+    tx.set(bookingRef, {
+      ...payload,
+      cancelledAt: payload?.cancelledAt ?? null,
+      createdAt: serverTimestamp(),
+    });
+
+    tx.set(
+      slotRef,
+      {
+        bookingId: bookingRef.id,
+        selectedDate: payload.selectedDate,
+        selectedTime: payload.selectedTime,
+        active: true,
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true },
+    );
+  });
+
+  try {
+    const monthKey = String(payload?.selectedDate || "").slice(0, 7);
+    if (!monthKey || monthKey.length !== 7) return bookingRef.id;
+
+    const monthRef = doc(db, "statsMonthly", monthKey);
+
+    await setDoc(
+      monthRef,
+      { total: increment(1), updatedAt: serverTimestamp() },
+      { merge: true },
+    );
+  } catch (err) {
+    console.warn("statsMonthly increment failed (ignored):", err);
+  }
+
+  return bookingRef.id;
+}
+
+export async function cancelBooking(bookingId) {
+  const bookingRef = doc(db, "bookings", bookingId);
+
+  try {
+    await runTransaction(db, async (tx) => {
+      const snap = await tx.get(bookingRef);
+      if (!snap.exists()) throw new Error("Booking not found");
+
+      const b = snap.data();
+
+      if (b.cancelledAt) return;
+
+      const slotId = makeSlotId(b.selectedDate, b.selectedTime);
+      const slotRef = doc(db, "bookedSlots", slotId);
+
+      tx.update(bookingRef, {
+        cancelledAt: serverTimestamp(),
+      });
+
+      tx.set(
+        slotRef,
+        {
+          bookingId,
+          selectedDate: b.selectedDate,
+          selectedTime: b.selectedTime,
+          active: false,
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true },
+      );
+
+      const monthKey = String(b.selectedDate || "").slice(0, 7);
+      if (!monthKey || monthKey.length !== 7) return;
+
+      const monthRef = doc(db, "statsMonthly", monthKey);
+
+      tx.set(
+        monthRef,
+        {
+          total: increment(-1),
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true },
+      );
+    });
+  } catch (err) {
+    console.error("cancelBooking failed:", err);
+    throw err;
+  }
+}
 </file>
 
 <file path="src/hooks/useAvailableTimes.js">
@@ -14843,102 +15061,6 @@ function Footer() {
 }
 
 export default Footer;
-</file>
-
-<file path="src/components/home/HeroSection.jsx">
-import { useTranslation } from "react-i18next";
-import { useEffect } from "react";
-import AOS from "aos";
-import "aos/dist/aos.css";
-
-import "../../styles/heroEnhancements.css";
-
-function HeroSection() {
-  const { t } = useTranslation();
-
-  useEffect(() => {
-    AOS.init({ duration: 1000 });
-  }, []);
-
-  const smoothScrollTo = (id) => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
-
-  const onCheckClick = (e) => {
-    e.preventDefault();
-    smoothScrollTo("check-booking");
-  };
-
-  const onBookClick = (e) => {
-    e.preventDefault();
-    // ✅ بدل ما ينزل على ساعات العمل، ينزل على بداية النموذج داخل الكرت
-    const el = document.getElementById("booking-form-start");
-    if (el) {
-      const y = el.getBoundingClientRect().top + window.pageYOffset - 100; // 👈 نفس الرقم هون
-
-      window.scrollTo({
-        top: y,
-        behavior: "smooth",
-      });
-    }
-  };
-
-  return (
-    <section className="hero-overlay relative w-full min-h-[100svh] h-screen overflow-hidden flex items-center justify-center">
-      <img
-        src="/barber-hero.jpg"
-        alt="Barber Hero"
-        className="hero-media absolute inset-0 w-full h-full object-cover object-center z-0"
-        loading="eager"
-      />
-
-      <div
-        className="hero-content text-center px-4 max-w-2xl"
-        data-aos="fade-up"
-      >
-        <h1
-          className="font-notokufi text-4xl sm:text-5xl md:text-6xl font-extrabold mb-4 leading-tight tracking-tight text-gold"
-          style={{
-            textShadow:
-              "0 2px 6px rgba(0,0,0,0.85), 0 6px 24px rgba(0,0,0,0.6)",
-          }}
-        >
-          {t("hero_title") || "أسلوب يليق بك، بكل بساطة"}
-        </h1>
-
-        <p className="text-base sm:text-lg md:text-xl mb-6 font-tajawal text-beige max-w-xl mx-auto leading-relaxed">
-          {t("hero_subtitle") || "لمحة مُظهرك، يناسبك ويعبر عنك"}
-        </p>
-
-        <div>
-          <a
-            href="#booking-form-start"
-            onClick={onBookClick}
-            className="inline-flex items-center justify-center bg-gold hover:bg-yellow-400 text-primary font-semibold px-7 py-3.5 rounded-xl shadow-md transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gold"
-            style={{ minHeight: 44 }}
-          >
-            {t("book_now") || "احجز الآن"}
-          </a>
-        </div>
-
-        <div className="mt-3">
-          <a
-            href="#check-booking"
-            onClick={onCheckClick}
-            className="inline-flex items-center gap-2 text-sm font-tajawal font-semibold text-beige/90 hover:text-gold transition underline underline-offset-4 decoration-white/30 hover:decoration-gold/60"
-          >
-            <span aria-hidden="true">↓</span>
-            <span>{t("check_booking") || "تحقق من الحجز"}</span>
-          </a>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-export default HeroSection;
 </file>
 
 <file path="src/components/home/InstagramSlider.jsx">
@@ -15501,6 +15623,149 @@ function CardBox({ color = "gray", title, children }) {
     "vite": "^6.3.5"
   }
 }
+</file>
+
+<file path="src/components/home/HeroSection.jsx">
+import { useTranslation } from "react-i18next";
+import { useEffect, useState } from "react";
+import { doc, onSnapshot } from "firebase/firestore";
+import { db } from "../../firebase";
+import AOS from "aos";
+import "aos/dist/aos.css";
+
+import "../../styles/heroEnhancements.css";
+
+function HeroSection() {
+  const { t } = useTranslation();
+
+  const [heroNote, setHeroNote] = useState(null);
+  const [noteClosed, setNoteClosed] = useState(false);
+
+  useEffect(() => {
+    AOS.init({ duration: 1000 });
+  }, []);
+
+  useEffect(() => {
+    const ref = doc(db, "barberSettings", "general");
+
+    const unsub = onSnapshot(ref, (snap) => {
+      const data = snap.exists() ? snap.data() : {};
+      setHeroNote(data.heroNote || null);
+      setNoteClosed(false);
+    });
+
+    return () => unsub();
+  }, []);
+
+  const smoothScrollTo = (id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const onCheckClick = (e) => {
+    e.preventDefault();
+    smoothScrollTo("check-booking");
+  };
+
+  const onBookClick = (e) => {
+    e.preventDefault();
+
+    const el = document.getElementById("booking-form-start");
+    if (el) {
+      const y = el.getBoundingClientRect().top + window.pageYOffset - 100;
+
+      window.scrollTo({
+        top: y,
+        behavior: "smooth",
+      });
+    }
+  };
+
+  return (
+    <section className="hero-overlay relative w-full min-h-[100svh] h-screen overflow-hidden flex items-center justify-center">
+      <img
+        src="/barber-hero.jpg"
+        alt="Barber Hero"
+        className="hero-media absolute inset-0 w-full h-full object-cover object-center z-0"
+        loading="eager"
+      />
+
+      <div
+        className="hero-content text-center px-4 max-w-2xl"
+        data-aos="fade-up"
+      >
+        <h1
+          className="font-notokufi text-4xl sm:text-5xl md:text-6xl font-extrabold mb-4 leading-tight tracking-tight text-gold"
+          style={{
+            textShadow:
+              "0 2px 6px rgba(0,0,0,0.85), 0 6px 24px rgba(0,0,0,0.6)",
+          }}
+        >
+          {t("hero_title") || "أسلوب يليق بك، بكل بساطة"}
+        </h1>
+
+        <p className="text-base sm:text-lg md:text-xl mb-6 font-tajawal text-beige max-w-xl mx-auto leading-relaxed">
+          {t("hero_subtitle") || "لمحة مُظهرك، يناسبك ويعبر عنك"}
+        </p>
+
+        {heroNote?.enabled && heroNote?.text && !noteClosed && (
+          <div
+            className={`relative mx-auto mb-6 max-w-xl rounded-2xl border px-5 py-3 pr-10 text-sm sm:text-base font-bold shadow-lg animate-pulse ${
+              heroNote.type === "important"
+                ? "bg-rose-100 text-rose-900 border-rose-300"
+                : heroNote.type === "offer"
+                  ? "bg-emerald-100 text-emerald-900 border-emerald-300"
+                  : "bg-yellow-100 text-yellow-900 border-yellow-300"
+            }`}
+            style={{
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+            }}
+          >
+            <span className="ml-2">📌</span>
+            {heroNote.text}
+
+            <button
+              type="button"
+              onClick={() => setNoteClosed(true)}
+              className="absolute top-2 right-3 text-lg leading-none opacity-70 hover:opacity-100"
+              aria-label="إغلاق الملاحظة"
+            >
+              ×
+            </button>
+          </div>
+        )}
+
+        <div>
+          <a
+            href="#booking-form-start"
+            onClick={onBookClick}
+            className="inline-flex items-center justify-center bg-gold hover:bg-yellow-400 text-primary font-semibold px-7 py-3.5 rounded-xl shadow-md transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gold"
+            style={{ minHeight: 44 }}
+          >
+            {t("book_now") || "احجز الآن"}
+          </a>
+        </div>
+
+        <div className="mt-3">
+          <a
+            href="#check-booking"
+            onClick={onCheckClick}
+            className="inline-flex items-center gap-2 text-sm font-tajawal font-semibold text-beige/90 hover:text-gold transition underline underline-offset-4 decoration-white/30 hover:decoration-gold/60"
+          >
+            <span aria-hidden="true">↓</span>
+            <span>{t("check_booking") || "تحقق من الحجز"}</span>
+          </a>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+export default HeroSection;
 </file>
 
 <file path="src/routes.jsx">
@@ -16877,6 +17142,7 @@ function BookingSection() {
 
   const {
     handleSubmit,
+    isSubmitting,
     submitted,
     showSuccessMessage,
     setShowSuccessMessage,
@@ -17212,14 +17478,14 @@ function BookingSection() {
                   scrollToFirstError(currentErrors);
                 }
               }}
-              disabled={hasErrors}
+              disabled={hasErrors || isSubmitting}
               className={`w-full font-bold py-3 rounded-xl shadow transition ${
-                hasErrors
+                hasErrors || isSubmitting
                   ? "bg-gray-300 text-gray-600 cursor-not-allowed"
                   : "bg-gradient-to-r from-gold to-yellow-400 text-primary hover:scale-[1.02] hover:shadow-lg"
               }`}
             >
-              {t("confirm_booking")}
+              {isSubmitting ? "جاري حفظ الحجز..." : t("confirm_booking")}
             </button>
           </form>
         </div>

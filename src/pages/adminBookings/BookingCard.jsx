@@ -1,7 +1,87 @@
 // src/pages/adminBookings/BookingCard.jsx
-import { FaClock, FaPhone, FaCut, FaTimesCircle } from "react-icons/fa";
+import { useState } from "react";
+import {
+  FaCheck,
+  FaClock,
+  FaCopy,
+  FaCut,
+  FaPhone,
+  FaTimesCircle,
+} from "react-icons/fa";
+
 import { e164ToLocalPretty } from "../../utils/phone";
 import { formatDateTime, serviceBadgeClasses, serviceLabel } from "./helpers";
+
+function getTodayYMD() {
+  const now = new Date();
+
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function formatBookingDateForMessage(selectedDate) {
+  if (!selectedDate) {
+    return "";
+  }
+
+  if (selectedDate === getTodayYMD()) {
+    return "اليوم";
+  }
+
+  const parts = selectedDate.split("-");
+
+  if (parts.length !== 3) {
+    return selectedDate;
+  }
+
+  const [year, month, day] = parts;
+
+  return `بتاريخ ${day}/${month}/${year}`;
+}
+
+function buildReminderMessage(booking, name) {
+  const bookingDateText = formatBookingDateForMessage(booking.selectedDate);
+
+  const time = booking.selectedTime || "";
+  const service = serviceLabel(booking.selectedService);
+
+  return `مرحبًا ${name}،
+
+تذكير بموعدك ${bookingDateText} لدى Arafat Barber الساعة ${time} لخدمة ${service}.
+
+بانتظارك، ونرجو الحضور في الموعد المحدد ✂️`;
+}
+
+async function copyTextToClipboard(text) {
+  if (navigator.clipboard && window.isSecureContext) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+
+  const textArea = document.createElement("textarea");
+
+  textArea.value = text;
+  textArea.style.position = "fixed";
+  textArea.style.top = "-9999px";
+  textArea.style.left = "-9999px";
+  textArea.setAttribute("readonly", "");
+
+  document.body.appendChild(textArea);
+
+  textArea.select();
+  textArea.setSelectionRange(0, text.length);
+
+  const copied = document.execCommand("copy");
+
+  document.body.removeChild(textArea);
+
+  if (!copied) {
+    throw new Error("Copy failed");
+  }
+}
 
 export default function BookingCard({
   booking,
@@ -11,38 +91,88 @@ export default function BookingCard({
   onToggleExpanded,
   onCancel,
 }) {
+  const [copied, setCopied] = useState(false);
+  const [copyError, setCopyError] = useState(false);
+
   const name = booking.fullName || "بدون اسم";
 
-  // ✅ لون الوقت (بدل الأسود)
-  const timePill = "bg-indigo-600 text-white border-indigo-600"; // مريح + واضح
+  const timePill = "bg-indigo-600 text-white border-indigo-600";
+
+  async function handleCopyReminder() {
+    const reminderMessage = buildReminderMessage(booking, name);
+
+    setCopyError(false);
+
+    try {
+      await copyTextToClipboard(reminderMessage);
+
+      setCopied(true);
+
+      window.setTimeout(() => {
+        setCopied(false);
+      }, 2500);
+    } catch (error) {
+      console.error("Failed to copy booking reminder:", error);
+
+      setCopyError(true);
+
+      window.setTimeout(() => {
+        setCopyError(false);
+      }, 3000);
+    }
+  }
+
+  function CopyReminderButton({ fullWidth = false }) {
+    return (
+      <button
+        type="button"
+        onClick={handleCopyReminder}
+        className={`inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2 text-sm font-bold transition focus:outline-none focus:ring-2 ${
+          fullWidth ? "w-full sm:w-auto" : ""
+        } ${
+          copied
+            ? "border-emerald-200 bg-emerald-50 text-emerald-700 focus:ring-emerald-200"
+            : copyError
+              ? "border-red-200 bg-red-50 text-red-700 focus:ring-red-200"
+              : "border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100 focus:ring-amber-200"
+        }`}
+        aria-label="نسخ رسالة تذكير الحجز"
+        title="نسخ رسالة التذكير"
+      >
+        {copied ? <FaCheck /> : <FaCopy />}
+
+        {copied ? "تم النسخ" : copyError ? "فشل النسخ" : "نسخ التذكير"}
+      </button>
+    );
+  }
 
   // =========================
-  // ✅ COMPACT MODE
+  // COMPACT MODE
   // =========================
   if (compactMode) {
-    // ✅ إذا Expanded: لا نعرض السطر العلوي أبداً (حتى ما يصير دابليكيت)
     if (expanded) {
       return (
         <div
-          className={`rounded-2xl bg-white border shadow-sm p-3 sm:p-4 ${
+          className={`rounded-2xl border bg-white p-3 shadow-sm sm:p-4 ${
             isNext
               ? "border-emerald-300 ring-1 ring-emerald-100"
               : "border-gray-200"
           }`}
         >
           <div className="flex items-start justify-between gap-3">
-            <h3 className="text-lg sm:text-xl font-black text-gray-900 leading-tight break-words">
+            <h3 className="break-words text-lg font-black leading-tight text-gray-900 sm:text-xl">
               {name}
             </h3>
 
-            <div className="shrink-0 flex items-center gap-2">
+            <div className="flex shrink-0 items-center gap-2">
               {isNext && (
-                <span className="text-[11px] font-extrabold px-3 py-1 rounded-full border bg-emerald-50 text-emerald-800 border-emerald-200">
+                <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-extrabold text-emerald-800">
                   التالي
                 </span>
               )}
+
               <span
-                className={`inline-flex items-center gap-2 text-xs font-extrabold rounded-full px-3 py-1 border ${timePill}`}
+                className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-extrabold ${timePill}`}
               >
                 <FaClock className="opacity-90" />
                 {booking.selectedTime}
@@ -53,7 +183,7 @@ export default function BookingCard({
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <a
               href={`tel:${booking.phoneNumber}`}
-              className="inline-flex items-center gap-2 text-sm font-extrabold px-4 py-2 rounded-xl border border-blue-200 bg-blue-50 text-blue-800 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-200"
+              className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-extrabold text-blue-800 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-200"
               aria-label={`اتصال بالزبون ${name}`}
               title="اتصال"
             >
@@ -66,12 +196,13 @@ export default function BookingCard({
 
             {booking.selectedService && (
               <span
-                className={`inline-flex items-center gap-2 text-xs font-bold rounded-full px-3 py-1 border ${serviceBadgeClasses(
-                  booking.selectedService
+                className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-bold ${serviceBadgeClasses(
+                  booking.selectedService,
                 )}`}
                 aria-label="الخدمة"
               >
                 <FaCut className="opacity-80" />
+
                 {serviceLabel(booking.selectedService)}
               </span>
             )}
@@ -81,11 +212,13 @@ export default function BookingCard({
             تم الحجز: {formatDateTime(booking.createdAt)}
           </div>
 
-          <div className="mt-3 flex flex-col sm:flex-row gap-2">
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+            <CopyReminderButton fullWidth />
+
             <button
               type="button"
               onClick={onCancel}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 text-sm font-bold px-4 py-2 rounded-xl border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-200"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-bold text-red-700 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-200 sm:w-auto"
               aria-label="إلغاء الحجز"
             >
               <FaTimesCircle />
@@ -95,7 +228,7 @@ export default function BookingCard({
             <button
               type="button"
               onClick={onToggleExpanded}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 text-sm font-bold px-4 py-2 rounded-xl border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100 sm:w-auto"
             >
               إغلاق
             </button>
@@ -104,7 +237,6 @@ export default function BookingCard({
       );
     }
 
-    // ✅ Compact collapsed: سطر واحد (اسم + وقت)
     return (
       <div
         className={`rounded-2xl border bg-white shadow-sm ${
@@ -116,25 +248,25 @@ export default function BookingCard({
         <button
           type="button"
           onClick={onToggleExpanded}
-          className="w-full text-right px-3 py-3 flex items-center justify-between gap-3"
+          className="flex w-full items-center justify-between gap-3 px-3 py-3 text-right"
           aria-label="فتح تفاصيل الحجز"
           title="فتح/إغلاق"
         >
-          <div className="min-w-0 flex items-center gap-2">
+          <div className="flex min-w-0 items-center gap-2">
             {isNext && (
-              <span className="text-[11px] font-extrabold px-2 py-0.5 rounded-full border bg-emerald-50 text-emerald-800 border-emerald-200 shrink-0">
+              <span className="shrink-0 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-extrabold text-emerald-800">
                 التالي
               </span>
             )}
 
-            <span className="text-sm sm:text-base font-black text-gray-900 truncate">
+            <span className="truncate text-sm font-black text-gray-900 sm:text-base">
               {name}
             </span>
           </div>
 
-          <div className="shrink-0 flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             <span
-              className={`inline-flex items-center gap-2 text-xs font-extrabold rounded-full px-3 py-1 border ${timePill}`}
+              className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-extrabold ${timePill}`}
             >
               <FaClock className="opacity-90" />
               {booking.selectedTime}
@@ -148,32 +280,32 @@ export default function BookingCard({
   }
 
   // =========================
-  // ✅ COMFORT MODE
+  // COMFORT MODE
   // =========================
   return (
     <div
-      className={`rounded-2xl bg-white border shadow-sm p-3 sm:p-4 ${
+      className={`rounded-2xl border bg-white p-3 shadow-sm sm:p-4 ${
         isNext
           ? "border-emerald-300 ring-1 ring-emerald-100"
           : "border-gray-200"
       }`}
     >
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-        <div className="space-y-2 flex-1 min-w-0">
-          {/* ✅ الاسم كامل (بدون 3 نقاط) */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0 flex-1 space-y-2">
           <div className="flex items-start justify-between gap-3">
-            <h3 className="text-lg sm:text-xl font-black text-gray-900 leading-tight break-words">
+            <h3 className="break-words text-lg font-black leading-tight text-gray-900 sm:text-xl">
               {name}
             </h3>
 
-            <div className="shrink-0 flex items-center gap-2">
+            <div className="flex shrink-0 items-center gap-2">
               {isNext && (
-                <span className="text-[11px] font-extrabold px-3 py-1 rounded-full border bg-emerald-50 text-emerald-800 border-emerald-200">
+                <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-extrabold text-emerald-800">
                   التالي
                 </span>
               )}
+
               <span
-                className={`inline-flex items-center gap-2 text-xs font-extrabold rounded-full px-3 py-1 border ${timePill}`}
+                className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-extrabold ${timePill}`}
               >
                 <FaClock className="opacity-90" />
                 {booking.selectedTime}
@@ -184,7 +316,7 @@ export default function BookingCard({
           <div className="flex flex-wrap items-center gap-2">
             <a
               href={`tel:${booking.phoneNumber}`}
-              className="inline-flex items-center gap-2 text-sm font-extrabold px-4 py-2 rounded-xl border border-blue-200 bg-blue-50 text-blue-800 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-200"
+              className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-extrabold text-blue-800 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-200"
               aria-label={`اتصال بالزبون ${name}`}
               title="اتصال"
             >
@@ -196,12 +328,13 @@ export default function BookingCard({
             </a>
 
             <span
-              className={`inline-flex items-center gap-2 text-xs font-bold rounded-full px-3 py-1 border ${serviceBadgeClasses(
-                booking.selectedService
+              className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-bold ${serviceBadgeClasses(
+                booking.selectedService,
               )}`}
               aria-label="الخدمة"
             >
               <FaCut className="opacity-80" />
+
               {serviceLabel(booking.selectedService)}
             </span>
           </div>
@@ -211,10 +344,13 @@ export default function BookingCard({
           </div>
         </div>
 
-        <div className="sm:pt-0">
+        <div className="flex flex-col gap-2 sm:flex-row sm:pt-0">
+          <CopyReminderButton fullWidth />
+
           <button
+            type="button"
             onClick={onCancel}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 text-sm font-bold px-4 py-2 rounded-xl border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-200"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-bold text-red-700 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-200 sm:w-auto"
             aria-label="إلغاء الحجز"
           >
             <FaTimesCircle />
