@@ -1,6 +1,13 @@
 // src/pages/barberPanel/BarberMobileApp.jsx
 
-import { createElement, useCallback, useEffect, useRef, useState } from "react";
+import {
+  createElement,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -110,7 +117,9 @@ export default function BarberMobileApp() {
   const initialIndex = getTabIndexFromPath(location.pathname);
 
   const [activeIndex, setActiveIndex] = useState(initialIndex);
+
   const [containerWidth, setContainerWidth] = useState(() => window.innerWidth);
+
   const [dragX, setDragX] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
@@ -121,6 +130,19 @@ export default function BarberMobileApp() {
   const dragXRef = useRef(0);
   const gestureRef = useRef(null);
   const mouseDraggingRef = useRef(false);
+
+  /*
+    نعكس ترتيب الصفحات داخل المسار فقط.
+
+    البار يبقى بترتيبه الطبيعي:
+    إدارة ← حجوزات ← أسبوعي ← تقييمات ← محظورون ← إحصائيات
+
+    لكن داخل المسار يجب أن تكون الصفحات معكوسة
+    حتى تتوافق الحركة مع اتجاه RTL.
+  */
+  const reversedTabs = useMemo(() => {
+    return [...TABS].reverse();
+  }, []);
 
   const setDrag = useCallback((value) => {
     dragXRef.current = value;
@@ -178,15 +200,16 @@ export default function BarberMobileApp() {
       const deltaY = clientY - gesture.startY;
 
       if (!gesture.axis) {
-        const absX = Math.abs(deltaX);
-        const absY = Math.abs(deltaY);
+        const absoluteX = Math.abs(deltaX);
+        const absoluteY = Math.abs(deltaY);
 
-        if (absX < 8 && absY < 8) {
+        if (absoluteX < 8 && absoluteY < 8) {
           return false;
         }
 
-        if (absX > absY * 1.1) {
+        if (absoluteX > absoluteY * 1.1) {
           gesture.axis = "horizontal";
+
           setIsAnimating(false);
           setIsDragging(true);
         } else {
@@ -200,6 +223,7 @@ export default function BarberMobileApp() {
       }
 
       const now = performance.now();
+
       const elapsed = Math.max(1, now - gesture.lastTime);
 
       gesture.velocityX = (clientX - gesture.lastX) / elapsed;
@@ -211,12 +235,21 @@ export default function BarberMobileApp() {
 
       const isLastPage = activeIndexRef.current === TABS.length - 1;
 
-      const draggingBeyondFirst = isFirstPage && deltaX > 0;
+      /*
+        بما أن ترتيب الصفحات RTL:
 
-      const draggingBeyondLast = isLastPage && deltaX < 0;
+        الصفحة الأولى موجودة بأقصى اليمين.
+        الصفحة التالية موجودة على يسارها.
+
+        السحب باتجاه اليمين ينتقل للصفحة التالية
+        حسب ترتيب البار.
+      */
+      const draggingOutsideFirst = isFirstPage && deltaX < 0;
+
+      const draggingOutsideLast = isLastPage && deltaX > 0;
 
       const nextDragX =
-        draggingBeyondFirst || draggingBeyondLast ? deltaX * 0.22 : deltaX;
+        draggingOutsideFirst || draggingOutsideLast ? deltaX * 0.22 : deltaX;
 
       setDrag(nextDragX);
 
@@ -253,12 +286,21 @@ export default function BarberMobileApp() {
     let nextIndex = activeIndexRef.current;
 
     if (farEnough || fastEnough) {
-      if (distance < 0) {
+      /*
+        السحب لليمين:
+        ينتقل للعنصر التالي باتجاه يسار البار.
+
+        السحب لليسار:
+        يرجع للعنصر السابق باتجاه يمين البار.
+      */
+      if (distance > 0) {
         nextIndex += 1;
-      } else if (distance > 0) {
+      } else if (distance < 0) {
         nextIndex -= 1;
       }
     }
+
+    nextIndex = Math.max(0, Math.min(TABS.length - 1, nextIndex));
 
     goToTab(nextIndex);
   }, [containerWidth, goToTab]);
@@ -304,12 +346,16 @@ export default function BarberMobileApp() {
     const resizeObserver = new ResizeObserver(updateWidth);
 
     resizeObserver.observe(viewport);
+
     window.addEventListener("resize", updateWidth);
+
     window.addEventListener("orientationchange", updateWidth);
 
     return () => {
       resizeObserver.disconnect();
+
       window.removeEventListener("resize", updateWidth);
+
       window.removeEventListener("orientationchange", updateWidth);
     };
   }, []);
@@ -410,6 +456,7 @@ export default function BarberMobileApp() {
     };
 
     window.addEventListener("mousemove", handleMouseMove);
+
     window.addEventListener("mouseup", handleMouseUp);
 
     return () => {
@@ -419,7 +466,15 @@ export default function BarberMobileApp() {
     };
   }, [moveGesture, finishGesture]);
 
-  const baseOffset = -(activeIndex * containerWidth);
+  /*
+    بسبب عكس ترتيب الصفحات:
+
+    index 0 يصبح آخر عنصر بصري في المسار.
+    index 1 يصبح العنصر الذي قبله.
+  */
+  const visualIndex = TABS.length - 1 - activeIndex;
+
+  const baseOffset = -(visualIndex * containerWidth);
 
   const trackTransform = `translate3d(${baseOffset + dragX}px, 0, 0)`;
 
@@ -434,6 +489,7 @@ export default function BarberMobileApp() {
           className="barber-pages-track"
           style={{
             transform: trackTransform,
+
             transition:
               isAnimating && !isDragging
                 ? "transform 320ms cubic-bezier(0.22, 0.72, 0, 1)"
@@ -443,15 +499,19 @@ export default function BarberMobileApp() {
             setIsAnimating(false);
           }}
         >
-          {TABS.map((tab, index) => (
-            <section
-              key={tab.id}
-              className={`barber-page-slide ${tab.slideClassName || ""}`}
-              aria-hidden={activeIndex !== index}
-            >
-              {createElement(tab.component)}
-            </section>
-          ))}
+          {reversedTabs.map((tab) => {
+            const originalIndex = TABS.findIndex((item) => item.id === tab.id);
+
+            return (
+              <section
+                key={tab.id}
+                className={`barber-page-slide ${tab.slideClassName || ""}`}
+                aria-hidden={activeIndex !== originalIndex}
+              >
+                {createElement(tab.component)}
+              </section>
+            );
+          })}
         </div>
       </div>
 
