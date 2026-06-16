@@ -1,12 +1,6 @@
 // src/pages/barberPanel/BarberMobileApp.jsx
-import {
-  createElement,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+
+import { createElement, useCallback, useEffect, useRef, useState } from "react";
 
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -88,9 +82,6 @@ const BLOCK_SWIPE_SELECTOR = [
   "textarea",
   "select",
   "option",
-  "button",
-  "a",
-  "[role='button']",
   "[contenteditable='true']",
 ].join(",");
 
@@ -116,26 +107,20 @@ export default function BarberMobileApp() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const initialIndex = useMemo(
-    () => getTabIndexFromPath(location.pathname),
-    [location.pathname],
-  );
+  const initialIndex = getTabIndexFromPath(location.pathname);
 
   const [activeIndex, setActiveIndex] = useState(initialIndex);
-
   const [containerWidth, setContainerWidth] = useState(() => window.innerWidth);
-
   const [dragX, setDragX] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
-
   const [isAnimating, setIsAnimating] = useState(false);
 
   const viewportRef = useRef(null);
-  const dragXRef = useRef(0);
+
   const activeIndexRef = useRef(initialIndex);
+  const dragXRef = useRef(0);
   const gestureRef = useRef(null);
-  const didDragRef = useRef(false);
-  const clickResetTimerRef = useRef(null);
+  const mouseDraggingRef = useRef(false);
 
   const setDrag = useCallback((value) => {
     dragXRef.current = value;
@@ -143,14 +128,15 @@ export default function BarberMobileApp() {
   }, []);
 
   const goToTab = useCallback(
-    (nextIndex, { updateUrl = true } = {}) => {
+    (nextIndex, updateUrl = true) => {
       const safeIndex = Math.max(0, Math.min(TABS.length - 1, nextIndex));
 
-      setIsAnimating(true);
-      setIsDragging(false);
-      setDrag(0);
-      setActiveIndex(safeIndex);
       activeIndexRef.current = safeIndex;
+
+      setIsDragging(false);
+      setIsAnimating(true);
+      setActiveIndex(safeIndex);
+      setDrag(0);
 
       if (updateUrl && location.pathname !== TABS[safeIndex].path) {
         navigate(TABS[safeIndex].path);
@@ -159,15 +145,145 @@ export default function BarberMobileApp() {
     [location.pathname, navigate, setDrag],
   );
 
+  const beginGesture = useCallback(
+    (clientX, clientY, target) => {
+      if (isAnimating || shouldBlockSwipe(target)) {
+        gestureRef.current = null;
+        return;
+      }
+
+      const now = performance.now();
+
+      gestureRef.current = {
+        startX: clientX,
+        startY: clientY,
+        lastX: clientX,
+        lastTime: now,
+        velocityX: 0,
+        axis: null,
+      };
+    },
+    [isAnimating],
+  );
+
+  const moveGesture = useCallback(
+    (clientX, clientY) => {
+      const gesture = gestureRef.current;
+
+      if (!gesture) {
+        return false;
+      }
+
+      const deltaX = clientX - gesture.startX;
+      const deltaY = clientY - gesture.startY;
+
+      if (!gesture.axis) {
+        const absX = Math.abs(deltaX);
+        const absY = Math.abs(deltaY);
+
+        if (absX < 8 && absY < 8) {
+          return false;
+        }
+
+        if (absX > absY * 1.1) {
+          gesture.axis = "horizontal";
+          setIsAnimating(false);
+          setIsDragging(true);
+        } else {
+          gesture.axis = "vertical";
+          return false;
+        }
+      }
+
+      if (gesture.axis !== "horizontal") {
+        return false;
+      }
+
+      const now = performance.now();
+      const elapsed = Math.max(1, now - gesture.lastTime);
+
+      gesture.velocityX = (clientX - gesture.lastX) / elapsed;
+
+      gesture.lastX = clientX;
+      gesture.lastTime = now;
+
+      const isFirstPage = activeIndexRef.current === 0;
+
+      const isLastPage = activeIndexRef.current === TABS.length - 1;
+
+      const draggingBeyondFirst = isFirstPage && deltaX > 0;
+
+      const draggingBeyondLast = isLastPage && deltaX < 0;
+
+      const nextDragX =
+        draggingBeyondFirst || draggingBeyondLast ? deltaX * 0.22 : deltaX;
+
+      setDrag(nextDragX);
+
+      return true;
+    },
+    [setDrag],
+  );
+
+  const finishGesture = useCallback(() => {
+    const gesture = gestureRef.current;
+
+    if (!gesture) {
+      return;
+    }
+
+    gestureRef.current = null;
+    mouseDraggingRef.current = false;
+
+    if (gesture.axis !== "horizontal") {
+      setIsDragging(false);
+      return;
+    }
+
+    const distance = dragXRef.current;
+    const absoluteDistance = Math.abs(distance);
+
+    const distanceThreshold = containerWidth * 0.22;
+    const velocityThreshold = 0.35;
+
+    const farEnough = absoluteDistance >= distanceThreshold;
+
+    const fastEnough = Math.abs(gesture.velocityX) >= velocityThreshold;
+
+    let nextIndex = activeIndexRef.current;
+
+    if (farEnough || fastEnough) {
+      if (distance < 0) {
+        nextIndex += 1;
+      } else if (distance > 0) {
+        nextIndex -= 1;
+      }
+    }
+
+    goToTab(nextIndex);
+  }, [containerWidth, goToTab]);
+
+  const cancelGesture = useCallback(() => {
+    gestureRef.current = null;
+    mouseDraggingRef.current = false;
+
+    setIsDragging(false);
+    setIsAnimating(true);
+    setDrag(0);
+  }, [setDrag]);
+
   useEffect(() => {
     const pathIndex = getTabIndexFromPath(location.pathname);
 
-    if (pathIndex !== activeIndexRef.current) {
-      setIsAnimating(true);
-      setActiveIndex(pathIndex);
-      activeIndexRef.current = pathIndex;
-      setDrag(0);
+    if (pathIndex === activeIndexRef.current) {
+      return;
     }
+
+    activeIndexRef.current = pathIndex;
+
+    setIsAnimating(true);
+    setActiveIndex(pathIndex);
+    setDrag(0);
   }, [location.pathname, setDrag]);
 
   useEffect(() => {
@@ -178,9 +294,9 @@ export default function BarberMobileApp() {
     }
 
     const updateWidth = () => {
-      const measuredWidth = viewport.getBoundingClientRect().width;
+      const width = viewport.getBoundingClientRect().width;
 
-      setContainerWidth(measuredWidth || window.innerWidth);
+      setContainerWidth(width || window.innerWidth);
     };
 
     updateWidth();
@@ -188,172 +304,120 @@ export default function BarberMobileApp() {
     const resizeObserver = new ResizeObserver(updateWidth);
 
     resizeObserver.observe(viewport);
-
+    window.addEventListener("resize", updateWidth);
     window.addEventListener("orientationchange", updateWidth);
 
     return () => {
       resizeObserver.disconnect();
-
+      window.removeEventListener("resize", updateWidth);
       window.removeEventListener("orientationchange", updateWidth);
     };
   }, []);
 
   useEffect(() => {
+    const viewport = viewportRef.current;
+
+    if (!viewport) {
+      return undefined;
+    }
+
+    const handleTouchStart = (event) => {
+      if (event.touches.length !== 1) {
+        return;
+      }
+
+      const touch = event.touches[0];
+
+      beginGesture(touch.clientX, touch.clientY, event.target);
+    };
+
+    const handleTouchMove = (event) => {
+      if (event.touches.length !== 1 || !gestureRef.current) {
+        return;
+      }
+
+      const touch = event.touches[0];
+
+      const isHorizontal = moveGesture(touch.clientX, touch.clientY);
+
+      if (isHorizontal) {
+        event.preventDefault();
+      }
+    };
+
+    const handleTouchEnd = () => {
+      finishGesture();
+    };
+
+    const handleTouchCancel = () => {
+      cancelGesture();
+    };
+
+    viewport.addEventListener("touchstart", handleTouchStart, {
+      passive: true,
+    });
+
+    viewport.addEventListener("touchmove", handleTouchMove, { passive: false });
+
+    viewport.addEventListener("touchend", handleTouchEnd, { passive: true });
+
+    viewport.addEventListener("touchcancel", handleTouchCancel, {
+      passive: true,
+    });
+
     return () => {
-      if (clickResetTimerRef.current) {
-        clearTimeout(clickResetTimerRef.current);
-      }
-    };
-  }, []);
+      viewport.removeEventListener("touchstart", handleTouchStart);
 
-  const onPointerDown = (event) => {
-    if (event.pointerType === "mouse" && event.button !== 0) {
+      viewport.removeEventListener("touchmove", handleTouchMove);
+
+      viewport.removeEventListener("touchend", handleTouchEnd);
+
+      viewport.removeEventListener("touchcancel", handleTouchCancel);
+    };
+  }, [beginGesture, moveGesture, finishGesture, cancelGesture]);
+
+  const handleMouseDown = (event) => {
+    if (event.button !== 0) {
       return;
     }
 
-    if (isAnimating || shouldBlockSwipe(event.target)) {
-      return;
+    beginGesture(event.clientX, event.clientY, event.target);
+
+    if (gestureRef.current) {
+      mouseDraggingRef.current = true;
     }
-
-    const now = performance.now();
-
-    gestureRef.current = {
-      pointerId: event.pointerId,
-      startX: event.clientX,
-      startY: event.clientY,
-      lastX: event.clientX,
-      lastTime: now,
-      axis: null,
-      velocityX: 0,
-    };
-
-    didDragRef.current = false;
   };
 
-  const onPointerMove = (event) => {
-    const gesture = gestureRef.current;
-
-    if (!gesture || gesture.pointerId !== event.pointerId) {
-      return;
-    }
-
-    const rawX = event.clientX - gesture.startX;
-
-    const rawY = event.clientY - gesture.startY;
-
-    if (!gesture.axis) {
-      if (Math.abs(rawX) < 7 && Math.abs(rawY) < 7) {
+  useEffect(() => {
+    const handleMouseMove = (event) => {
+      if (!mouseDraggingRef.current) {
         return;
       }
 
-      gesture.axis =
-        Math.abs(rawX) > Math.abs(rawY) * 1.15 ? "horizontal" : "vertical";
+      const isHorizontal = moveGesture(event.clientX, event.clientY);
 
-      if (gesture.axis === "vertical") {
-        gestureRef.current = null;
+      if (isHorizontal) {
+        event.preventDefault();
+      }
+    };
+
+    const handleMouseUp = () => {
+      if (!mouseDraggingRef.current) {
         return;
       }
 
-      setIsDragging(true);
-      setIsAnimating(false);
-      didDragRef.current = true;
+      finishGesture();
+    };
 
-      try {
-        event.currentTarget.setPointerCapture(event.pointerId);
-      } catch {
-        // بعض المتصفحات لا تحتاج Pointer Capture
-      }
-    }
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
 
-    if (gesture.axis !== "horizontal") {
-      return;
-    }
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
 
-    event.preventDefault();
-
-    const now = performance.now();
-
-    const elapsed = Math.max(1, now - gesture.lastTime);
-
-    gesture.velocityX = (event.clientX - gesture.lastX) / elapsed;
-
-    gesture.lastX = event.clientX;
-    gesture.lastTime = now;
-
-    const atFirstPage = activeIndexRef.current === 0 && rawX > 0;
-
-    const atLastPage = activeIndexRef.current === TABS.length - 1 && rawX < 0;
-
-    const resistedX = atFirstPage || atLastPage ? rawX * 0.24 : rawX;
-
-    setDrag(resistedX);
-  };
-
-  const finishGesture = (event) => {
-    const gesture = gestureRef.current;
-
-    if (!gesture || gesture.pointerId !== event.pointerId) {
-      return;
-    }
-
-    gestureRef.current = null;
-
-    if (gesture.axis !== "horizontal") {
-      return;
-    }
-
-    const distance = dragXRef.current;
-    const absoluteDistance = Math.abs(distance);
-
-    const distanceThreshold = containerWidth * 0.24;
-
-    const velocityThreshold = 0.45;
-
-    const fastEnough = Math.abs(gesture.velocityX) >= velocityThreshold;
-
-    const farEnough = absoluteDistance >= distanceThreshold;
-
-    let nextIndex = activeIndexRef.current;
-
-    if (farEnough || fastEnough) {
-      if (distance < 0) {
-        nextIndex += 1;
-      }
-
-      if (distance > 0) {
-        nextIndex -= 1;
-      }
-    }
-
-    nextIndex = Math.max(0, Math.min(TABS.length - 1, nextIndex));
-
-    goToTab(nextIndex);
-
-    if (clickResetTimerRef.current) {
-      clearTimeout(clickResetTimerRef.current);
-    }
-
-    clickResetTimerRef.current = setTimeout(() => {
-      didDragRef.current = false;
-    }, 80);
-  };
-
-  const cancelGesture = () => {
-    gestureRef.current = null;
-
-    setIsAnimating(true);
-    setIsDragging(false);
-    setDrag(0);
-  };
-
-  const onClickCapture = (event) => {
-    if (!didDragRef.current) {
-      return;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-  };
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [moveGesture, finishGesture]);
 
   const baseOffset = -(activeIndex * containerWidth);
 
@@ -364,12 +428,7 @@ export default function BarberMobileApp() {
       <div
         ref={viewportRef}
         className={`barber-pages-viewport ${isDragging ? "is-dragging" : ""}`}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={finishGesture}
-        onPointerCancel={cancelGesture}
-        onLostPointerCapture={cancelGesture}
-        onClickCapture={onClickCapture}
+        onMouseDown={handleMouseDown}
       >
         <div
           className="barber-pages-track"
@@ -396,7 +455,11 @@ export default function BarberMobileApp() {
         </div>
       </div>
 
-      <nav className="barber-floating-nav" aria-label="التنقل في لوحة الحلاق">
+      <nav
+        className="barber-floating-nav"
+        aria-label="التنقل في لوحة الحلاق"
+        data-no-page-swipe
+      >
         {TABS.map((tab, index) => {
           const Icon = tab.icon;
           const active = activeIndex === index;
@@ -409,7 +472,6 @@ export default function BarberMobileApp() {
               onClick={() => goToTab(index)}
               aria-current={active ? "page" : undefined}
               aria-label={tab.fullLabel}
-              data-no-page-swipe
             >
               <span className="barber-nav-icon" aria-hidden="true">
                 <Icon />

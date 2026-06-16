@@ -12,58 +12,89 @@
   position: absolute;
   inset: 0;
   overflow: hidden;
-  touch-action: pan-y;
+
+  touch-action: pan-y pinch-zoom;
   overscroll-behavior-x: none;
+
+  -webkit-user-select: auto;
   user-select: auto;
 }
 
 .barber-pages-viewport.is-dragging {
   cursor: grabbing;
+
+  -webkit-user-select: none;
   user-select: none;
 }
 
 .barber-pages-track {
   display: flex;
   flex-direction: row;
+
+  width: 100%;
   height: 100%;
+
   direction: ltr;
+
   will-change: transform;
+  backface-visibility: hidden;
+  transform-style: preserve-3d;
 }
 
 .barber-page-slide {
+  position: relative;
+
   flex: 0 0 100%;
   width: 100%;
+  min-width: 100%;
+  max-width: 100%;
   height: 100%;
+
   overflow-x: hidden;
   overflow-y: auto;
+
   direction: rtl;
+
   overscroll-behavior-y: contain;
-  scrollbar-gutter: stable;
-  padding-bottom: calc(108px + env(safe-area-inset-bottom));
+  scroll-behavior: smooth;
+
+  padding-bottom: calc(112px + env(safe-area-inset-bottom));
+
   -webkit-overflow-scrolling: touch;
+  scrollbar-gutter: stable;
+}
+
+.barber-page-slide > * {
+  width: 100%;
+  min-height: 100%;
 }
 
 /*
-  نخفي شريط التنقل القديم داخل صفحة
-  إدارة الساعات فقط.
+  محاولة إخفاء شريط التنقل القديم
+  داخل صفحة إدارة الساعات فقط.
 
-  باقي محتوى الصفحة لا يتغير.
+  باقي الصفحة لا يتغير.
 */
 .barber-manage-slide > div > div:nth-child(2) > div:first-child > div.mt-4 {
   display: none !important;
 }
 
+/* الشريط السفلي العائم */
 .barber-floating-nav {
   position: fixed;
-  z-index: 80;
+  z-index: 100;
+
   right: 10px;
   left: 10px;
+
   bottom: calc(10px + env(safe-area-inset-bottom));
 
-  min-height: 70px;
+  min-height: 72px;
 
   display: flex;
   align-items: stretch;
+  justify-content: center;
+
   gap: 3px;
 
   padding: 7px;
@@ -72,16 +103,19 @@
 
   border-radius: 24px;
 
-  background: rgba(255, 255, 255, 0.94);
+  background: rgba(255, 255, 255, 0.95);
 
   box-shadow:
     0 18px 45px rgba(15, 23, 42, 0.16),
-    0 3px 12px rgba(15, 23, 42, 0.08);
+    0 4px 14px rgba(15, 23, 42, 0.08);
 
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
+
+  isolation: isolate;
 }
 
+/* عنصر واحد داخل الشريط */
 .barber-nav-item {
   min-width: 0;
   flex: 1 1 0;
@@ -90,12 +124,15 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
+
   gap: 4px;
 
   padding: 7px 2px;
 
   border: 0;
   border-radius: 18px;
+
+  outline: none;
 
   background: transparent;
   color: #64748b;
@@ -106,25 +143,38 @@
     flex-grow 240ms ease,
     color 200ms ease,
     background-color 200ms ease,
-    transform 200ms ease;
+    box-shadow 200ms ease,
+    transform 180ms ease;
 
   -webkit-tap-highlight-color: transparent;
+}
+
+.barber-nav-item:hover {
+  color: #334155;
+}
+
+.barber-nav-item:focus-visible {
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.22);
 }
 
 .barber-nav-item:active {
   transform: scale(0.96);
 }
 
+/* الصفحة الحالية */
 .barber-nav-item.is-active {
   flex-grow: 1.55;
 
   color: #a16207;
 
-  background: linear-gradient(135deg, #fff8dc, #fef3c7);
+  background: linear-gradient(135deg, #fff8dc 0%, #fef3c7 100%);
 
-  box-shadow: inset 0 0 0 1px rgba(217, 119, 6, 0.13);
+  box-shadow:
+    inset 0 0 0 1px rgba(217, 119, 6, 0.14),
+    0 4px 12px rgba(217, 119, 6, 0.08);
 }
 
+/* الأيقونة */
 .barber-nav-icon {
   display: grid;
   place-items: center;
@@ -132,17 +182,33 @@
   width: 24px;
   height: 24px;
 
+  flex-shrink: 0;
+
   font-size: 19px;
   line-height: 1;
+
+  transition:
+    transform 180ms ease,
+    font-size 180ms ease;
+}
+
+.barber-nav-icon svg {
+  display: block;
+  width: 1em;
+  height: 1em;
 }
 
 .barber-nav-item.is-active .barber-nav-icon {
   font-size: 20px;
+  transform: translateY(-1px);
 }
 
+/* اسم الصفحة */
 .barber-nav-label {
   display: block;
+
   width: 100%;
+  max-width: 100%;
 
   overflow: hidden;
 
@@ -151,10 +217,14 @@
   font-size: 10px;
   font-weight: 800;
   line-height: 1.15;
-  text-align: center;
 
+  text-align: center;
   text-overflow: ellipsis;
   white-space: nowrap;
+
+  transition:
+    font-size 180ms ease,
+    font-weight 180ms ease;
 }
 
 .barber-nav-item.is-active .barber-nav-label {
@@ -162,19 +232,41 @@
   font-weight: 900;
 }
 
-@media (max-width: 390px) {
+/* شاشات صغيرة */
+@media (max-width: 430px) {
   .barber-floating-nav {
-    right: 6px;
-    left: 6px;
+    right: 7px;
+    left: 7px;
 
-    gap: 1px;
+    min-height: 68px;
+
+    gap: 2px;
+
     padding: 6px 4px;
 
     border-radius: 22px;
   }
 
   .barber-nav-item {
-    padding-inline: 1px;
+    gap: 3px;
+    padding: 6px 1px;
+
+    border-radius: 16px;
+  }
+
+  .barber-nav-item.is-active {
+    flex-grow: 1.45;
+  }
+
+  .barber-nav-icon {
+    width: 22px;
+    height: 22px;
+
+    font-size: 17px;
+  }
+
+  .barber-nav-item.is-active .barber-nav-icon {
+    font-size: 18px;
   }
 
   .barber-nav-label {
@@ -184,22 +276,66 @@
   .barber-nav-item.is-active .barber-nav-label {
     font-size: 9px;
   }
+
+  .barber-page-slide {
+    padding-bottom: calc(104px + env(safe-area-inset-bottom));
+  }
 }
 
+/* شاشات صغيرة جدًا */
+@media (max-width: 360px) {
+  .barber-floating-nav {
+    right: 4px;
+    left: 4px;
+
+    gap: 1px;
+
+    padding-inline: 3px;
+  }
+
+  .barber-nav-item {
+    padding-inline: 0;
+  }
+
+  .barber-nav-label {
+    font-size: 7.5px;
+  }
+
+  .barber-nav-item.is-active .barber-nav-label {
+    font-size: 8px;
+  }
+
+  .barber-nav-icon {
+    font-size: 16px;
+  }
+
+  .barber-nav-item.is-active .barber-nav-icon {
+    font-size: 17px;
+  }
+}
+
+/* الكمبيوتر والشاشات الواسعة */
 @media (min-width: 900px) {
   .barber-floating-nav {
     right: 50%;
     left: auto;
 
-    width: min(760px, calc(100vw - 40px));
+    width: min(780px, calc(100vw - 40px));
 
     transform: translateX(50%);
   }
 }
 
+/* منع الحركات الثقيلة لمن يفعّل تقليل الحركة */
 @media (prefers-reduced-motion: reduce) {
   .barber-pages-track,
-  .barber-nav-item {
+  .barber-nav-item,
+  .barber-nav-icon,
+  .barber-nav-label {
     transition-duration: 1ms !important;
+  }
+
+  .barber-page-slide {
+    scroll-behavior: auto;
   }
 }
