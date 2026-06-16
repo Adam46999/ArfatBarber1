@@ -2,22 +2,39 @@
 
 .barber-mobile-app {
   position: relative;
+
   width: 100%;
   height: 100dvh;
+
   overflow: hidden;
+
   background: #f1f5f9;
+
+  /*
+    منع تحديد النصوص أثناء
+    السحب الأفقي بالخطأ.
+  */
+  -webkit-tap-highlight-color: transparent;
 }
 
+/* الحاوية الخارجية للصفحات */
 .barber-pages-viewport {
   position: absolute;
   inset: 0;
+
   overflow: hidden;
 
+  /*
+    نسمح بالتمرير العمودي الطبيعي،
+    لكن الحركة الأفقية يديرها
+    Framer Motion.
+  */
   touch-action: pan-y pinch-zoom;
-  overscroll-behavior-x: none;
 
-  -webkit-user-select: auto;
-  user-select: auto;
+  overscroll-behavior-x: none;
+  overscroll-behavior-y: none;
+
+  cursor: grab;
 }
 
 .barber-pages-viewport.is-dragging {
@@ -27,6 +44,7 @@
   user-select: none;
 }
 
+/* المسار الذي يحتوي جميع الصفحات */
 .barber-pages-track {
   display: flex;
   flex-direction: row;
@@ -37,17 +55,25 @@
   direction: ltr;
 
   will-change: transform;
+
+  transform: translateZ(0);
+
   backface-visibility: hidden;
-  transform-style: preserve-3d;
+  -webkit-backface-visibility: hidden;
+
+  perspective: 1000px;
 }
 
+/* كل صفحة */
 .barber-page-slide {
   position: relative;
 
   flex: 0 0 100%;
+
   width: 100%;
   min-width: 100%;
   max-width: 100%;
+
   height: 100%;
 
   overflow-x: hidden;
@@ -56,12 +82,22 @@
   direction: rtl;
 
   overscroll-behavior-y: contain;
-  scroll-behavior: smooth;
 
   padding-bottom: calc(112px + env(safe-area-inset-bottom));
 
   -webkit-overflow-scrolling: touch;
-  scrollbar-gutter: stable;
+
+  /*
+    يساعد المتصفح على عزل رسم
+    كل صفحة وتحسين السحب.
+  */
+  contain: layout paint style;
+
+  transform: translateZ(0);
+
+  backface-visibility: hidden;
+
+  -webkit-backface-visibility: hidden;
 }
 
 .barber-page-slide > * {
@@ -70,10 +106,8 @@
 }
 
 /*
-  محاولة إخفاء شريط التنقل القديم
+  إخفاء شريط التنقل القديم
   داخل صفحة إدارة الساعات فقط.
-
-  باقي الصفحة لا يتغير.
 */
 .barber-manage-slide > div > div:nth-child(2) > div:first-child > div.mt-4 {
   display: none !important;
@@ -99,7 +133,7 @@
 
   padding: 7px;
 
-  border: 1px solid rgba(203, 213, 225, 0.9);
+  border: 1px solid rgba(203, 213, 225, 0.88);
 
   border-radius: 24px;
 
@@ -110,14 +144,22 @@
     0 4px 14px rgba(15, 23, 42, 0.08);
 
   backdrop-filter: blur(18px);
+
   -webkit-backdrop-filter: blur(18px);
 
   isolation: isolate;
+
+  /*
+    يمنع الشريط من التحرك
+    مع الصفحات.
+  */
+  transform: translateZ(0);
 }
 
-/* عنصر واحد داخل الشريط */
+/* زر الصفحة */
 .barber-nav-item {
   min-width: 0;
+
   flex: 1 1 0;
 
   display: flex;
@@ -140,10 +182,10 @@
   cursor: pointer;
 
   transition:
-    flex-grow 240ms ease,
+    flex-grow 260ms cubic-bezier(0.22, 1, 0.36, 1),
     color 200ms ease,
-    background-color 200ms ease,
-    box-shadow 200ms ease,
+    background-color 220ms ease,
+    box-shadow 220ms ease,
     transform 180ms ease;
 
   -webkit-tap-highlight-color: transparent;
@@ -174,7 +216,7 @@
     0 4px 12px rgba(217, 119, 6, 0.08);
 }
 
-/* الأيقونة */
+/* أيقونة الصفحة */
 .barber-nav-icon {
   display: grid;
   place-items: center;
@@ -188,19 +230,21 @@
   line-height: 1;
 
   transition:
-    transform 180ms ease,
+    transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
     font-size 180ms ease;
 }
 
 .barber-nav-icon svg {
   display: block;
+
   width: 1em;
   height: 1em;
 }
 
 .barber-nav-item.is-active .barber-nav-icon {
   font-size: 20px;
-  transform: translateY(-1px);
+
+  transform: translateY(-1px) scale(1.04);
 }
 
 /* اسم الصفحة */
@@ -220,11 +264,13 @@
 
   text-align: center;
   text-overflow: ellipsis;
+
   white-space: nowrap;
 
   transition:
     font-size 180ms ease,
-    font-weight 180ms ease;
+    font-weight 180ms ease,
+    opacity 180ms ease;
 }
 
 .barber-nav-item.is-active .barber-nav-label {
@@ -232,7 +278,7 @@
   font-weight: 900;
 }
 
-/* شاشات صغيرة */
+/* شاشات الموبايل الصغيرة */
 @media (max-width: 430px) {
   .barber-floating-nav {
     right: 7px;
@@ -249,6 +295,7 @@
 
   .barber-nav-item {
     gap: 3px;
+
     padding: 6px 1px;
 
     border-radius: 16px;
@@ -282,7 +329,7 @@
   }
 }
 
-/* شاشات صغيرة جدًا */
+/* شاشات ضيقة جدًا */
 @media (max-width: 360px) {
   .barber-floating-nav {
     right: 4px;
@@ -314,7 +361,7 @@
   }
 }
 
-/* الكمبيوتر والشاشات الواسعة */
+/* الكمبيوتر */
 @media (min-width: 900px) {
   .barber-floating-nav {
     right: 50%;
@@ -322,20 +369,15 @@
 
     width: min(780px, calc(100vw - 40px));
 
-    transform: translateX(50%);
+    transform: translateX(50%) translateZ(0);
   }
 }
 
-/* منع الحركات الثقيلة لمن يفعّل تقليل الحركة */
+/* احترام إعداد تقليل الحركة */
 @media (prefers-reduced-motion: reduce) {
-  .barber-pages-track,
   .barber-nav-item,
   .barber-nav-icon,
   .barber-nav-label {
     transition-duration: 1ms !important;
-  }
-
-  .barber-page-slide {
-    scroll-behavior: auto;
   }
 }

@@ -1,13 +1,13 @@
 // src/pages/barberPanel/BarberMobileApp.jsx
 
+import { createElement, useCallback, useEffect, useRef, useState } from "react";
+
 import {
-  createElement,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+  animate,
+  motion,
+  useDragControls,
+  useMotionValue,
+} from "framer-motion";
 
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -28,6 +28,8 @@ import BlockedPhones from "../BlockedPhones";
 import Dashboard from "../Dashboard";
 
 import "./BarberMobileApp.css";
+
+const MotionDiv = motion.div;
 
 const TABS = [
   {
@@ -81,6 +83,8 @@ const TABS = [
   },
 ];
 
+const REVERSED_TABS = [...TABS].reverse();
+
 const BLOCK_SWIPE_SELECTOR = [
   "[data-no-page-swipe]",
   "[data-horizontal-scroll]",
@@ -89,8 +93,20 @@ const BLOCK_SWIPE_SELECTOR = [
   "textarea",
   "select",
   "option",
+  "button",
+  "a",
+  "[role='button']",
   "[contenteditable='true']",
 ].join(",");
+
+const SPRING_TRANSITION = {
+  type: "spring",
+  stiffness: 380,
+  damping: 38,
+  mass: 0.82,
+  restDelta: 0.5,
+  restSpeed: 8,
+};
 
 function getTabIndexFromPath(pathname) {
   if (pathname === "/barber" || pathname === "/barber/") {
@@ -110,6 +126,18 @@ function shouldBlockSwipe(target) {
   );
 }
 
+function clampTabIndex(index) {
+  return Math.max(0, Math.min(TABS.length - 1, index));
+}
+
+function getVisualIndex(tabIndex) {
+  return TABS.length - 1 - tabIndex;
+}
+
+function getTargetX(tabIndex, width) {
+  return -getVisualIndex(tabIndex) * width;
+}
+
 export default function BarberMobileApp() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -120,199 +148,59 @@ export default function BarberMobileApp() {
 
   const [containerWidth, setContainerWidth] = useState(() => window.innerWidth);
 
-  const [dragX, setDragX] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
-  const [isAnimating, setIsAnimating] = useState(false);
 
   const viewportRef = useRef(null);
-
   const activeIndexRef = useRef(initialIndex);
-  const dragXRef = useRef(0);
-  const gestureRef = useRef(null);
-  const mouseDraggingRef = useRef(false);
 
-  /*
-    نعكس ترتيب الصفحات داخل المسار فقط.
+  const currentAnimationRef = useRef(null);
 
-    البار يبقى بترتيبه الطبيعي:
-    إدارة ← حجوزات ← أسبوعي ← تقييمات ← محظورون ← إحصائيات
+  const dragControls = useDragControls();
 
-    لكن داخل المسار يجب أن تكون الصفحات معكوسة
-    حتى تتوافق الحركة مع اتجاه RTL.
-  */
-  const reversedTabs = useMemo(() => {
-    return [...TABS].reverse();
-  }, []);
+  const x = useMotionValue(0);
 
-  const setDrag = useCallback((value) => {
-    dragXRef.current = value;
-    setDragX(value);
-  }, []);
+  const stopCurrentAnimation = useCallback(() => {
+    if (currentAnimationRef.current) {
+      currentAnimationRef.current.stop();
+      currentAnimationRef.current = null;
+    }
+
+    x.stop();
+  }, [x]);
+
+  const animateToIndex = useCallback(
+    (tabIndex, width = containerWidth, immediate = false) => {
+      const targetX = getTargetX(tabIndex, width);
+
+      stopCurrentAnimation();
+
+      if (immediate) {
+        x.jump(targetX);
+        return;
+      }
+
+      currentAnimationRef.current = animate(x, targetX, SPRING_TRANSITION);
+    },
+    [containerWidth, stopCurrentAnimation, x],
+  );
 
   const goToTab = useCallback(
-    (nextIndex, updateUrl = true) => {
-      const safeIndex = Math.max(0, Math.min(TABS.length - 1, nextIndex));
+    (nextIndex, { updateUrl = true, immediate = false } = {}) => {
+      const safeIndex = clampTabIndex(nextIndex);
 
       activeIndexRef.current = safeIndex;
 
-      setIsDragging(false);
-      setIsAnimating(true);
       setActiveIndex(safeIndex);
-      setDrag(0);
+      setIsDragging(false);
+
+      animateToIndex(safeIndex, containerWidth, immediate);
 
       if (updateUrl && location.pathname !== TABS[safeIndex].path) {
         navigate(TABS[safeIndex].path);
       }
     },
-    [location.pathname, navigate, setDrag],
+    [animateToIndex, containerWidth, location.pathname, navigate],
   );
-
-  const beginGesture = useCallback(
-    (clientX, clientY, target) => {
-      if (isAnimating || shouldBlockSwipe(target)) {
-        gestureRef.current = null;
-        return;
-      }
-
-      const now = performance.now();
-
-      gestureRef.current = {
-        startX: clientX,
-        startY: clientY,
-        lastX: clientX,
-        lastTime: now,
-        velocityX: 0,
-        axis: null,
-      };
-    },
-    [isAnimating],
-  );
-
-  const moveGesture = useCallback(
-    (clientX, clientY) => {
-      const gesture = gestureRef.current;
-
-      if (!gesture) {
-        return false;
-      }
-
-      const deltaX = clientX - gesture.startX;
-      const deltaY = clientY - gesture.startY;
-
-      if (!gesture.axis) {
-        const absoluteX = Math.abs(deltaX);
-        const absoluteY = Math.abs(deltaY);
-
-        if (absoluteX < 8 && absoluteY < 8) {
-          return false;
-        }
-
-        if (absoluteX > absoluteY * 1.1) {
-          gesture.axis = "horizontal";
-
-          setIsAnimating(false);
-          setIsDragging(true);
-        } else {
-          gesture.axis = "vertical";
-          return false;
-        }
-      }
-
-      if (gesture.axis !== "horizontal") {
-        return false;
-      }
-
-      const now = performance.now();
-
-      const elapsed = Math.max(1, now - gesture.lastTime);
-
-      gesture.velocityX = (clientX - gesture.lastX) / elapsed;
-
-      gesture.lastX = clientX;
-      gesture.lastTime = now;
-
-      const isFirstPage = activeIndexRef.current === 0;
-
-      const isLastPage = activeIndexRef.current === TABS.length - 1;
-
-      /*
-        بما أن ترتيب الصفحات RTL:
-
-        الصفحة الأولى موجودة بأقصى اليمين.
-        الصفحة التالية موجودة على يسارها.
-
-        السحب باتجاه اليمين ينتقل للصفحة التالية
-        حسب ترتيب البار.
-      */
-      const draggingOutsideFirst = isFirstPage && deltaX < 0;
-
-      const draggingOutsideLast = isLastPage && deltaX > 0;
-
-      const nextDragX =
-        draggingOutsideFirst || draggingOutsideLast ? deltaX * 0.22 : deltaX;
-
-      setDrag(nextDragX);
-
-      return true;
-    },
-    [setDrag],
-  );
-
-  const finishGesture = useCallback(() => {
-    const gesture = gestureRef.current;
-
-    if (!gesture) {
-      return;
-    }
-
-    gestureRef.current = null;
-    mouseDraggingRef.current = false;
-
-    if (gesture.axis !== "horizontal") {
-      setIsDragging(false);
-      return;
-    }
-
-    const distance = dragXRef.current;
-    const absoluteDistance = Math.abs(distance);
-
-    const distanceThreshold = containerWidth * 0.22;
-    const velocityThreshold = 0.35;
-
-    const farEnough = absoluteDistance >= distanceThreshold;
-
-    const fastEnough = Math.abs(gesture.velocityX) >= velocityThreshold;
-
-    let nextIndex = activeIndexRef.current;
-
-    if (farEnough || fastEnough) {
-      /*
-        السحب لليمين:
-        ينتقل للعنصر التالي باتجاه يسار البار.
-
-        السحب لليسار:
-        يرجع للعنصر السابق باتجاه يمين البار.
-      */
-      if (distance > 0) {
-        nextIndex += 1;
-      } else if (distance < 0) {
-        nextIndex -= 1;
-      }
-    }
-
-    nextIndex = Math.max(0, Math.min(TABS.length - 1, nextIndex));
-
-    goToTab(nextIndex);
-  }, [containerWidth, goToTab]);
-
-  const cancelGesture = useCallback(() => {
-    gestureRef.current = null;
-    mouseDraggingRef.current = false;
-
-    setIsDragging(false);
-    setIsAnimating(true);
-    setDrag(0);
-  }, [setDrag]);
 
   useEffect(() => {
     const pathIndex = getTabIndexFromPath(location.pathname);
@@ -323,10 +211,11 @@ export default function BarberMobileApp() {
 
     activeIndexRef.current = pathIndex;
 
-    setIsAnimating(true);
     setActiveIndex(pathIndex);
-    setDrag(0);
-  }, [location.pathname, setDrag]);
+    setIsDragging(false);
+
+    animateToIndex(pathIndex);
+  }, [animateToIndex, location.pathname]);
 
   useEffect(() => {
     const viewport = viewportRef.current;
@@ -336,9 +225,13 @@ export default function BarberMobileApp() {
     }
 
     const updateWidth = () => {
-      const width = viewport.getBoundingClientRect().width;
+      const measuredWidth = viewport.getBoundingClientRect().width;
 
-      setContainerWidth(width || window.innerWidth);
+      const nextWidth = measuredWidth || window.innerWidth;
+
+      setContainerWidth(nextWidth);
+
+      x.jump(getTargetX(activeIndexRef.current, nextWidth));
     };
 
     updateWidth();
@@ -347,159 +240,102 @@ export default function BarberMobileApp() {
 
     resizeObserver.observe(viewport);
 
-    window.addEventListener("resize", updateWidth);
-
     window.addEventListener("orientationchange", updateWidth);
 
     return () => {
       resizeObserver.disconnect();
 
-      window.removeEventListener("resize", updateWidth);
-
       window.removeEventListener("orientationchange", updateWidth);
     };
-  }, []);
+  }, [x]);
 
   useEffect(() => {
-    const viewport = viewportRef.current;
-
-    if (!viewport) {
-      return undefined;
-    }
-
-    const handleTouchStart = (event) => {
-      if (event.touches.length !== 1) {
-        return;
-      }
-
-      const touch = event.touches[0];
-
-      beginGesture(touch.clientX, touch.clientY, event.target);
-    };
-
-    const handleTouchMove = (event) => {
-      if (event.touches.length !== 1 || !gestureRef.current) {
-        return;
-      }
-
-      const touch = event.touches[0];
-
-      const isHorizontal = moveGesture(touch.clientX, touch.clientY);
-
-      if (isHorizontal) {
-        event.preventDefault();
-      }
-    };
-
-    const handleTouchEnd = () => {
-      finishGesture();
-    };
-
-    const handleTouchCancel = () => {
-      cancelGesture();
-    };
-
-    viewport.addEventListener("touchstart", handleTouchStart, {
-      passive: true,
-    });
-
-    viewport.addEventListener("touchmove", handleTouchMove, { passive: false });
-
-    viewport.addEventListener("touchend", handleTouchEnd, { passive: true });
-
-    viewport.addEventListener("touchcancel", handleTouchCancel, {
-      passive: true,
-    });
-
     return () => {
-      viewport.removeEventListener("touchstart", handleTouchStart);
-
-      viewport.removeEventListener("touchmove", handleTouchMove);
-
-      viewport.removeEventListener("touchend", handleTouchEnd);
-
-      viewport.removeEventListener("touchcancel", handleTouchCancel);
+      stopCurrentAnimation();
     };
-  }, [beginGesture, moveGesture, finishGesture, cancelGesture]);
+  }, [stopCurrentAnimation]);
 
-  const handleMouseDown = (event) => {
-    if (event.button !== 0) {
+  const handlePointerDown = (event) => {
+    if (event.pointerType === "mouse" && event.button !== 0) {
       return;
     }
 
-    beginGesture(event.clientX, event.clientY, event.target);
-
-    if (gestureRef.current) {
-      mouseDraggingRef.current = true;
+    if (shouldBlockSwipe(event.target)) {
+      return;
     }
+
+    stopCurrentAnimation();
+
+    dragControls.start(event);
   };
 
-  useEffect(() => {
-    const handleMouseMove = (event) => {
-      if (!mouseDraggingRef.current) {
-        return;
-      }
+  const handleDragStart = () => {
+    stopCurrentAnimation();
+    setIsDragging(true);
+  };
 
-      const isHorizontal = moveGesture(event.clientX, event.clientY);
+  const handleDragEnd = (event, info) => {
+    event.stopPropagation();
 
-      if (isHorizontal) {
-        event.preventDefault();
-      }
-    };
+    setIsDragging(false);
 
-    const handleMouseUp = () => {
-      if (!mouseDraggingRef.current) {
-        return;
-      }
+    const offsetX = info.offset.x;
 
-      finishGesture();
-    };
+    const velocityX = info.velocity.x;
 
-    window.addEventListener("mousemove", handleMouseMove);
+    const distanceThreshold = Math.min(110, containerWidth * 0.2);
 
-    window.addEventListener("mouseup", handleMouseUp);
+    const velocityThreshold = 520;
 
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
+    const projectedOffset = offsetX + velocityX * 0.14;
 
-      window.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, [moveGesture, finishGesture]);
+    let nextIndex = activeIndexRef.current;
 
-  /*
-    بسبب عكس ترتيب الصفحات:
+    const shouldMoveRight =
+      projectedOffset > distanceThreshold || velocityX > velocityThreshold;
 
-    index 0 يصبح آخر عنصر بصري في المسار.
-    index 1 يصبح العنصر الذي قبله.
-  */
-  const visualIndex = TABS.length - 1 - activeIndex;
+    const shouldMoveLeft =
+      projectedOffset < -distanceThreshold || velocityX < -velocityThreshold;
 
-  const baseOffset = -(visualIndex * containerWidth);
+    if (shouldMoveRight) {
+      nextIndex += 1;
+    } else if (shouldMoveLeft) {
+      nextIndex -= 1;
+    }
 
-  const trackTransform = `translate3d(${baseOffset + dragX}px, 0, 0)`;
+    nextIndex = clampTabIndex(nextIndex);
+
+    goToTab(nextIndex);
+  };
+
+  const dragLeftConstraint = -(TABS.length - 1) * containerWidth;
+
+  const dragRightConstraint = 0;
 
   return (
     <div className="barber-mobile-app" dir="rtl">
       <div
         ref={viewportRef}
         className={`barber-pages-viewport ${isDragging ? "is-dragging" : ""}`}
-        onMouseDown={handleMouseDown}
+        onPointerDown={handlePointerDown}
       >
-        <div
+        <MotionDiv
           className="barber-pages-track"
-          style={{
-            transform: trackTransform,
-
-            transition:
-              isAnimating && !isDragging
-                ? "transform 320ms cubic-bezier(0.22, 0.72, 0, 1)"
-                : "none",
+          style={{ x }}
+          drag="x"
+          dragListener={false}
+          dragControls={dragControls}
+          dragConstraints={{
+            left: dragLeftConstraint,
+            right: dragRightConstraint,
           }}
-          onTransitionEnd={() => {
-            setIsAnimating(false);
-          }}
+          dragElastic={0.075}
+          dragMomentum={false}
+          dragDirectionLock
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
         >
-          {reversedTabs.map((tab) => {
+          {REVERSED_TABS.map((tab) => {
             const originalIndex = TABS.findIndex((item) => item.id === tab.id);
 
             return (
@@ -512,7 +348,7 @@ export default function BarberMobileApp() {
               </section>
             );
           })}
-        </div>
+        </MotionDiv>
       </div>
 
       <nav
@@ -522,6 +358,7 @@ export default function BarberMobileApp() {
       >
         {TABS.map((tab, index) => {
           const Icon = tab.icon;
+
           const active = activeIndex === index;
 
           return (
@@ -532,6 +369,7 @@ export default function BarberMobileApp() {
               onClick={() => goToTab(index)}
               aria-current={active ? "page" : undefined}
               aria-label={tab.fullLabel}
+              data-no-page-swipe
             >
               <span className="barber-nav-icon" aria-hidden="true">
                 <Icon />
