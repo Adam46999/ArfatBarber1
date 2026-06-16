@@ -1,0 +1,205 @@
+/* src/pages/barberPanel/BarberMobileApp.css */
+
+.barber-mobile-app {
+  position: relative;
+  width: 100%;
+  height: 100dvh;
+  overflow: hidden;
+  background: #f1f5f9;
+}
+
+.barber-pages-viewport {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  touch-action: pan-y;
+  overscroll-behavior-x: none;
+  user-select: auto;
+}
+
+.barber-pages-viewport.is-dragging {
+  cursor: grabbing;
+  user-select: none;
+}
+
+.barber-pages-track {
+  display: flex;
+  flex-direction: row;
+  height: 100%;
+  direction: ltr;
+  will-change: transform;
+}
+
+.barber-page-slide {
+  flex: 0 0 100%;
+  width: 100%;
+  height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  direction: rtl;
+  overscroll-behavior-y: contain;
+  scrollbar-gutter: stable;
+  padding-bottom: calc(108px + env(safe-area-inset-bottom));
+  -webkit-overflow-scrolling: touch;
+}
+
+/*
+  نخفي شريط التنقل القديم داخل صفحة
+  إدارة الساعات فقط.
+
+  باقي محتوى الصفحة لا يتغير.
+*/
+.barber-manage-slide > div > div:nth-child(2) > div:first-child > div.mt-4 {
+  display: none !important;
+}
+
+.barber-floating-nav {
+  position: fixed;
+  z-index: 80;
+  right: 10px;
+  left: 10px;
+  bottom: calc(10px + env(safe-area-inset-bottom));
+
+  min-height: 70px;
+
+  display: flex;
+  align-items: stretch;
+  gap: 3px;
+
+  padding: 7px;
+
+  border: 1px solid rgba(203, 213, 225, 0.9);
+
+  border-radius: 24px;
+
+  background: rgba(255, 255, 255, 0.94);
+
+  box-shadow:
+    0 18px 45px rgba(15, 23, 42, 0.16),
+    0 3px 12px rgba(15, 23, 42, 0.08);
+
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.barber-nav-item {
+  min-width: 0;
+  flex: 1 1 0;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+
+  padding: 7px 2px;
+
+  border: 0;
+  border-radius: 18px;
+
+  background: transparent;
+  color: #64748b;
+
+  cursor: pointer;
+
+  transition:
+    flex-grow 240ms ease,
+    color 200ms ease,
+    background-color 200ms ease,
+    transform 200ms ease;
+
+  -webkit-tap-highlight-color: transparent;
+}
+
+.barber-nav-item:active {
+  transform: scale(0.96);
+}
+
+.barber-nav-item.is-active {
+  flex-grow: 1.55;
+
+  color: #a16207;
+
+  background: linear-gradient(135deg, #fff8dc, #fef3c7);
+
+  box-shadow: inset 0 0 0 1px rgba(217, 119, 6, 0.13);
+}
+
+.barber-nav-icon {
+  display: grid;
+  place-items: center;
+
+  width: 24px;
+  height: 24px;
+
+  font-size: 19px;
+  line-height: 1;
+}
+
+.barber-nav-item.is-active .barber-nav-icon {
+  font-size: 20px;
+}
+
+.barber-nav-label {
+  display: block;
+  width: 100%;
+
+  overflow: hidden;
+
+  color: currentColor;
+
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.15;
+  text-align: center;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.barber-nav-item.is-active .barber-nav-label {
+  font-size: 10.5px;
+  font-weight: 900;
+}
+
+@media (max-width: 390px) {
+  .barber-floating-nav {
+    right: 6px;
+    left: 6px;
+
+    gap: 1px;
+    padding: 6px 4px;
+
+    border-radius: 22px;
+  }
+
+  .barber-nav-item {
+    padding-inline: 1px;
+  }
+
+  .barber-nav-label {
+    font-size: 8.5px;
+  }
+
+  .barber-nav-item.is-active .barber-nav-label {
+    font-size: 9px;
+  }
+}
+
+@media (min-width: 900px) {
+  .barber-floating-nav {
+    right: 50%;
+    left: auto;
+
+    width: min(760px, calc(100vw - 40px));
+
+    transform: translateX(50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .barber-pages-track,
+  .barber-nav-item {
+    transition-duration: 1ms !important;
+  }
+}

@@ -2134,236 +2134,6 @@ export default function AdminBookingsPage() {
 }
 </file>
 
-<file path="src/pages/adminBookings/BookingCard.jsx">
-// src/pages/adminBookings/BookingCard.jsx
-import { FaClock, FaPhone, FaCut, FaTimesCircle } from "react-icons/fa";
-import { e164ToLocalPretty } from "../../utils/phone";
-import { formatDateTime, serviceBadgeClasses, serviceLabel } from "./helpers";
-
-export default function BookingCard({
-  booking,
-  isNext,
-  compactMode,
-  expanded,
-  onToggleExpanded,
-  onCancel,
-}) {
-  const name = booking.fullName || "بدون اسم";
-
-  // ✅ لون الوقت (بدل الأسود)
-  const timePill = "bg-indigo-600 text-white border-indigo-600"; // مريح + واضح
-
-  // =========================
-  // ✅ COMPACT MODE
-  // =========================
-  if (compactMode) {
-    // ✅ إذا Expanded: لا نعرض السطر العلوي أبداً (حتى ما يصير دابليكيت)
-    if (expanded) {
-      return (
-        <div
-          className={`rounded-2xl bg-white border shadow-sm p-3 sm:p-4 ${
-            isNext
-              ? "border-emerald-300 ring-1 ring-emerald-100"
-              : "border-gray-200"
-          }`}
-        >
-          <div className="flex items-start justify-between gap-3">
-            <h3 className="text-lg sm:text-xl font-black text-gray-900 leading-tight break-words">
-              {name}
-            </h3>
-
-            <div className="shrink-0 flex items-center gap-2">
-              {isNext && (
-                <span className="text-[11px] font-extrabold px-3 py-1 rounded-full border bg-emerald-50 text-emerald-800 border-emerald-200">
-                  التالي
-                </span>
-              )}
-              <span
-                className={`inline-flex items-center gap-2 text-xs font-extrabold rounded-full px-3 py-1 border ${timePill}`}
-              >
-                <FaClock className="opacity-90" />
-                {booking.selectedTime}
-              </span>
-            </div>
-          </div>
-
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <a
-              href={`tel:${booking.phoneNumber}`}
-              className="inline-flex items-center gap-2 text-sm font-extrabold px-4 py-2 rounded-xl border border-blue-200 bg-blue-50 text-blue-800 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-200"
-              aria-label={`اتصال بالزبون ${name}`}
-              title="اتصال"
-            >
-              <FaPhone className="opacity-80" />
-              اتصال
-              <span className="font-semibold opacity-90">
-                {e164ToLocalPretty(booking.phoneNumber)}
-              </span>
-            </a>
-
-            {booking.selectedService && (
-              <span
-                className={`inline-flex items-center gap-2 text-xs font-bold rounded-full px-3 py-1 border ${serviceBadgeClasses(
-                  booking.selectedService
-                )}`}
-                aria-label="الخدمة"
-              >
-                <FaCut className="opacity-80" />
-                {serviceLabel(booking.selectedService)}
-              </span>
-            )}
-          </div>
-
-          <div className="mt-2 text-[11px] text-gray-500">
-            تم الحجز: {formatDateTime(booking.createdAt)}
-          </div>
-
-          <div className="mt-3 flex flex-col sm:flex-row gap-2">
-            <button
-              type="button"
-              onClick={onCancel}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 text-sm font-bold px-4 py-2 rounded-xl border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-200"
-              aria-label="إلغاء الحجز"
-            >
-              <FaTimesCircle />
-              إلغاء
-            </button>
-
-            <button
-              type="button"
-              onClick={onToggleExpanded}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 text-sm font-bold px-4 py-2 rounded-xl border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100"
-            >
-              إغلاق
-            </button>
-          </div>
-        </div>
-      );
-    }
-
-    // ✅ Compact collapsed: سطر واحد (اسم + وقت)
-    return (
-      <div
-        className={`rounded-2xl border bg-white shadow-sm ${
-          isNext
-            ? "border-emerald-300 ring-1 ring-emerald-100"
-            : "border-gray-200"
-        }`}
-      >
-        <button
-          type="button"
-          onClick={onToggleExpanded}
-          className="w-full text-right px-3 py-3 flex items-center justify-between gap-3"
-          aria-label="فتح تفاصيل الحجز"
-          title="فتح/إغلاق"
-        >
-          <div className="min-w-0 flex items-center gap-2">
-            {isNext && (
-              <span className="text-[11px] font-extrabold px-2 py-0.5 rounded-full border bg-emerald-50 text-emerald-800 border-emerald-200 shrink-0">
-                التالي
-              </span>
-            )}
-
-            <span className="text-sm sm:text-base font-black text-gray-900 truncate">
-              {name}
-            </span>
-          </div>
-
-          <div className="shrink-0 flex items-center gap-2">
-            <span
-              className={`inline-flex items-center gap-2 text-xs font-extrabold rounded-full px-3 py-1 border ${timePill}`}
-            >
-              <FaClock className="opacity-90" />
-              {booking.selectedTime}
-            </span>
-
-            <span className="text-[11px] text-gray-400">فتح</span>
-          </div>
-        </button>
-      </div>
-    );
-  }
-
-  // =========================
-  // ✅ COMFORT MODE
-  // =========================
-  return (
-    <div
-      className={`rounded-2xl bg-white border shadow-sm p-3 sm:p-4 ${
-        isNext
-          ? "border-emerald-300 ring-1 ring-emerald-100"
-          : "border-gray-200"
-      }`}
-    >
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-        <div className="space-y-2 flex-1 min-w-0">
-          {/* ✅ الاسم كامل (بدون 3 نقاط) */}
-          <div className="flex items-start justify-between gap-3">
-            <h3 className="text-lg sm:text-xl font-black text-gray-900 leading-tight break-words">
-              {name}
-            </h3>
-
-            <div className="shrink-0 flex items-center gap-2">
-              {isNext && (
-                <span className="text-[11px] font-extrabold px-3 py-1 rounded-full border bg-emerald-50 text-emerald-800 border-emerald-200">
-                  التالي
-                </span>
-              )}
-              <span
-                className={`inline-flex items-center gap-2 text-xs font-extrabold rounded-full px-3 py-1 border ${timePill}`}
-              >
-                <FaClock className="opacity-90" />
-                {booking.selectedTime}
-              </span>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <a
-              href={`tel:${booking.phoneNumber}`}
-              className="inline-flex items-center gap-2 text-sm font-extrabold px-4 py-2 rounded-xl border border-blue-200 bg-blue-50 text-blue-800 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-200"
-              aria-label={`اتصال بالزبون ${name}`}
-              title="اتصال"
-            >
-              <FaPhone className="opacity-80" />
-              اتصال
-              <span className="font-semibold opacity-90">
-                {e164ToLocalPretty(booking.phoneNumber)}
-              </span>
-            </a>
-
-            <span
-              className={`inline-flex items-center gap-2 text-xs font-bold rounded-full px-3 py-1 border ${serviceBadgeClasses(
-                booking.selectedService
-              )}`}
-              aria-label="الخدمة"
-            >
-              <FaCut className="opacity-80" />
-              {serviceLabel(booking.selectedService)}
-            </span>
-          </div>
-
-          <div className="text-[11px] text-gray-500">
-            تم الحجز: {formatDateTime(booking.createdAt)}
-          </div>
-        </div>
-
-        <div className="sm:pt-0">
-          <button
-            onClick={onCancel}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 text-sm font-bold px-4 py-2 rounded-xl border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-200"
-            aria-label="إلغاء الحجز"
-          >
-            <FaTimesCircle />
-            إلغاء
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-</file>
-
 <file path="src/pages/adminBookings/DayGroup.jsx">
 // src/pages/adminBookings/DayGroup.jsx
 import BookingCard from "./BookingCard";
@@ -4365,174 +4135,6 @@ export default function ExtraSlotsCard({
         <br />
         إذا كان هناك <b>حجز</b> على دور سيتم حذفه، النظام يمنع التقليل حتى لا
         ينكسر شيء.
-      </div>
-    </div>
-  );
-}
-</file>
-
-<file path="src/pages/barberPanel/components/HeroNoteCard.jsx">
-import { useEffect, useState } from "react";
-import { doc, onSnapshot, setDoc } from "firebase/firestore";
-import { db } from "../../../firebase";
-
-const DEFAULT_NOTE = {
-  enabled: false,
-  text: "",
-  type: "normal",
-};
-
-const TYPE_STYLES = {
-  normal: "bg-yellow-100 text-yellow-900 border-yellow-300",
-  important: "bg-rose-100 text-rose-900 border-rose-300",
-  offer: "bg-emerald-100 text-emerald-900 border-emerald-300",
-};
-
-export default function HeroNoteCard() {
-  const [note, setNote] = useState(DEFAULT_NOTE);
-  const [saving, setSaving] = useState(false);
-  const [savedMsg, setSavedMsg] = useState("");
-
-  useEffect(() => {
-    const ref = doc(db, "barberSettings", "general");
-
-    const unsub = onSnapshot(ref, (snap) => {
-      const data = snap.exists() ? snap.data() : {};
-      setNote({
-        enabled: Boolean(data.heroNote?.enabled),
-        text: data.heroNote?.text || "",
-        type: data.heroNote?.type || "normal",
-      });
-    });
-
-    return () => unsub();
-  }, []);
-
-  const saveNote = async () => {
-    setSaving(true);
-    setSavedMsg("");
-
-    await setDoc(
-      doc(db, "barberSettings", "general"),
-      {
-        heroNote: {
-          enabled: note.enabled,
-          text: note.text.trim(),
-          type: note.type,
-          updatedAt: Date.now(),
-        },
-      },
-      { merge: true },
-    );
-
-    setSaving(false);
-    setSavedMsg("تم حفظ الملاحظة بنجاح");
-    setTimeout(() => setSavedMsg(""), 2500);
-  };
-
-  const previewStyle = TYPE_STYLES[note.type] || TYPE_STYLES.normal;
-
-  return (
-    <div className="max-w-3xl mx-auto mt-6">
-      <div className="bg-white rounded-2xl shadow p-4 border border-gray-200 text-right">
-        <div className="flex items-center justify-between gap-3 mb-4">
-          <div>
-            <h2 className="text-base font-black text-gray-900">
-              ملاحظة الهيرو
-            </h2>
-            <p className="text-xs text-gray-500 mt-1">
-              تظهر للزبون في أعلى الصفحة الرئيسية.
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={() =>
-              setNote((prev) => ({ ...prev, enabled: !prev.enabled }))
-            }
-            className="shrink-0"
-          >
-            <div
-              className={`relative w-16 h-8 rounded-full transition-colors ${
-                note.enabled ? "bg-emerald-500" : "bg-gray-300"
-              }`}
-            >
-              <div
-                className={`absolute top-0.5 left-0.5 w-7 h-7 rounded-full bg-white shadow-md transition-transform ${
-                  note.enabled ? "translate-x-8" : "translate-x-0"
-                }`}
-              />
-            </div>
-          </button>
-        </div>
-
-        <label className="block text-sm font-bold text-gray-700 mb-2">
-          نوع الملاحظة
-        </label>
-
-        <select
-          value={note.type}
-          onChange={(e) =>
-            setNote((prev) => ({ ...prev, type: e.target.value }))
-          }
-          className="w-full border border-gray-300 rounded-xl p-3 mb-4 focus:ring-2 focus:ring-yellow-300 outline-none"
-        >
-          <option value="normal">عادية</option>
-          <option value="important">مهمة</option>
-          <option value="offer">عرض</option>
-        </select>
-
-        <label className="block text-sm font-bold text-gray-700 mb-2">
-          نص الملاحظة
-        </label>
-
-        <textarea
-          value={note.text}
-          maxLength={120}
-          rows={3}
-          onChange={(e) =>
-            setNote((prev) => ({ ...prev, text: e.target.value }))
-          }
-          placeholder="مثال: اليوم يوجد ضغط عالي، يرجى الحجز مسبقاً."
-          className="w-full border border-gray-300 rounded-xl p-3 resize-none focus:ring-2 focus:ring-yellow-300 outline-none"
-        />
-
-        <div className="flex items-center justify-between mt-2 text-xs text-gray-500">
-          <span>الحد المناسب: سطرين تقريباً</span>
-          <span>{note.text.length}/120</span>
-        </div>
-
-        <div className="mt-4">
-          <p className="text-xs font-bold text-gray-500 mb-2">المعاينة:</p>
-
-          {note.enabled && note.text.trim() ? (
-            <div
-              className={`border rounded-2xl px-4 py-3 text-sm font-bold animate-pulse ${previewStyle}`}
-            >
-              <span className="ml-2">📌</span>
-              {note.text}
-            </div>
-          ) : (
-            <div className="border rounded-2xl px-4 py-3 text-sm text-gray-400 bg-gray-50">
-              الملاحظة غير مفعّلة أو فارغة.
-            </div>
-          )}
-        </div>
-
-        <button
-          type="button"
-          onClick={saveNote}
-          disabled={saving}
-          className="mt-4 w-full bg-gray-900 text-white py-3 rounded-xl font-bold disabled:opacity-60"
-        >
-          {saving ? "جاري الحفظ..." : "حفظ الملاحظة"}
-        </button>
-
-        {savedMsg && (
-          <p className="text-center text-emerald-600 text-sm font-bold mt-3">
-            {savedMsg}
-          </p>
-        )}
       </div>
     </div>
   );
@@ -7485,62 +7087,6 @@ export default function ProductsPage() {
 }
 </file>
 
-<file path="src/services/barberWeeklyHours.js">
-// src/services/barberWeeklyHours.js
-import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
-import { db } from "../firebase";
-
-const DOC_PATH = ["barberSettings", "hours"];
-
-// Reads the doc { weekly, updatedAt }
-export async function getWeeklyHoursDoc() {
-  const ref = doc(db, ...DOC_PATH);
-  const snap = await getDoc(ref);
-  return snap.exists() ? snap.data() : null;
-}
-
-// Ensures default exists only if doc is missing OR weekly missing
-export async function ensureDefaultWeeklyHours(defaultWeekly) {
-  const ref = doc(db, ...DOC_PATH);
-  const snap = await getDoc(ref);
-
-  if (!snap.exists()) {
-    await setDoc(
-      ref,
-      { weekly: defaultWeekly, updatedAt: serverTimestamp() },
-      { merge: true },
-    );
-    return { weekly: defaultWeekly, ensured: true };
-  }
-
-  const data = snap.data() || {};
-  if (!data.weekly) {
-    await setDoc(
-      ref,
-      { weekly: defaultWeekly, updatedAt: serverTimestamp() },
-      { merge: true },
-    );
-    return { weekly: defaultWeekly, ensured: true };
-  }
-
-  return { weekly: data.weekly, ensured: false };
-}
-
-export async function saveWeeklyHours(weekly) {
-  const ref = doc(db, ...DOC_PATH);
-  await setDoc(ref, { weekly, updatedAt: serverTimestamp() }, { merge: true });
-}
-
-export async function resetWeeklyHoursToDefault(defaultWeekly) {
-  const ref = doc(db, ...DOC_PATH);
-  await setDoc(
-    ref,
-    { weekly: defaultWeekly, updatedAt: serverTimestamp() },
-    { merge: true },
-  );
-}
-</file>
-
 <file path="src/services/fcmTest.js">
 // src/services/fcmTest.js
 //
@@ -9392,6 +8938,794 @@ createRoot(document.getElementById("root")).render(
 );
 </file>
 
+<file path="src/pages/adminBookings/BookingCard.jsx">
+// src/pages/adminBookings/BookingCard.jsx
+import { useState } from "react";
+import {
+  FaCheck,
+  FaClock,
+  FaCopy,
+  FaCut,
+  FaPhone,
+  FaTimesCircle,
+} from "react-icons/fa";
+
+import { e164ToLocalPretty } from "../../utils/phone";
+import { formatDateTime, serviceBadgeClasses, serviceLabel } from "./helpers";
+
+function getTodayYMD() {
+  const now = new Date();
+
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function formatBookingDateForMessage(selectedDate) {
+  if (!selectedDate) {
+    return "";
+  }
+
+  if (selectedDate === getTodayYMD()) {
+    return "اليوم";
+  }
+
+  const parts = selectedDate.split("-");
+
+  if (parts.length !== 3) {
+    return selectedDate;
+  }
+
+  const [year, month, day] = parts;
+
+  return `بتاريخ ${day}/${month}/${year}`;
+}
+
+function buildReminderMessage(booking, name) {
+  const bookingDateText = formatBookingDateForMessage(booking.selectedDate);
+
+  const time = booking.selectedTime || "";
+  const service = serviceLabel(booking.selectedService);
+
+  return `مرحبًا ${name}،
+
+تذكير بموعدك ${bookingDateText} لدى Arafat Barber الساعة ${time} لخدمة ${service}.
+
+بانتظارك، ونرجو الحضور في الموعد المحدد ✂️`;
+}
+
+async function copyTextToClipboard(text) {
+  if (navigator.clipboard && window.isSecureContext) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+
+  const textArea = document.createElement("textarea");
+
+  textArea.value = text;
+  textArea.style.position = "fixed";
+  textArea.style.top = "-9999px";
+  textArea.style.left = "-9999px";
+  textArea.setAttribute("readonly", "");
+
+  document.body.appendChild(textArea);
+
+  textArea.select();
+  textArea.setSelectionRange(0, text.length);
+
+  const copied = document.execCommand("copy");
+
+  document.body.removeChild(textArea);
+
+  if (!copied) {
+    throw new Error("Copy failed");
+  }
+}
+
+export default function BookingCard({
+  booking,
+  isNext,
+  compactMode,
+  expanded,
+  onToggleExpanded,
+  onCancel,
+}) {
+  const [copied, setCopied] = useState(false);
+  const [copyError, setCopyError] = useState(false);
+
+  const name = booking.fullName || "بدون اسم";
+
+  const timePill = "bg-indigo-600 text-white border-indigo-600";
+
+  async function handleCopyReminder() {
+    const reminderMessage = buildReminderMessage(booking, name);
+
+    setCopyError(false);
+
+    try {
+      await copyTextToClipboard(reminderMessage);
+
+      setCopied(true);
+
+      window.setTimeout(() => {
+        setCopied(false);
+      }, 2500);
+    } catch (error) {
+      console.error("Failed to copy booking reminder:", error);
+
+      setCopyError(true);
+
+      window.setTimeout(() => {
+        setCopyError(false);
+      }, 3000);
+    }
+  }
+
+  function CopyReminderButton({ fullWidth = false }) {
+    return (
+      <button
+        type="button"
+        onClick={handleCopyReminder}
+        className={`inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2 text-sm font-bold transition focus:outline-none focus:ring-2 ${
+          fullWidth ? "w-full sm:w-auto" : ""
+        } ${
+          copied
+            ? "border-emerald-200 bg-emerald-50 text-emerald-700 focus:ring-emerald-200"
+            : copyError
+              ? "border-red-200 bg-red-50 text-red-700 focus:ring-red-200"
+              : "border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100 focus:ring-amber-200"
+        }`}
+        aria-label="نسخ رسالة تذكير الحجز"
+        title="نسخ رسالة التذكير"
+      >
+        {copied ? <FaCheck /> : <FaCopy />}
+
+        {copied ? "تم النسخ" : copyError ? "فشل النسخ" : "نسخ التذكير"}
+      </button>
+    );
+  }
+
+  // =========================
+  // COMPACT MODE
+  // =========================
+  if (compactMode) {
+    if (expanded) {
+      return (
+        <div
+          className={`rounded-2xl border bg-white p-3 shadow-sm sm:p-4 ${
+            isNext
+              ? "border-emerald-300 ring-1 ring-emerald-100"
+              : "border-gray-200"
+          }`}
+        >
+          <div className="flex items-start justify-between gap-3">
+            <h3 className="break-words text-lg font-black leading-tight text-gray-900 sm:text-xl">
+              {name}
+            </h3>
+
+            <div className="flex shrink-0 items-center gap-2">
+              {isNext && (
+                <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-extrabold text-emerald-800">
+                  التالي
+                </span>
+              )}
+
+              <span
+                className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-extrabold ${timePill}`}
+              >
+                <FaClock className="opacity-90" />
+                {booking.selectedTime}
+              </span>
+            </div>
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <a
+              href={`tel:${booking.phoneNumber}`}
+              className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-extrabold text-blue-800 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-200"
+              aria-label={`اتصال بالزبون ${name}`}
+              title="اتصال"
+            >
+              <FaPhone className="opacity-80" />
+              اتصال
+              <span className="font-semibold opacity-90">
+                {e164ToLocalPretty(booking.phoneNumber)}
+              </span>
+            </a>
+
+            {booking.selectedService && (
+              <span
+                className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-bold ${serviceBadgeClasses(
+                  booking.selectedService,
+                )}`}
+                aria-label="الخدمة"
+              >
+                <FaCut className="opacity-80" />
+
+                {serviceLabel(booking.selectedService)}
+              </span>
+            )}
+          </div>
+
+          <div className="mt-2 text-[11px] text-gray-500">
+            تم الحجز: {formatDateTime(booking.createdAt)}
+          </div>
+
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+            <CopyReminderButton fullWidth />
+
+            <button
+              type="button"
+              onClick={onCancel}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-bold text-red-700 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-200 sm:w-auto"
+              aria-label="إلغاء الحجز"
+            >
+              <FaTimesCircle />
+              إلغاء
+            </button>
+
+            <button
+              type="button"
+              onClick={onToggleExpanded}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100 sm:w-auto"
+            >
+              إغلاق
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div
+        className={`rounded-2xl border bg-white shadow-sm ${
+          isNext
+            ? "border-emerald-300 ring-1 ring-emerald-100"
+            : "border-gray-200"
+        }`}
+      >
+        <button
+          type="button"
+          onClick={onToggleExpanded}
+          className="flex w-full items-center justify-between gap-3 px-3 py-3 text-right"
+          aria-label="فتح تفاصيل الحجز"
+          title="فتح/إغلاق"
+        >
+          <div className="flex min-w-0 items-center gap-2">
+            {isNext && (
+              <span className="shrink-0 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-extrabold text-emerald-800">
+                التالي
+              </span>
+            )}
+
+            <span className="truncate text-sm font-black text-gray-900 sm:text-base">
+              {name}
+            </span>
+          </div>
+
+          <div className="flex shrink-0 items-center gap-2">
+            <span
+              className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-extrabold ${timePill}`}
+            >
+              <FaClock className="opacity-90" />
+              {booking.selectedTime}
+            </span>
+
+            <span className="text-[11px] text-gray-400">فتح</span>
+          </div>
+        </button>
+      </div>
+    );
+  }
+
+  // =========================
+  // COMFORT MODE
+  // =========================
+  return (
+    <div
+      className={`rounded-2xl border bg-white p-3 shadow-sm sm:p-4 ${
+        isNext
+          ? "border-emerald-300 ring-1 ring-emerald-100"
+          : "border-gray-200"
+      }`}
+    >
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0 flex-1 space-y-2">
+          <div className="flex items-start justify-between gap-3">
+            <h3 className="break-words text-lg font-black leading-tight text-gray-900 sm:text-xl">
+              {name}
+            </h3>
+
+            <div className="flex shrink-0 items-center gap-2">
+              {isNext && (
+                <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-extrabold text-emerald-800">
+                  التالي
+                </span>
+              )}
+
+              <span
+                className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-extrabold ${timePill}`}
+              >
+                <FaClock className="opacity-90" />
+                {booking.selectedTime}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <a
+              href={`tel:${booking.phoneNumber}`}
+              className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-extrabold text-blue-800 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-200"
+              aria-label={`اتصال بالزبون ${name}`}
+              title="اتصال"
+            >
+              <FaPhone className="opacity-80" />
+              اتصال
+              <span className="font-semibold opacity-90">
+                {e164ToLocalPretty(booking.phoneNumber)}
+              </span>
+            </a>
+
+            <span
+              className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-bold ${serviceBadgeClasses(
+                booking.selectedService,
+              )}`}
+              aria-label="الخدمة"
+            >
+              <FaCut className="opacity-80" />
+
+              {serviceLabel(booking.selectedService)}
+            </span>
+          </div>
+
+          <div className="text-[11px] text-gray-500">
+            تم الحجز: {formatDateTime(booking.createdAt)}
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-2 sm:flex-row sm:pt-0">
+          <CopyReminderButton fullWidth />
+
+          <button
+            type="button"
+            onClick={onCancel}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-bold text-red-700 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-200 sm:w-auto"
+            aria-label="إلغاء الحجز"
+          >
+            <FaTimesCircle />
+            إلغاء
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+</file>
+
+<file path="src/pages/barberPanel/components/HeroNoteCard.jsx">
+import { useEffect, useMemo, useState } from "react";
+import { doc, onSnapshot, serverTimestamp, setDoc } from "firebase/firestore";
+import {
+  FaBullhorn,
+  FaCheckCircle,
+  FaExclamationTriangle,
+  FaGift,
+  FaInfoCircle,
+} from "react-icons/fa";
+
+import { db } from "../../../firebase";
+
+const DEFAULT_NOTE = {
+  enabled: false,
+  text: "",
+  type: "normal",
+};
+
+const NOTE_TYPES = [
+  {
+    value: "normal",
+    label: "رسالة عادية",
+    description: "معلومة بسيطة للزبائن",
+    icon: FaInfoCircle,
+    buttonClass: "border-yellow-300 bg-yellow-50 text-yellow-900",
+    previewClass: "border-yellow-300 bg-yellow-100 text-yellow-950",
+  },
+  {
+    value: "important",
+    label: "تنبيه مهم",
+    description: "تغيير أو ضغط أو خبر مهم",
+    icon: FaExclamationTriangle,
+    buttonClass: "border-rose-300 bg-rose-50 text-rose-900",
+    previewClass: "border-rose-300 bg-rose-100 text-rose-950",
+  },
+  {
+    value: "offer",
+    label: "عرض",
+    description: "عرض أو خصم للزبائن",
+    icon: FaGift,
+    buttonClass: "border-emerald-300 bg-emerald-50 text-emerald-900",
+    previewClass: "border-emerald-300 bg-emerald-100 text-emerald-950",
+  },
+];
+
+function normalizeNote(heroNote) {
+  return {
+    enabled: Boolean(heroNote?.enabled),
+    text: String(heroNote?.text || ""),
+    type: ["normal", "important", "offer"].includes(heroNote?.type)
+      ? heroNote.type
+      : "normal",
+  };
+}
+
+function notesAreEqual(first, second) {
+  return (
+    first.enabled === second.enabled &&
+    first.text === second.text &&
+    first.type === second.type
+  );
+}
+
+export default function HeroNoteCard() {
+  const [note, setNote] = useState(DEFAULT_NOTE);
+  const [savedNote, setSavedNote] = useState(DEFAULT_NOTE);
+
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  const [message, setMessage] = useState({
+    type: "",
+    text: "",
+  });
+
+  useEffect(() => {
+    const reference = doc(db, "barberSettings", "general");
+
+    const unsubscribe = onSnapshot(
+      reference,
+      (snapshot) => {
+        const data = snapshot.exists() ? snapshot.data() : {};
+
+        const nextNote = normalizeNote(data.heroNote);
+
+        setNote(nextNote);
+        setSavedNote(nextNote);
+        setLoading(false);
+      },
+      (error) => {
+        console.error("Failed to load hero note:", error);
+
+        setLoading(false);
+
+        setMessage({
+          type: "error",
+          text: "تعذر تحميل الرسالة. تأكد من الاتصال وحاول مرة ثانية.",
+        });
+      },
+    );
+
+    return () => unsubscribe();
+  }, []);
+
+  const selectedType = useMemo(() => {
+    return NOTE_TYPES.find((item) => item.value === note.type) || NOTE_TYPES[0];
+  }, [note.type]);
+
+  const hasChanges = useMemo(() => {
+    return !notesAreEqual(note, savedNote);
+  }, [note, savedNote]);
+
+  const trimmedText = note.text.trim();
+
+  function updateNote(field, value) {
+    setNote((current) => ({
+      ...current,
+      [field]: value,
+    }));
+
+    setMessage({
+      type: "",
+      text: "",
+    });
+  }
+
+  function toggleEnabled() {
+    if (!note.enabled && !trimmedText) {
+      setMessage({
+        type: "error",
+        text: "اكتب الرسالة أولًا، وبعدها فعّل ظهورها للزبائن.",
+      });
+
+      return;
+    }
+
+    updateNote("enabled", !note.enabled);
+  }
+
+  async function saveNote() {
+    if (saving || !hasChanges) {
+      return;
+    }
+
+    if (note.enabled && !trimmedText) {
+      setMessage({
+        type: "error",
+        text: "لا يمكن إظهار رسالة فارغة للزبائن.",
+      });
+
+      return;
+    }
+
+    setSaving(true);
+
+    setMessage({
+      type: "",
+      text: "",
+    });
+
+    try {
+      const noteToSave = {
+        enabled: note.enabled && Boolean(trimmedText),
+        text: trimmedText,
+        type: note.type,
+      };
+
+      await setDoc(
+        doc(db, "barberSettings", "general"),
+        {
+          heroNote: {
+            ...noteToSave,
+            updatedAt: serverTimestamp(),
+          },
+        },
+        {
+          merge: true,
+        },
+      );
+
+      setNote(noteToSave);
+      setSavedNote(noteToSave);
+
+      setMessage({
+        type: "success",
+        text: noteToSave.enabled
+          ? "تم حفظ الرسالة، وهي ظاهرة الآن للزبائن."
+          : "تم حفظ الرسالة، وهي مخفية عن الزبائن.",
+      });
+
+      window.setTimeout(() => {
+        setMessage({
+          type: "",
+          text: "",
+        });
+      }, 3500);
+    } catch (error) {
+      console.error("Failed to save hero note:", error);
+
+      setMessage({
+        type: "error",
+        text: "تعذر حفظ الرسالة. حاول مرة ثانية.",
+      });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function cancelChanges() {
+    setNote(savedNote);
+
+    setMessage({
+      type: "",
+      text: "",
+    });
+  }
+
+  if (loading) {
+    return (
+      <div className="mx-auto mt-6 max-w-3xl">
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 text-center text-sm font-bold text-gray-500 shadow-sm">
+          جارٍ تحميل رسالة الزبائن...
+        </div>
+      </div>
+    );
+  }
+
+  const PreviewIcon = selectedType.icon;
+
+  return (
+    <div dir="rtl" className="mx-auto mt-6 max-w-3xl">
+      <div className="rounded-3xl border border-gray-200 bg-white p-4 text-right shadow-sm sm:p-6">
+        {/* العنوان والحالة */}
+
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <FaBullhorn className="text-yellow-600" />
+
+              <h2 className="text-lg font-black text-gray-900">
+                رسالة للزبائن
+              </h2>
+            </div>
+
+            <p className="mt-1 text-xs leading-6 text-gray-500 sm:text-sm">
+              رسالة قصيرة تظهر للزبائن في أعلى الصفحة الرئيسية.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={toggleEnabled}
+            className="shrink-0"
+            aria-label={note.enabled ? "إخفاء الرسالة" : "إظهار الرسالة"}
+          >
+            <div
+              className={`relative h-8 w-16 rounded-full transition-colors ${
+                note.enabled ? "bg-emerald-500" : "bg-gray-300"
+              }`}
+            >
+              <div
+                className={`absolute top-0.5 h-7 w-7 rounded-full bg-white shadow-md transition-transform ${
+                  note.enabled ? "translate-x-[-32px]" : "translate-x-[-2px]"
+                }`}
+              />
+            </div>
+          </button>
+        </div>
+
+        <div
+          className={`mt-4 rounded-xl border px-3 py-2 text-sm font-bold ${
+            note.enabled
+              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+              : "border-gray-200 bg-gray-50 text-gray-500"
+          }`}
+        >
+          {note.enabled ? "الرسالة ظاهرة للزبائن" : "الرسالة مخفية عن الزبائن"}
+        </div>
+
+        {/* نوع الرسالة */}
+
+        <div className="mt-5">
+          <label className="mb-2 block text-sm font-black text-gray-700">
+            نوع الرسالة
+          </label>
+
+          <div className="grid gap-2 sm:grid-cols-3">
+            {NOTE_TYPES.map((item) => {
+              const Icon = item.icon;
+              const selected = note.type === item.value;
+
+              return (
+                <button
+                  key={item.value}
+                  type="button"
+                  onClick={() => updateNote("type", item.value)}
+                  className={`rounded-2xl border p-3 text-right transition ${
+                    selected
+                      ? `${item.buttonClass} ring-2 ring-current/10`
+                      : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <Icon className="shrink-0" />
+
+                    <span className="text-sm font-black">{item.label}</span>
+                  </div>
+
+                  <p className="mt-1 text-xs opacity-75">{item.description}</p>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* نص الرسالة */}
+
+        <div className="mt-5">
+          <label className="mb-2 block text-sm font-black text-gray-700">
+            نص الرسالة
+          </label>
+
+          <textarea
+            value={note.text}
+            maxLength={120}
+            rows={3}
+            onChange={(event) => updateNote("text", event.target.value)}
+            placeholder="مثال: اليوم يوجد ضغط، ننصح بالحجز مسبقًا."
+            className="w-full resize-none rounded-2xl border border-gray-300 bg-gray-50 p-3 text-right leading-7 outline-none transition focus:border-yellow-400 focus:bg-white focus:ring-2 focus:ring-yellow-200"
+          />
+
+          <div className="mt-2 flex items-center justify-between text-xs text-gray-500">
+            <span>خلي الرسالة قصيرة وواضحة.</span>
+
+            <span
+              className={
+                note.text.length >= 110 ? "font-bold text-rose-600" : ""
+              }
+            >
+              {note.text.length}/120
+            </span>
+          </div>
+        </div>
+
+        {/* المعاينة */}
+
+        <div className="mt-5">
+          <p className="mb-2 text-xs font-black text-gray-500">
+            كيف ستظهر للزبائن:
+          </p>
+
+          {note.enabled && trimmedText ? (
+            <div
+              className={`flex items-start gap-3 rounded-2xl border px-4 py-3 text-sm font-bold leading-7 ${selectedType.previewClass}`}
+            >
+              <PreviewIcon className="mt-1 shrink-0" />
+
+              <span>{note.text}</span>
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-gray-300 bg-gray-50 px-4 py-3 text-sm text-gray-400">
+              {trimmedText
+                ? "فعّل الرسالة حتى تظهر للزبائن."
+                : "اكتب رسالة حتى تظهر المعاينة هنا."}
+            </div>
+          )}
+        </div>
+
+        {/* الرسائل */}
+
+        {message.text && (
+          <div
+            className={`mt-4 flex items-center gap-2 rounded-2xl border px-4 py-3 text-sm font-bold ${
+              message.type === "success"
+                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                : "border-red-200 bg-red-50 text-red-700"
+            }`}
+          >
+            {message.type === "success" ? (
+              <FaCheckCircle />
+            ) : (
+              <FaExclamationTriangle />
+            )}
+
+            {message.text}
+          </div>
+        )}
+
+        {/* الأزرار */}
+
+        <div className="mt-5 flex flex-col gap-2 sm:flex-row">
+          <button
+            type="button"
+            onClick={saveNote}
+            disabled={saving || !hasChanges}
+            className="w-full rounded-xl bg-gray-900 px-5 py-3 font-bold text-white transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+          >
+            {saving
+              ? "جارٍ الحفظ..."
+              : hasChanges
+                ? "حفظ التغييرات"
+                : "تم الحفظ"}
+          </button>
+
+          {hasChanges && (
+            <button
+              type="button"
+              onClick={cancelChanges}
+              disabled={saving}
+              className="w-full rounded-xl border border-gray-200 bg-white px-5 py-3 font-bold text-gray-600 transition hover:bg-gray-50 disabled:opacity-50 sm:w-auto"
+            >
+              إلغاء التغييرات
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+</file>
+
 <file path="src/pages/barberPanel/components/StickySaveBar.jsx">
 // src/pages/barberPanel/components/StickySaveBar.jsx
 import React from "react";
@@ -10173,791 +10507,6 @@ export default function ReviewsManagerPage() {
 }
 </file>
 
-<file path="src/pages/barberPanel/ReviewsManagerPage.jsx">
-// src/pages/barberPanel/ReviewsManagerPage.jsx
-import { useEffect, useMemo, useRef, useState } from "react";
-import { db } from "../../firebase";
-import {
-  collection,
-  deleteDoc,
-  doc,
-  getDoc,
-  getDocs,
-  limit,
-  orderBy,
-  query,
-  runTransaction,
-  serverTimestamp,
-  setDoc,
-  startAfter,
-} from "firebase/firestore";
-
-const BARBER_ID = "arfat";
-const ARCHIVE_KEEP_DAYS = 14; // ✅ مدة بقاء التقييم بعد "حذفه" (مثل الأدوار الملغاة)
-const UNDO_MS = 7000; // ✅ مدة التراجع بعد الحذف المؤقت
-
-function addDaysTimestamp(days) {
-  const d = new Date();
-  d.setDate(d.getDate() + days);
-  return d;
-}
-
-function starsLabel(n) {
-  const v = Math.max(0, Math.min(5, Number(n || 0)));
-  return "★".repeat(v) + "☆".repeat(5 - v);
-}
-
-function safeLower(v) {
-  return (v || "").toString().toLowerCase();
-}
-
-function prettyName(name) {
-  const s = String(name || "").trim();
-  if (!s) return "زبون";
-  const parts = s.split(/\s+/).filter(Boolean);
-  if (parts.length <= 1) return parts[0];
-  const first = parts[0];
-  const lastInitial = parts[parts.length - 1][0] || "";
-  return `${first} ${lastInitial}.`;
-}
-
-export default function ReviewsManagerPage() {
-  const [tab, setTab] = useState("reviews"); // reviews | blocked | archived
-
-  // Reviews (active)
-  const [reviews, setReviews] = useState([]);
-  const [loadingReviews, setLoadingReviews] = useState(false);
-  const [lastDoc, setLastDoc] = useState(null);
-  const [hasMore, setHasMore] = useState(true);
-
-  // Archived
-  const [archived, setArchived] = useState([]);
-  const [loadingArchived, setLoadingArchived] = useState(false);
-
-  // Search/filter/sort
-  const [qText, setQText] = useState("");
-  const [stars, setStars] = useState("all");
-  const [sortBy, setSortBy] = useState("newest"); // newest | highest | lowest
-
-  // Blocked
-  const [blocked, setBlocked] = useState([]);
-  const [loadingBlocked, setLoadingBlocked] = useState(false);
-
-  // Summary (stats)
-  const [summary, setSummary] = useState({
-    count: 0,
-    sum: 0,
-    byStar: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
-    tagCounts: {},
-  });
-  const [loadingSummary, setLoadingSummary] = useState(false);
-
-  // Undo toast for archive
-  const [undo, setUndo] = useState(null); // { id, name }
-  const undoTimerRef = useRef(null);
-
-  const reviewsCol = collection(db, "barbers", BARBER_ID, "reviews");
-  const summaryRef = doc(db, "barbers", BARBER_ID, "meta", "reviewsSummary");
-
-  const count = Number(summary.count || 0);
-  const avg = count > 0 ? summary.sum / count : 0;
-
-  const fetchSummary = async () => {
-    if (loadingSummary) return;
-    setLoadingSummary(true);
-    try {
-      const ss = await getDoc(summaryRef);
-      if (ss.exists()) setSummary((p) => ({ ...p, ...ss.data() }));
-    } catch (e) {
-      console.error("fetchSummary error:", e);
-    } finally {
-      setLoadingSummary(false);
-    }
-  };
-
-  // ===== Fetch ACTIVE Reviews =====
-  const fetchReviews = async ({ reset = false } = {}) => {
-    if (loadingReviews) return;
-    setLoadingReviews(true);
-
-    try {
-      let qBase = query(reviewsCol, orderBy("createdAt", "desc"), limit(50));
-
-      if (!reset && lastDoc) {
-        qBase = query(
-          reviewsCol,
-          orderBy("createdAt", "desc"),
-          startAfter(lastDoc),
-          limit(50),
-        );
-      }
-
-      const snap = await getDocs(qBase);
-      const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-
-      // ✅ فقط active
-      const onlyActive = docs.filter(
-        (r) => (r.status || "active") === "active",
-      );
-
-      if (reset) setReviews(onlyActive);
-      else setReviews((p) => [...p, ...onlyActive]);
-
-      setLastDoc(snap.docs[snap.docs.length - 1] || null);
-      setHasMore(snap.docs.length === 50);
-    } catch (e) {
-      console.error("fetchReviews error:", e);
-    } finally {
-      setLoadingReviews(false);
-    }
-  };
-
-  // ===== Fetch Blocked (barber-scoped) =====
-  const fetchBlocked = async () => {
-    if (loadingBlocked) return;
-    setLoadingBlocked(true);
-    try {
-      const ref = collection(db, "barbers", BARBER_ID, "blockedPhones");
-      const snap = await getDocs(ref);
-      setBlocked(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-    } finally {
-      setLoadingBlocked(false);
-    }
-  };
-
-  // ===== Fetch ARCHIVED Reviews (Prototype بدون Index) =====
-  const fetchArchived = async () => {
-    if (loadingArchived) return;
-    setLoadingArchived(true);
-    try {
-      const qAll = query(reviewsCol, orderBy("createdAt", "desc"), limit(200));
-      const snap = await getDocs(qAll);
-      const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-
-      const onlyArchived = docs.filter((r) => r.status === "archived");
-      setArchived(onlyArchived);
-    } catch (e) {
-      console.error("fetchArchived error:", e);
-    } finally {
-      setLoadingArchived(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchReviews({ reset: true });
-    fetchBlocked();
-    fetchArchived();
-    fetchSummary();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // ===== Block/Unblock (barber + global) =====
-  const blockPhoneEverywhere = async (phoneKey, reviewId) => {
-    if (!phoneKey) return;
-
-    await setDoc(
-      doc(db, "barbers", BARBER_ID, "blockedPhones", String(phoneKey)),
-      {
-        phoneKey: String(phoneKey),
-        from: "reviews",
-        fromBarberId: BARBER_ID,
-        reviewId: reviewId || null,
-        blockedAt: serverTimestamp(),
-      },
-    );
-
-    await setDoc(doc(db, "blockedPhones", String(phoneKey)), {
-      phoneKey: String(phoneKey),
-      from: "reviews",
-      fromBarberId: BARBER_ID,
-      reviewId: reviewId || null,
-      blockedAt: serverTimestamp(),
-    });
-
-    await fetchBlocked();
-  };
-
-  const unblockPhoneEverywhere = async (phoneKey) => {
-    if (!phoneKey) return;
-
-    await deleteDoc(
-      doc(db, "barbers", BARBER_ID, "blockedPhones", String(phoneKey)),
-    );
-    await deleteDoc(doc(db, "blockedPhones", String(phoneKey)));
-
-    await fetchBlocked();
-  };
-
-  // ===== Summary helpers =====
-  function safeSummary(data) {
-    return (
-      data || {
-        count: 0,
-        sum: 0,
-        byStar: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
-        tagCounts: {},
-      }
-    );
-  }
-
-  function decSummary(cur, rating, tags = []) {
-    const r = Number(rating || 0);
-    const next = {
-      ...cur,
-      count: Math.max(0, Number(cur.count || 0) - 1),
-      sum: Math.max(0, Number(cur.sum || 0) - r),
-      byStar: { ...(cur.byStar || { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }) },
-      tagCounts: { ...(cur.tagCounts || {}) },
-    };
-
-    if (r >= 1 && r <= 5)
-      next.byStar[r] = Math.max(0, Number(next.byStar[r] || 0) - 1);
-
-    (Array.isArray(tags) ? tags : []).forEach((k) => {
-      next.tagCounts[k] = Math.max(0, Number(next.tagCounts[k] || 0) - 1);
-      if (next.tagCounts[k] === 0) delete next.tagCounts[k];
-    });
-
-    return next;
-  }
-
-  function incSummary(cur, rating, tags = []) {
-    const r = Number(rating || 0);
-    const next = {
-      ...cur,
-      count: Number(cur.count || 0) + 1,
-      sum: Number(cur.sum || 0) + r,
-      byStar: { ...(cur.byStar || { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }) },
-      tagCounts: { ...(cur.tagCounts || {}) },
-    };
-
-    if (r >= 1 && r <= 5) next.byStar[r] = Number(next.byStar[r] || 0) + 1;
-
-    (Array.isArray(tags) ? tags : []).forEach((k) => {
-      next.tagCounts[k] = Number(next.tagCounts[k] || 0) + 1;
-    });
-
-    return next;
-  }
-
-  // ===== Archive Review (instead of delete) + UNDO =====
-  const archiveReview = async (reviewId) => {
-    if (!reviewId) return;
-
-    // اسم للـUndo (لو موجود)
-    const rLocal = reviews.find((x) => x.id === reviewId);
-    const nameForUndo = prettyName(
-      rLocal?.customerName || rLocal?.userName || rLocal?.displayName,
-    );
-
-    await runTransaction(db, async (tx) => {
-      const reviewRef = doc(db, "barbers", BARBER_ID, "reviews", reviewId);
-
-      const [rSnap, sSnap] = await Promise.all([
-        tx.get(reviewRef),
-        tx.get(summaryRef),
-      ]);
-      if (!rSnap.exists()) return;
-
-      const r = rSnap.data();
-      if (r.status === "archived") return;
-
-      const cur = safeSummary(sSnap.exists() ? sSnap.data() : null);
-      const rating = r.rating ?? r.stars ?? 0;
-      const tags = r.tags || [];
-
-      const next = decSummary(cur, rating, tags);
-
-      tx.set(
-        reviewRef,
-        {
-          status: "archived",
-          archivedAt: serverTimestamp(),
-          purgeAt: addDaysTimestamp(ARCHIVE_KEEP_DAYS),
-        },
-        { merge: true },
-      );
-
-      tx.set(
-        summaryRef,
-        {
-          ...next,
-          updatedAt: serverTimestamp(),
-        },
-        { merge: true },
-      );
-    });
-
-    // UI update
-    setReviews((p) => p.filter((x) => x.id !== reviewId));
-    await fetchArchived();
-    await fetchSummary();
-
-    // UNDO toast
-    setUndo({ id: reviewId, name: nameForUndo });
-    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
-    undoTimerRef.current = setTimeout(() => {
-      setUndo(null);
-      undoTimerRef.current = null;
-    }, UNDO_MS);
-  };
-
-  // ===== Restore Review =====
-  const restoreReview = async (reviewId) => {
-    if (!reviewId) return;
-
-    await runTransaction(db, async (tx) => {
-      const reviewRef = doc(db, "barbers", BARBER_ID, "reviews", reviewId);
-
-      const [rSnap, sSnap] = await Promise.all([
-        tx.get(reviewRef),
-        tx.get(summaryRef),
-      ]);
-      if (!rSnap.exists()) return;
-
-      const r = rSnap.data();
-      if (r.status !== "archived") return;
-
-      const cur = safeSummary(sSnap.exists() ? sSnap.data() : null);
-      const rating = r.rating ?? r.stars ?? 0;
-      const tags = r.tags || [];
-
-      const next = incSummary(cur, rating, tags);
-
-      tx.set(
-        reviewRef,
-        {
-          status: "active",
-          restoredAt: serverTimestamp(),
-          purgeAt: null,
-        },
-        { merge: true },
-      );
-
-      tx.set(
-        summaryRef,
-        {
-          ...next,
-          updatedAt: serverTimestamp(),
-        },
-        { merge: true },
-      );
-    });
-
-    await fetchReviews({ reset: true });
-    await fetchArchived();
-    await fetchSummary();
-  };
-
-  const undoArchive = async () => {
-    if (!undo?.id) return;
-    const id = undo.id;
-    setUndo(null);
-    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
-    undoTimerRef.current = null;
-    await restoreReview(id);
-  };
-
-  // ===== Hard delete archived (manual) =====
-  const deleteArchivedPermanently = async (reviewId) => {
-    if (!reviewId) return;
-    await deleteDoc(doc(db, "barbers", BARBER_ID, "reviews", reviewId));
-    setArchived((p) => p.filter((x) => x.id !== reviewId));
-  };
-
-  // ===== Filtered ACTIVE Reviews (client-side) =====
-  const filteredReviews = useMemo(() => {
-    const t = safeLower(qText).trim();
-
-    let rows = reviews.filter((r) => {
-      const rStars = Number(r.rating || r.stars || 0);
-
-      const phone = r.phoneKey || r.phoneE164 || r.phone || "";
-      const msg = r.comment || r.message || r.text || "";
-      const name = r.customerName || r.userName || r.displayName || "";
-
-      const matchStars = stars === "all" ? true : rStars === Number(stars);
-      const matchText =
-        !t ||
-        safeLower(phone).includes(t) ||
-        safeLower(msg).includes(t) ||
-        safeLower(name).includes(t);
-
-      return matchStars && matchText;
-    });
-
-    // ✅ sort
-    if (sortBy === "highest") {
-      rows = [...rows].sort(
-        (a, b) =>
-          Number(b.rating || b.stars || 0) - Number(a.rating || a.stars || 0),
-      );
-    } else if (sortBy === "lowest") {
-      rows = [...rows].sort(
-        (a, b) =>
-          Number(a.rating || a.stars || 0) - Number(b.rating || b.stars || 0),
-      );
-    } else {
-      // newest: خليه زي ما هو (createdAt desc أصلاً)
-    }
-
-    return rows;
-  }, [reviews, qText, stars, sortBy]);
-
-  return (
-    <div className="w-full max-w-4xl mx-auto p-4">
-      <div className="flex items-center justify-between gap-3 mb-4">
-        <h1 className="text-xl font-black">إدارة التقييمات</h1>
-
-        <div className="flex gap-2 flex-wrap">
-          <button
-            className={`px-3 py-2 rounded-lg text-sm font-black border ${
-              tab === "reviews" ? "bg-black text-white" : "bg-white"
-            }`}
-            onClick={() => setTab("reviews")}
-          >
-            التقييمات
-          </button>
-          <button
-            className={`px-3 py-2 rounded-lg text-sm font-black border ${
-              tab === "blocked" ? "bg-black text-white" : "bg-white"
-            }`}
-            onClick={() => setTab("blocked")}
-          >
-            الأرقام المحظورة
-          </button>
-          <button
-            className={`px-3 py-2 rounded-lg text-sm font-black border ${
-              tab === "archived" ? "bg-black text-white" : "bg-white"
-            }`}
-            onClick={() => setTab("archived")}
-          >
-            محذوفة مؤقتًا
-          </button>
-        </div>
-      </div>
-
-      {/* ✅ Stats (تبويب reviews فقط) */}
-      {tab === "reviews" && (
-        <div className="bg-white border rounded-xl p-4 mb-4">
-          <div className="flex flex-col md:flex-row gap-4 md:items-center md:justify-between">
-            <div className="text-right">
-              <div className="text-3xl font-black">
-                {count ? avg.toFixed(1) : "—"}
-              </div>
-              <div className="text-sm opacity-80">{count} تقييم</div>
-            </div>
-
-            <div className="flex-1">
-              <div className="text-sm font-black mb-2">توزيع النجوم</div>
-              <div className="space-y-1">
-                {[5, 4, 3, 2, 1].map((s) => {
-                  const n = Number(summary.byStar?.[s] || 0);
-                  const pct = count ? Math.round((n / count) * 100) : 0;
-                  return (
-                    <div key={s} className="flex items-center gap-2">
-                      <div className="w-10 text-sm font-black">{s}★</div>
-                      <div className="flex-1 h-2 rounded-full bg-gray-100 overflow-hidden">
-                        <div
-                          className="h-2 bg-black"
-                          style={{ width: `${pct}%` }}
-                        />
-                      </div>
-                      <div className="w-16 text-xs opacity-80 text-left">
-                        {n} ({pct}%)
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            <button
-              className="px-3 py-2 rounded-lg border text-sm font-black"
-              onClick={fetchSummary}
-              disabled={loadingSummary}
-              title="تحديث الإحصائيات"
-            >
-              {loadingSummary ? "..." : "تحديث"}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {tab === "reviews" && (
-        <>
-          <div className="bg-white border rounded-xl p-3 mb-4">
-            <div className="flex flex-col md:flex-row gap-2 md:items-center md:justify-between">
-              <input
-                className="border rounded-lg px-3 py-2 w-full md:w-1/2"
-                placeholder="بحث (اسم / رقم / نص التقييم)"
-                value={qText}
-                onChange={(e) => setQText(e.target.value)}
-              />
-
-              <div className="flex gap-2 w-full md:w-auto">
-                <select
-                  className="border rounded-lg px-3 py-2 w-full md:w-48"
-                  value={stars}
-                  onChange={(e) => setStars(e.target.value)}
-                >
-                  <option value="all">كل النجوم</option>
-                  <option value="5">5 نجوم</option>
-                  <option value="4">4 نجوم</option>
-                  <option value="3">3 نجوم</option>
-                  <option value="2">2 نجوم</option>
-                  <option value="1">1 نجمة</option>
-                </select>
-
-                <select
-                  className="border rounded-lg px-3 py-2 w-full md:w-48"
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  title="ترتيب"
-                >
-                  <option value="newest">الأحدث</option>
-                  <option value="highest">الأعلى تقييمًا</option>
-                  <option value="lowest">الأقل تقييمًا</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            {filteredReviews.map((r) => {
-              const phoneKey = r.phoneKey || r.phoneE164 || r.phone || null;
-              const rStars = Number(r.rating || r.stars || 0);
-              const msg = r.comment || r.message || r.text || "";
-
-              // ✅ الاسم من البيانات
-              const displayName = prettyName(
-                r.customerName || r.userName || r.displayName,
-              );
-
-              const isBlocked = !!blocked.find(
-                (b) => b.id === String(phoneKey),
-              );
-
-              return (
-                <div key={r.id} className="bg-white border rounded-xl p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      {/* ✅ بدل "زبون" */}
-                      <div className="font-black truncate">{displayName}</div>
-
-                      <div className="text-sm opacity-80">
-                        {starsLabel(rStars)}
-                      </div>
-
-                      {phoneKey ? (
-                        <div className="text-xs opacity-70 mt-1">
-                          {String(phoneKey)}
-                        </div>
-                      ) : (
-                        <div className="text-xs text-rose-600 mt-1 font-bold">
-                          لا يوجد رقم داخل بيانات التقييم (لن يمكن الحظر)
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex flex-wrap gap-2 justify-end">
-                      <button
-                        className="px-3 py-2 rounded-lg border text-sm font-black"
-                        onClick={() => archiveReview(r.id)}
-                      >
-                        حذف (مؤقت)
-                      </button>
-
-                      {!isBlocked ? (
-                        <button
-                          className="px-3 py-2 rounded-lg border text-sm font-black"
-                          disabled={!phoneKey}
-                          onClick={() =>
-                            blockPhoneEverywhere(String(phoneKey), r.id)
-                          }
-                        >
-                          حظر الرقم
-                        </button>
-                      ) : (
-                        <button
-                          className="px-3 py-2 rounded-lg border text-sm font-black"
-                          onClick={() =>
-                            unblockPhoneEverywhere(String(phoneKey))
-                          }
-                        >
-                          فك الحظر
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  {msg ? (
-                    <p className="mt-3 text-sm leading-relaxed">{msg}</p>
-                  ) : null}
-                </div>
-              );
-            })}
-
-            {filteredReviews.length === 0 && (
-              <div className="bg-white border rounded-xl p-6 text-center opacity-80">
-                لا يوجد تقييمات.
-              </div>
-            )}
-          </div>
-
-          <div className="mt-4 flex justify-center">
-            {hasMore ? (
-              <button
-                className="px-4 py-2 rounded-lg border font-black"
-                onClick={() => fetchReviews({ reset: false })}
-                disabled={loadingReviews}
-              >
-                {loadingReviews ? "جاري التحميل..." : "تحميل المزيد"}
-              </button>
-            ) : (
-              <div className="text-sm opacity-70">لا يوجد المزيد.</div>
-            )}
-          </div>
-        </>
-      )}
-
-      {tab === "blocked" && (
-        <div className="bg-white border rounded-xl p-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="font-black">الأرقام المحظورة</div>
-            <button
-              className="px-3 py-2 rounded-lg border text-sm font-black"
-              onClick={fetchBlocked}
-            >
-              تحديث
-            </button>
-          </div>
-
-          {loadingBlocked ? (
-            <div className="opacity-70">جاري التحميل...</div>
-          ) : blocked.length === 0 ? (
-            <div className="opacity-80">لا يوجد أرقام محظورة.</div>
-          ) : (
-            <div className="space-y-2">
-              {blocked.map((b) => (
-                <div
-                  key={b.id}
-                  className="flex items-center justify-between border rounded-lg p-3"
-                >
-                  <div className="font-mono text-sm">{b.id}</div>
-                  <button
-                    className="px-3 py-2 rounded-lg border text-sm font-black"
-                    onClick={() => unblockPhoneEverywhere(b.id)}
-                  >
-                    فك الحظر
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {tab === "archived" && (
-        <div className="bg-white border rounded-xl p-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="font-black">
-              محذوفة مؤقتًا (تبقى {ARCHIVE_KEEP_DAYS} يوم)
-            </div>
-            <button
-              className="px-3 py-2 rounded-lg border text-sm font-black"
-              onClick={fetchArchived}
-            >
-              تحديث
-            </button>
-          </div>
-
-          {loadingArchived ? (
-            <div className="opacity-70">جاري التحميل...</div>
-          ) : archived.length === 0 ? (
-            <div className="opacity-80">لا يوجد تقييمات مؤرشفة.</div>
-          ) : (
-            <div className="space-y-3">
-              {archived.map((r) => {
-                const phoneKey = r.phoneKey || r.phoneE164 || r.phone || "";
-                const rStars = Number(r.rating || r.stars || 0);
-                const msg = r.comment || r.message || r.text || "";
-                const displayName = prettyName(
-                  r.customerName || r.userName || r.displayName,
-                );
-
-                return (
-                  <div key={r.id} className="border rounded-xl p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        {/* ✅ بدل "زبون" */}
-                        <div className="font-black">{displayName}</div>
-
-                        <div className="text-sm opacity-80">
-                          {starsLabel(rStars)}
-                        </div>
-                        <div className="text-xs opacity-70 mt-1">
-                          {String(phoneKey)}
-                        </div>
-                      </div>
-
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          className="px-3 py-2 rounded-lg border text-sm font-black"
-                          onClick={() => restoreReview(r.id)}
-                        >
-                          استرجاع
-                        </button>
-                        <button
-                          className="px-3 py-2 rounded-lg border text-sm font-black"
-                          onClick={() => deleteArchivedPermanently(r.id)}
-                        >
-                          حذف نهائي
-                        </button>
-                      </div>
-                    </div>
-
-                    {msg ? (
-                      <p className="mt-3 text-sm leading-relaxed">{msg}</p>
-                    ) : null}
-
-                    {r.purgeAt ? (
-                      <div className="mt-2 text-xs opacity-70">
-                        حذف تلقائي بعد:{" "}
-                        {typeof r.purgeAt?.toDate === "function"
-                          ? r.purgeAt.toDate().toLocaleString()
-                          : new Date(r.purgeAt).toLocaleString()}
-                      </div>
-                    ) : null}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ✅ Undo Toast */}
-      {undo?.id && (
-        <div className="fixed bottom-4 left-4 right-4 max-w-4xl mx-auto">
-          <div className="bg-black text-white rounded-xl p-4 flex items-center justify-between gap-3">
-            <div className="text-sm font-bold">
-              تم حذف تقييم ({undo.name}) مؤقتًا. تراجع؟
-            </div>
-            <button
-              className="px-3 py-2 rounded-lg border border-white text-sm font-black"
-              onClick={undoArchive}
-            >
-              تراجع
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-</file>
-
 <file path="src/pages/barberPanel/WeeklyHoursPage.jsx">
 // src/pages/barberPanel/WeeklyHoursPage.jsx
 import { useEffect, useMemo, useState, useCallback } from "react";
@@ -11263,6 +10812,104 @@ function NotFound() {
 }
 
 export default NotFound;
+</file>
+
+<file path="src/services/barberWeeklyHours.js">
+// src/services/barberWeeklyHours.js
+import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
+
+import { db } from "../firebase";
+
+const DOC_PATH = ["barberSettings", "hours"];
+
+function getHoursRef() {
+  return doc(db, ...DOC_PATH);
+}
+
+// قراءة ساعات العمل
+export async function getWeeklyHoursDoc() {
+  const ref = getHoursRef();
+  const snap = await getDoc(ref);
+
+  return snap.exists() ? snap.data() : null;
+}
+
+// إنشاء الساعات الافتراضية فقط إذا لم تكن موجودة
+export async function ensureDefaultWeeklyHours(defaultWeekly) {
+  const ref = getHoursRef();
+  const snap = await getDoc(ref);
+
+  if (!snap.exists()) {
+    await setDoc(
+      ref,
+      {
+        weekly: defaultWeekly,
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true },
+    );
+
+    return {
+      weekly: defaultWeekly,
+      ensured: true,
+    };
+  }
+
+  const data = snap.data() || {};
+
+  if (!data.weekly) {
+    await setDoc(
+      ref,
+      {
+        weekly: defaultWeekly,
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true },
+    );
+
+    return {
+      weekly: defaultWeekly,
+      ensured: true,
+    };
+  }
+
+  return {
+    weekly: data.weekly,
+    ensured: false,
+  };
+}
+
+// حفظ ساعات العمل
+export async function saveWeeklyHours(weekly) {
+  const ref = getHoursRef();
+
+  await setDoc(
+    ref,
+    {
+      weekly,
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true },
+  );
+
+  return true;
+}
+
+// إرجاع الساعات الافتراضية
+export async function resetWeeklyHoursToDefault(defaultWeekly) {
+  const ref = getHoursRef();
+
+  await setDoc(
+    ref,
+    {
+      weekly: defaultWeekly,
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true },
+  );
+
+  return true;
+}
 </file>
 
 <file path="src/utils/dateTime.js">
@@ -12028,6 +11675,425 @@ i18n.on('languageChanged', (lng) => {
 export default i18n;
 </file>
 
+<file path="src/pages/barberPanel/ReviewsManagerPage.jsx">
+// src/pages/barberPanel/reviews/ReviewsManagerPage.jsx
+import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+
+import TabsBar from "./TabsBar";
+import SummaryCards from "./SummaryCards";
+import FiltersBar from "./FiltersBar";
+import ReviewsList from "./ReviewsList";
+import BlockedPhonesPanel from "./BlockedPhonesPanel";
+import ArchivedPanel from "./ArchivedPanel";
+import UndoToast from "./UndoToast";
+
+import { useReviewsManager } from "./useReviewsManager";
+
+export default function ReviewsManagerPage() {
+  const navigate = useNavigate();
+
+  const [refreshing, setRefreshing] = useState(false);
+  const [message, setMessage] = useState("");
+
+  const {
+    tab,
+    setTab,
+
+    // البيانات
+    filteredReviews,
+    archived,
+    blocked,
+    summary,
+    count,
+    avg,
+
+    // التحميل
+    loadingReviews,
+    loadingArchived,
+    loadingBlocked,
+    loadingSummary,
+
+    // تحميل المزيد
+    hasMore,
+
+    // الفلاتر
+    qText,
+    setQText,
+    stars,
+    setStars,
+    sortBy,
+    setSortBy,
+
+    // العمليات
+    fetchReviews,
+    fetchArchived,
+    fetchBlocked,
+    fetchSummary,
+    archiveReview,
+    restoreReview,
+    deleteArchivedPermanently,
+    blockPhoneEverywhere,
+    unblockPhoneEverywhere,
+
+    // التراجع
+    undo,
+    setUndo,
+    undoArchive,
+  } = useReviewsManager();
+
+  const counts = useMemo(
+    () => ({
+      reviews: filteredReviews?.length || 0,
+      blocked: blocked?.length || 0,
+      archived: archived?.length || 0,
+    }),
+    [filteredReviews, blocked, archived],
+  );
+
+  const blockedSet = useMemo(() => {
+    const result = new Set();
+
+    (blocked || []).forEach((item) => {
+      const phoneKey = String(item.phoneKey || item.id || "").trim();
+
+      if (phoneKey) {
+        result.add(phoneKey);
+      }
+    });
+
+    return result;
+  }, [blocked]);
+
+  const newReviewsCount = useMemo(() => {
+    return (filteredReviews || []).filter((review) => review.isNew === true)
+      .length;
+  }, [filteredReviews]);
+
+  const lowRatingsCount = useMemo(() => {
+    return (filteredReviews || []).filter((review) => {
+      const rating = Number(review.rating ?? review.stars ?? 0);
+
+      return rating > 0 && rating <= 2;
+    }).length;
+  }, [filteredReviews]);
+
+  const anyLoading =
+    loadingReviews ||
+    loadingBlocked ||
+    loadingArchived ||
+    loadingSummary ||
+    refreshing;
+
+  async function onRefresh() {
+    if (refreshing) {
+      return;
+    }
+
+    setRefreshing(true);
+    setMessage("");
+
+    try {
+      await Promise.all([
+        fetchReviews({ reset: true }),
+        fetchBlocked(),
+        fetchArchived(),
+        fetchSummary(),
+      ]);
+
+      setMessage("تم تحديث البيانات بنجاح.");
+
+      window.setTimeout(() => {
+        setMessage("");
+      }, 3000);
+    } catch (error) {
+      console.error("Failed to refresh reviews manager:", error);
+
+      setMessage("تعذر تحديث البيانات. حاول مرة ثانية.");
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
+  async function handleArchive(reviewId) {
+    try {
+      await archiveReview(reviewId);
+    } catch (error) {
+      console.error("Failed to archive review:", error);
+
+      setMessage("تعذر أرشفة التقييم. حاول مرة ثانية.");
+    }
+  }
+
+  async function handleRestore(reviewId) {
+    try {
+      await restoreReview(reviewId);
+
+      setMessage("تم استرجاع التقييم.");
+
+      window.setTimeout(() => {
+        setMessage("");
+      }, 3000);
+    } catch (error) {
+      console.error("Failed to restore review:", error);
+
+      setMessage("تعذر استرجاع التقييم. حاول مرة ثانية.");
+    }
+  }
+
+  async function handleDeleteForever(reviewId) {
+    const confirmed = window.confirm(
+      "هل أنت متأكد من حذف هذا التقييم نهائيًا؟ لا يمكن التراجع بعد الحذف.",
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await deleteArchivedPermanently(reviewId);
+
+      setMessage("تم حذف التقييم نهائيًا.");
+
+      window.setTimeout(() => {
+        setMessage("");
+      }, 3000);
+    } catch (error) {
+      console.error("Failed to delete archived review:", error);
+
+      setMessage("تعذر حذف التقييم. حاول مرة ثانية.");
+    }
+  }
+
+  async function handleBlock(phoneKey, reviewId) {
+    const confirmed = window.confirm(
+      "هل تريد حظر هذا الرقم؟ لن يتمكن صاحبه من إرسال تقييمات أو حجوزات جديدة.",
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await blockPhoneEverywhere(phoneKey, reviewId);
+
+      setMessage("تم حظر الرقم بنجاح.");
+
+      window.setTimeout(() => {
+        setMessage("");
+      }, 3000);
+    } catch (error) {
+      console.error("Failed to block phone:", error);
+
+      setMessage("تعذر حظر الرقم. حاول مرة ثانية.");
+    }
+  }
+
+  async function handleUnblock(phoneKey) {
+    const confirmed = window.confirm("هل تريد إلغاء حظر هذا الرقم؟");
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await unblockPhoneEverywhere(phoneKey);
+
+      setMessage("تم إلغاء حظر الرقم.");
+
+      window.setTimeout(() => {
+        setMessage("");
+      }, 3000);
+    } catch (error) {
+      console.error("Failed to unblock phone:", error);
+
+      setMessage("تعذر إلغاء الحظر. حاول مرة ثانية.");
+    }
+  }
+
+  return (
+    <div
+      dir="rtl"
+      className="min-h-screen bg-gray-100 px-3 sm:px-4"
+      style={{
+        paddingTop: "calc(var(--header-h, 96px) + 16px)",
+        paddingBottom: "32px",
+      }}
+    >
+      <div className="mx-auto w-full max-w-5xl">
+        <div className="overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-xl">
+          {/* أعلى الصفحة */}
+          <div className="border-b border-gray-100 bg-gradient-to-l from-white to-amber-50/60 p-5 md:p-7">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="text-right">
+                <h1 className="text-2xl font-black text-gray-900 md:text-3xl">
+                  إدارة التقييمات
+                </h1>
+
+                <p className="mt-1 max-w-2xl text-sm leading-6 text-gray-500">
+                  راقب آراء الزبائن، أخفِ التقييمات غير المناسبة وأدر الأرقام
+                  المحظورة بسهولة.
+                </p>
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={onRefresh}
+                  disabled={anyLoading}
+                  className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-black text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {refreshing ? "جارٍ التحديث..." : "تحديث"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => navigate(-1)}
+                  className="rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-black text-white transition hover:bg-gray-800"
+                >
+                  رجوع
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-4 md:p-7">
+            {message && (
+              <div
+                className={`mb-5 rounded-2xl border px-4 py-3 text-sm font-bold ${
+                  message.includes("تعذر")
+                    ? "border-red-200 bg-red-50 text-red-700"
+                    : "border-emerald-200 bg-emerald-50 text-emerald-700"
+                }`}
+              >
+                {message}
+              </div>
+            )}
+
+            {/* إحصائيات سريعة */}
+            <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-4">
+              <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                <div className="text-xs font-bold text-gray-500">
+                  كل التقييمات
+                </div>
+
+                <div className="mt-1 text-2xl font-black text-gray-900">
+                  {count || 0}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                <div className="text-xs font-bold text-amber-700">
+                  المعدل العام
+                </div>
+
+                <div className="mt-1 text-2xl font-black text-amber-800">
+                  {count ? Number(avg || 0).toFixed(1) : "—"}
+                  <span className="mr-1 text-base">★</span>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
+                <div className="text-xs font-bold text-blue-700">
+                  تقييمات جديدة
+                </div>
+
+                <div className="mt-1 text-2xl font-black text-blue-800">
+                  {newReviewsCount}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-red-200 bg-red-50 p-4">
+                <div className="text-xs font-bold text-red-700">
+                  تقييمات منخفضة
+                </div>
+
+                <div className="mt-1 text-2xl font-black text-red-800">
+                  {lowRatingsCount}
+                </div>
+              </div>
+            </div>
+
+            {/* التبويبات */}
+            <div className="mb-5">
+              <TabsBar tab={tab} setTab={setTab} counts={counts} />
+            </div>
+
+            {/* التقييمات */}
+            {tab === "reviews" && (
+              <>
+                <div className="mb-4">
+                  <SummaryCards
+                    count={count}
+                    avg={avg}
+                    byStar={summary?.byStar}
+                  />
+                </div>
+
+                <div className="mb-4">
+                  <FiltersBar
+                    qText={qText}
+                    setQText={setQText}
+                    stars={stars}
+                    setStars={setStars}
+                    sortBy={sortBy}
+                    setSortBy={setSortBy}
+                    onRefresh={onRefresh}
+                    loading={anyLoading}
+                  />
+                </div>
+
+                {newReviewsCount > 0 && (
+                  <div className="mb-4 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-bold text-blue-800">
+                    يوجد {newReviewsCount} تقييم جديد يحتاج مراجعة.
+                  </div>
+                )}
+
+                <ReviewsList
+                  items={filteredReviews}
+                  loading={loadingReviews}
+                  hasMore={hasMore}
+                  onLoadMore={() => fetchReviews({ reset: false })}
+                  blockedSet={blockedSet}
+                  onArchive={handleArchive}
+                  onBlock={handleBlock}
+                  onUnblock={handleUnblock}
+                />
+              </>
+            )}
+
+            {/* الأرقام المحظورة */}
+            {tab === "blocked" && (
+              <BlockedPhonesPanel
+                blocked={blocked}
+                loading={loadingBlocked}
+                onUnblock={handleUnblock}
+              />
+            )}
+
+            {/* الأرشيف */}
+            {tab === "archived" && (
+              <ArchivedPanel
+                items={archived}
+                loading={loadingArchived}
+                onRestore={handleRestore}
+                onDeleteForever={handleDeleteForever}
+              />
+            )}
+          </div>
+        </div>
+      </div>
+
+      <UndoToast
+        undo={undo}
+        onUndo={undoArchive}
+        onClose={() => setUndo(null)}
+      />
+    </div>
+  );
+}
+</file>
+
 <file path="src/pages/barberPanel/utils/weeklyHoursUX.js">
 // src/pages/barberPanel/utils/weeklyHoursUX.js
 
@@ -12684,668 +12750,6 @@ function Footer() {
 }
 
 export default Footer;
-</file>
-
-<file path="src/components/reviews/BarberRatingSection.jsx">
-/* eslint-disable no-empty */
-import { useEffect, useMemo, useRef, useState } from "react";
-import SectionTitle from "../common/SectionTitle";
-import { db } from "../../firebase";
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  limit,
-  orderBy,
-  query,
-  runTransaction,
-  serverTimestamp,
-  startAfter,
-} from "firebase/firestore";
-import { MessageSquare } from "lucide-react";
-import {
-  toILPhoneE164,
-  isILPhoneE164,
-  normalizeDigits,
-} from "../../utils/phone";
-
-/* ================== CONFIG ================== */
-const BARBER_ID = "arfat";
-const INITIAL_LIMIT = 3;
-const PAGE_LIMIT = 6;
-
-/* ================== HELPERS ================== */
-function clamp(n, a, b) {
-  return Math.max(a, Math.min(b, n));
-}
-
-function isActiveReview(r) {
-  const s = String(r?.status || "active").toLowerCase();
-  return !["archived", "deleted", "removed", "hidden"].includes(s);
-}
-
-function toDateSafe(v) {
-  if (!v) return null;
-  if (typeof v?.toDate === "function") {
-    const d = v.toDate();
-    return d instanceof Date && !Number.isNaN(d.getTime()) ? d : null;
-  }
-  if (typeof v?.seconds === "number") {
-    const d = new Date(v.seconds * 1000);
-    return !Number.isNaN(d.getTime()) ? d : null;
-  }
-  if (v instanceof Date) return !Number.isNaN(v.getTime()) ? v : null;
-  const d = new Date(v);
-  return !Number.isNaN(d.getTime()) ? d : null;
-}
-
-function formatTimeAgo(createdAt) {
-  const d = toDateSafe(createdAt);
-  if (!d) return "";
-
-  const diff = Math.max(0, Date.now() - d.getTime());
-  const sec = Math.floor(diff / 1000);
-  if (sec < 30) return "الآن";
-  const min = Math.floor(sec / 60);
-  if (min < 60) return `قبل ${min} دقيقة`;
-  const hr = Math.floor(min / 60);
-  if (hr < 24) return `قبل ${hr} ساعة`;
-  const day = Math.floor(hr / 24);
-  if (day < 7) return `قبل ${day} يوم`;
-  const wk = Math.floor(day / 7);
-  if (wk < 5) return `قبل ${wk} أسبوع`;
-  const mo = Math.floor(day / 30);
-  if (mo < 12) return `قبل ${mo} شهر`;
-  const yr = Math.floor(day / 365);
-  return `قبل ${yr} سنة`;
-}
-
-function hashHue(str) {
-  let h = 0;
-  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
-  return h % 360;
-}
-
-function buildAvatar(name) {
-  const parts = String(name || "")
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean);
-  const initials =
-    parts.length === 0
-      ? "Z"
-      : (parts[0][0] + (parts[1]?.[0] || "")).toUpperCase();
-
-  const hue = hashHue(String(name || "customer"));
-  return { initials, bg: `hsl(${hue} 35% 28%)` };
-}
-
-function prettyName(name) {
-  const s = String(name || "").trim();
-  if (!s) return "زبون";
-  const parts = s.split(/\s+/).filter(Boolean);
-  if (parts.length <= 1) return parts[0];
-  const first = parts[0];
-  const lastInitial = parts[parts.length - 1][0] || "";
-  return `${first} ${lastInitial}.`;
-}
-
-/* ================== STARS ================== */
-function StarRow({ value, onChange, readonly = false, size = 22 }) {
-  const v = clamp(Number(value || 0), 0, 5);
-  return (
-    <div className="flex flex-row-reverse items-center gap-1">
-      {Array.from({ length: 5 }).map((_, i) => {
-        const on = i < Math.round(v);
-        return (
-          <button
-            key={i}
-            type="button"
-            disabled={readonly}
-            onClick={() => !readonly && onChange?.(i + 1)}
-            className={[
-              "transition-transform",
-              readonly
-                ? "cursor-default"
-                : "cursor-pointer active:scale-95 hover:scale-110",
-              on ? "text-gold" : "text-gray-300",
-            ].join(" ")}
-            style={{ fontSize: size }}
-            aria-label={`${i + 1} stars`}
-          >
-            ★
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-/* ================== TAGS ================== */
-const TAGS = [
-  { k: "clean", label: "نظافة" },
-  { k: "on_time", label: "دقة بالمواعيد" },
-  { k: "pro", label: "احتراف" },
-  { k: "speed", label: "سرعة" },
-  { k: "price", label: "سعر مناسب" },
-  { k: "respect", label: "تعامل محترم" },
-  { k: "hair_quality", label: "جودة قص الشعر" },
-  { k: "vibe", label: "جو المكان" },
-];
-
-function RatingBars({ byStar, total }) {
-  const t = Number(total || 0);
-  if (!t) return null;
-
-  const rows = [
-    { star: 5, n: Number(byStar?.[5] || 0) },
-    { star: 4, n: Number(byStar?.[4] || 0) },
-    { star: 3, n: Number(byStar?.[3] || 0) },
-    { star: 2, n: Number(byStar?.[2] || 0) },
-    { star: 1, n: Number(byStar?.[1] || 0) },
-  ];
-
-  return (
-    <div className="mt-5 grid gap-2">
-      {rows.map((row) => {
-        const pct = Math.round((row.n / t) * 100);
-        return (
-          <div key={row.star} className="flex items-center gap-3">
-            <div className="w-10 text-xs font-bold text-right">{row.star}★</div>
-
-            <div className="flex-1 h-2 rounded-full bg-gray-200 overflow-hidden">
-              <div
-                className="h-2 rounded-full bg-gold/80"
-                style={{ width: `${pct}%` }}
-              />
-            </div>
-
-            <div className="w-20 text-xs text-gray-600 text-left">
-              {pct}%{row.n ? ` • ${row.n}` : ""}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function ClampText({ text, expanded }) {
-  if (expanded) return <div className="whitespace-pre-wrap">{text}</div>;
-
-  // ✅ بدون line-clamp plugin
-  return (
-    <div
-      style={{
-        display: "-webkit-box",
-        WebkitLineClamp: 2,
-        WebkitBoxOrient: "vertical",
-        overflow: "hidden",
-      }}
-      className="whitespace-pre-wrap"
-    >
-      {text}
-    </div>
-  );
-}
-
-/* ================== REVIEW CARD ================== */
-function ReviewCard({ r, expanded, onToggle }) {
-  const rating = Number(r.rating || 0);
-  const comment = String(r.comment || "");
-  const tags = Array.isArray(r.tags) ? r.tags : [];
-
-  const rawName = String(
-    r.customerName || r.userName || r.displayName || "",
-  ).trim();
-  const name = prettyName(rawName);
-  const avatar = buildAvatar(name);
-
-  const tagLabel = (k) => TAGS.find((t) => t.k === k)?.label || k;
-
-  const timeAgo = formatTimeAgo(r.createdAt);
-  const isLong = comment.trim().length > 140;
-
-  return (
-    <div className="rounded-2xl border bg-white p-4 shadow-sm">
-      <div className="flex flex-row-reverse justify-between gap-3">
-        <div className="flex flex-row-reverse items-center gap-3 min-w-0">
-          <div
-            className="h-10 w-10 shrink-0 rounded-full flex items-center justify-center text-white text-sm font-extrabold"
-            style={{ backgroundColor: avatar.bg }}
-            title={rawName || "زبون"}
-          >
-            {avatar.initials}
-          </div>
-
-          <div className="text-right min-w-0">
-            <div className="font-bold truncate">{name || "زبون"}</div>
-            {!!timeAgo && (
-              <div className="text-xs text-gray-500 mt-0.5">{timeAgo}</div>
-            )}
-          </div>
-        </div>
-
-        <StarRow value={rating} readonly size={18} />
-      </div>
-
-      {tags.length > 0 && (
-        <div className="mt-3 flex flex-row-reverse flex-wrap gap-2">
-          {tags.map((k) => (
-            <span
-              key={k}
-              className="text-xs px-2 py-1 rounded-full bg-[#f6f2ea] border border-gold/20"
-            >
-              {tagLabel(k)}
-            </span>
-          ))}
-        </div>
-      )}
-
-      <div className="mt-3 text-sm text-right text-gray-700">
-        <ClampText text={comment || "(بدون تعليق)"} expanded={expanded} />
-
-        {/* ✅ عرض المزيد / إظهار أقل */}
-        {isLong && (
-          <button
-            type="button"
-            onClick={onToggle}
-            className="mt-2 text-xs font-semibold text-gold hover:underline"
-          >
-            {expanded ? "إظهار أقل" : "عرض المزيد"}
-          </button>
-        )}
-      </div>
-    </div>
-  );
-}
-
-/* ================== MAIN ================== */
-export default function BarberRatingSection() {
-  const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-
-  const [summary, setSummary] = useState({
-    count: 0,
-    sum: 0,
-    byStar: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
-  });
-
-  const [reviews, setReviews] = useState([]);
-
-  // pagination
-  const [lastDoc, setLastDoc] = useState(null);
-  const [hasMore, setHasMore] = useState(false);
-
-  // ✅ المزيد / إظهار أقل لقائمة التقييمات
-  const [expandedList, setExpandedList] = useState(false);
-
-  // ✅ Accordion للتعليقات: واحد فقط مفتوح
-  const [openReviewId, setOpenReviewId] = useState(null);
-
-  // form
-  const [open, setOpen] = useState(false);
-  const [customerName, setCustomerName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [rating, setRating] = useState(5);
-  const [tags, setTags] = useState([]);
-  const [comment, setComment] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-
-  // refs for smooth UX
-  const listTopRef = useRef(null);
-  const formRef = useRef(null);
-  const nameInputRef = useRef(null);
-
-  const count = Number(summary.count || 0);
-  const avg = count > 0 ? summary.sum / count : 0;
-
-  const summaryRef = doc(db, "barbers", BARBER_ID, "meta", "reviewsSummary");
-  const reviewsCol = collection(db, "barbers", BARBER_ID, "reviews");
-
-  const visibleReviews = useMemo(() => {
-    return expandedList ? reviews : reviews.slice(0, INITIAL_LIMIT);
-  }, [reviews, expandedList]);
-
-  async function fetchReviewsPage({ reset }) {
-    if (reset) setLoading(true);
-    else setLoadingMore(true);
-
-    try {
-      const base = [orderBy("createdAt", "desc")];
-
-      let q;
-      if (reset) {
-        q = query(reviewsCol, ...base, limit(INITIAL_LIMIT));
-      } else {
-        if (!lastDoc) {
-          setHasMore(false);
-          setLoadingMore(false);
-          return;
-        }
-        q = query(reviewsCol, ...base, startAfter(lastDoc), limit(PAGE_LIMIT));
-      }
-
-      const snap = await getDocs(q);
-
-      const pageItems = snap.docs
-        .map((d) => ({ id: d.id, ...d.data() }))
-        .filter(isActiveReview);
-
-      const newLast = snap.docs[snap.docs.length - 1] || null;
-
-      if (reset) setReviews(pageItems);
-      else setReviews((prev) => [...prev, ...pageItems]);
-
-      setLastDoc(newLast);
-
-      const expected = reset ? INITIAL_LIMIT : PAGE_LIMIT;
-      setHasMore(snap.docs.length === expected);
-
-      if (reset) {
-        setExpandedList(false);
-        setOpenReviewId(null);
-      }
-    } finally {
-      setLoading(false);
-      setLoadingMore(false);
-    }
-  }
-
-  useEffect(() => {
-    (async () => {
-      setLoading(true);
-      const ss = await getDoc(summaryRef);
-      if (ss.exists()) setSummary(ss.data());
-      await fetchReviewsPage({ reset: true });
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  async function submitReview() {
-    const nameTrimmed = customerName.trim();
-    if (!nameTrimmed) return;
-
-    const phoneKey =
-      toILPhoneE164(phone) && isILPhoneE164(toILPhoneE164(phone))
-        ? toILPhoneE164(phone)
-        : normalizeDigits(phone);
-
-    if (!phoneKey) return;
-
-    setSubmitting(true);
-
-    await runTransaction(db, async (tx) => {
-      const sSnap = await tx.get(summaryRef);
-      const cur = sSnap.exists()
-        ? sSnap.data()
-        : { count: 0, sum: 0, byStar: {} };
-
-      const reviewRef = doc(reviewsCol);
-
-      tx.set(reviewRef, {
-        rating,
-        tags,
-        comment,
-        status: "active",
-        createdAt: serverTimestamp(),
-        customerName: nameTrimmed,
-        phoneKey,
-      });
-
-      tx.set(
-        summaryRef,
-        {
-          count: cur.count + 1,
-          sum: cur.sum + rating,
-          byStar: {
-            ...cur.byStar,
-            [rating]: (cur.byStar?.[rating] || 0) + 1,
-          },
-        },
-        { merge: true },
-      );
-    });
-
-    setOpen(false);
-    setCustomerName("");
-    setPhone("");
-    setComment("");
-    setTags([]);
-    setRating(5);
-    setSubmitting(false);
-
-    const ss = await getDoc(summaryRef);
-    if (ss.exists()) setSummary(ss.data());
-
-    setLastDoc(null);
-    await fetchReviewsPage({ reset: true });
-
-    // رجّع المستخدم للقسم بشكل لطيف
-    setTimeout(() => {
-      try {
-        document.getElementById("ratings")?.scrollIntoView({
-          behavior: "smooth",
-          block: "start",
-        });
-        // eslint-disable-next-line no-empty
-      } catch {}
-    }, 50);
-  }
-
-  async function onMoreClick() {
-    // أول مرة: وسّع القائمة
-    if (!expandedList) {
-      setExpandedList(true);
-
-      // سكرول ناعم لأعلى القائمة (عشان يحس بالاتساع)
-      setTimeout(() => {
-        try {
-          listTopRef.current?.scrollIntoView({
-            behavior: "smooth",
-            block: "start",
-          });
-          // eslint-disable-next-line no-empty
-        } catch {}
-      }, 40);
-
-      // حمّل صفحة إضافية مرة واحدة (لو موجود)
-      if (hasMore && !loadingMore) {
-        await fetchReviewsPage({ reset: false });
-      }
-      return;
-    }
-
-    // بعدها: تحميل المزيد
-    if (hasMore && !loadingMore) {
-      await fetchReviewsPage({ reset: false });
-    }
-  }
-
-  function onLessClick() {
-    // ✅ “إظهار أقل” أسلس:
-    // 1) سكّر أي تعليق مفتوح
-    setOpenReviewId(null);
-
-    // 2) سكرول لأعلى القائمة قبل التصغير (يقلل jump)
-    try {
-      listTopRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
-      // eslint-disable-next-line no-empty
-    } catch {}
-
-    // 3) بعد لحظة صغيرة، صغّر
-    setTimeout(() => {
-      setExpandedList(false);
-
-      // 4) تثبيت لطيف بعد التصغير
-      setTimeout(() => {
-        try {
-          listTopRef.current?.scrollIntoView({
-            behavior: "smooth",
-            block: "start",
-          });
-        } catch {}
-      }, 120);
-    }, 180);
-  }
-
-  function openFormAndScroll() {
-    setOpen(true);
-    setTimeout(() => {
-      try {
-        formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-        setTimeout(() => nameInputRef.current?.focus?.(), 200);
-      } catch {}
-    }, 60);
-  }
-
-  return (
-    <section
-      id="ratings"
-      dir="rtl"
-      className="relative bg-white px-4 py-16 sm:py-20 font-body overflow-hidden"
-    >
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-20 right-10 w-64 h-64 rounded-full bg-gold/10 blur-3xl" />
-      </div>
-
-      <SectionTitle
-        icon={
-          <div className="w-10 h-10 rounded-full bg-gold/15 flex items-center justify-center">
-            <span className="text-gold text-xl font-black">★</span>
-          </div>
-        }
-      >
-        تقييمات وتجربة الزبائن
-      </SectionTitle>
-
-      <div className="max-w-3xl mx-auto mt-6 bg-[#fcfaf7] p-5 sm:p-6 rounded-3xl shadow-lg border border-gold/10 ring-1 ring-black/5">
-        {/* ✅ Summary */}
-        <div className="text-right">
-          <div className="text-4xl font-black">
-            {count ? avg.toFixed(1) : "—"}
-          </div>
-
-          <div className="mt-1">
-            <StarRow value={avg} readonly />
-          </div>
-
-          <div className="text-sm text-gray-600 mt-1">
-            {count ? `${count} تقييم` : "لا يوجد تقييمات بعد"}
-          </div>
-
-          {!!count && <RatingBars byStar={summary.byStar} total={count} />}
-        </div>
-
-        {/* Header row - mobile perfect */}
-        <div className="mt-7 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div className="font-bold text-right">آخر الآراء</div>
-
-          <button
-            onClick={openFormAndScroll}
-            className="w-full sm:w-auto bg-gold px-4 py-3 rounded-2xl font-extrabold flex items-center justify-center gap-2 active:scale-[0.99]"
-          >
-            <MessageSquare className="w-4 h-4" />
-            اكتب تقييم
-          </button>
-        </div>
-
-        {loading ? (
-          <div className="mt-4 text-gray-500 text-right">جارٍ التحميل…</div>
-        ) : (
-          <>
-            {/* anchor for smooth list scroll */}
-            <div ref={listTopRef} />
-
-            <div className="mt-4 grid gap-4 sm:gap-5">
-              {visibleReviews.map((r) => (
-                <ReviewCard
-                  key={r.id}
-                  r={r}
-                  expanded={openReviewId === r.id}
-                  onToggle={() =>
-                    setOpenReviewId((prev) => (prev === r.id ? null : r.id))
-                  }
-                />
-              ))}
-            </div>
-
-            {/* ✅ List controls: المزيد / إظهار أقل */}
-            <div className="mt-5 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-center">
-              {(hasMore || !expandedList) && reviews.length > 0 && (
-                <button
-                  onClick={onMoreClick}
-                  disabled={loadingMore}
-                  className="w-full sm:w-auto px-5 py-3 rounded-2xl font-extrabold border border-gray-200 bg-white hover:bg-gray-50 transition disabled:opacity-60 disabled:cursor-not-allowed"
-                >
-                  {expandedList
-                    ? loadingMore
-                      ? "جارٍ التحميل…"
-                      : "تحميل المزيد"
-                    : "المزيد"}
-                </button>
-              )}
-
-              {expandedList && (
-                <button
-                  onClick={onLessClick}
-                  className="w-full sm:w-auto px-5 py-3 rounded-2xl font-extrabold border border-gold/25 bg-gold/10 hover:bg-gold/15 transition"
-                >
-                  إظهار أقل
-                </button>
-              )}
-            </div>
-          </>
-        )}
-
-        {/* Form */}
-        {open && (
-          <div ref={formRef} className="mt-7 border-t pt-6">
-            <div className="grid gap-3">
-              <input
-                ref={nameInputRef}
-                className="w-full border rounded-2xl px-4 py-3"
-                placeholder="اسمك"
-                value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
-              />
-
-              <input
-                className="w-full border rounded-2xl px-4 py-3"
-                placeholder="رقم الهاتف"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-              />
-
-              <div className="flex justify-end">
-                <StarRow value={rating} onChange={setRating} />
-              </div>
-
-              <textarea
-                className="w-full border rounded-2xl px-4 py-3 min-h-[110px]"
-                placeholder="تعليق (اختياري)"
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-              />
-
-              <button
-                onClick={submitReview}
-                disabled={submitting}
-                className="mt-1 w-full bg-primary text-white py-3 rounded-2xl font-extrabold disabled:opacity-60 disabled:cursor-not-allowed active:scale-[0.99]"
-              >
-                {submitting ? "جارٍ الإرسال…" : "إرسال التقييم"}
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-    </section>
-  );
-}
 </file>
 
 <file path="src/firebase.js">
@@ -15063,6 +14467,1209 @@ function Footer() {
 export default Footer;
 </file>
 
+<file path="src/components/reviews/BarberRatingSection.jsx">
+/* eslint-disable no-empty */
+import { useEffect, useMemo, useRef, useState } from "react";
+
+import SectionTitle from "../common/SectionTitle";
+import { db } from "../../firebase";
+
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  limit,
+  orderBy,
+  query,
+  runTransaction,
+  serverTimestamp,
+  startAfter,
+} from "firebase/firestore";
+
+import {
+  ArrowDown,
+  CheckCircle2,
+  MessageSquare,
+  Quote,
+  ShieldCheck,
+  Sparkles,
+  X,
+} from "lucide-react";
+
+import { isILPhoneE164, toILPhoneE164 } from "../../utils/phone";
+
+/* ================== الإعدادات ================== */
+
+const BARBER_ID = "arfat";
+const INITIAL_VISIBLE_REVIEWS = 3;
+const PAGE_LIMIT = 6;
+const FEATURED_POOL_LIMIT = 20;
+
+const FEATURED_CHANGE_INTERVAL = 5000;
+const FEATURED_FADE_OUT_DURATION = 300;
+const FEATURED_FADE_IN_DURATION = 400;
+
+/* ================== دوال مساعدة ================== */
+
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function isActiveReview(review) {
+  const status = String(review?.status || "active").toLowerCase();
+
+  return !["archived", "deleted", "removed", "hidden"].includes(status);
+}
+
+function toDateSafe(value) {
+  if (!value) {
+    return null;
+  }
+
+  if (typeof value?.toDate === "function") {
+    return value.toDate();
+  }
+
+  if (typeof value?.seconds === "number") {
+    return new Date(value.seconds * 1000);
+  }
+
+  if (value instanceof Date) {
+    return value;
+  }
+
+  const date = new Date(value);
+
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function formatTimeAgo(createdAt) {
+  const date = toDateSafe(createdAt);
+
+  if (!date) {
+    return "";
+  }
+
+  const difference = Math.max(0, Date.now() - date.getTime());
+  const minutes = Math.floor(difference / 60000);
+
+  if (minutes < 1) {
+    return "الآن";
+  }
+
+  if (minutes < 60) {
+    return `قبل ${minutes} دقيقة`;
+  }
+
+  const hours = Math.floor(minutes / 60);
+
+  if (hours < 24) {
+    return `قبل ${hours} ساعة`;
+  }
+
+  const days = Math.floor(hours / 24);
+
+  if (days < 7) {
+    return `قبل ${days} يوم`;
+  }
+
+  const weeks = Math.floor(days / 7);
+
+  if (weeks < 5) {
+    return `قبل ${weeks} أسبوع`;
+  }
+
+  const months = Math.floor(days / 30);
+
+  if (months < 12) {
+    return `قبل ${months} شهر`;
+  }
+
+  const years = Math.floor(days / 365);
+
+  return `قبل ${years} سنة`;
+}
+
+function getPublicName(name) {
+  const value = String(name || "").trim();
+
+  if (!value) {
+    return "أحد الزبائن";
+  }
+
+  const parts = value.split(/\s+/).filter(Boolean);
+
+  if (parts.length === 1) {
+    return parts[0];
+  }
+
+  return `${parts[0]} ${parts.at(-1)[0]}.`;
+}
+
+function getInitials(name) {
+  const parts = String(name || "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+
+  if (parts.length === 0) {
+    return "ز";
+  }
+
+  return `${parts[0]?.[0] || ""}${parts[1]?.[0] || ""}`.toUpperCase();
+}
+
+/* ================== النجوم ================== */
+
+function StarRow({ value, onChange, readonly = false, size = 24 }) {
+  const selected = clamp(Number(value || 0), 0, 5);
+
+  return (
+    <div
+      className="flex flex-row-reverse items-center justify-center gap-1"
+      role={readonly ? undefined : "radiogroup"}
+      aria-label="اختيار عدد النجوم"
+    >
+      {Array.from({ length: 5 }).map((_, index) => {
+        const starValue = index + 1;
+        const active = starValue <= Math.round(selected);
+
+        return (
+          <button
+            key={starValue}
+            type="button"
+            disabled={readonly}
+            onClick={() => onChange?.(starValue)}
+            role={readonly ? undefined : "radio"}
+            aria-checked={readonly ? undefined : selected === starValue}
+            aria-label={`${starValue} نجوم`}
+            className={`rounded-md leading-none transition duration-200 ${
+              readonly
+                ? "cursor-default"
+                : "cursor-pointer hover:-translate-y-1 hover:scale-110 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-gold/40"
+            } ${active ? "text-gold drop-shadow-sm" : "text-gray-300"}`}
+            style={{
+              fontSize: size,
+            }}
+          >
+            ★
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ================== توزيع التقييمات ================== */
+
+function RatingBars({ byStar, total }) {
+  if (!total) {
+    return null;
+  }
+
+  return (
+    <div className="mt-4 grid gap-2">
+      {[5, 4, 3, 2, 1].map((star) => {
+        const amount = Number(byStar?.[star] || 0);
+        const percentage = Math.round((amount / total) * 100);
+
+        return (
+          <div key={star} className="flex items-center gap-3">
+            <span className="w-9 shrink-0 text-sm font-black text-gray-700">
+              {star}
+
+              <span className="mr-1 text-gold">★</span>
+            </span>
+
+            <div className="h-2 flex-1 overflow-hidden rounded-full bg-gray-200">
+              <div
+                className="h-full rounded-full bg-gradient-to-l from-gold to-yellow-300 transition-all duration-700"
+                style={{
+                  width: `${percentage}%`,
+                }}
+              />
+            </div>
+
+            <span className="w-11 shrink-0 text-left text-xs font-bold text-gray-500">
+              {percentage}%
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ================== محتوى التقييم المميز ================== */
+
+function FeaturedReviewContent({ review }) {
+  if (!review) {
+    return null;
+  }
+
+  const name = getPublicName(
+    review.customerName || review.userName || review.displayName,
+  );
+
+  const comment = String(review.comment || "").trim();
+
+  return (
+    <div className="flex h-full min-w-0 flex-col">
+      <div className="flex shrink-0 items-center justify-between gap-3">
+        <div className="inline-flex items-center gap-2 rounded-full border border-gold/25 bg-gold/10 px-2.5 py-1 text-xs font-black text-gold">
+          <Sparkles className="h-3.5 w-3.5" />
+          تجربة مميزة
+        </div>
+
+        <StarRow value={review.rating} readonly size={18} />
+      </div>
+
+      <div className="mt-3 min-h-0 flex-1">
+        <Quote className="mb-2 h-6 w-6 text-gold" />
+
+        <p
+          className="text-right text-base font-bold leading-7 text-white sm:text-lg sm:leading-8"
+          style={{
+            display: "-webkit-box",
+            WebkitLineClamp: 3,
+            WebkitBoxOrient: "vertical",
+            overflow: "hidden",
+          }}
+        >
+          “{comment || "تجربة ممتازة وخدمة مرتبة."}”
+        </p>
+      </div>
+
+      <div className="mt-3 flex shrink-0 items-center gap-3">
+        <div className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/10 text-xs font-black text-gold">
+          {getInitials(name)}
+        </div>
+
+        <div className="min-w-0 text-right">
+          <div className="truncate text-sm font-black">{name}</div>
+
+          <div className="mt-0.5 text-[11px] text-white/55">
+            {formatTimeAgo(review.createdAt)}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ================== بطاقة التجربة المميزة ================== */
+
+function FeaturedReview({ review, visible, onPause, onResume }) {
+  if (!review) {
+    return null;
+  }
+
+  return (
+    <article
+      tabIndex={0}
+      onMouseEnter={onPause}
+      onMouseLeave={onResume}
+      onFocus={onPause}
+      onBlur={onResume}
+      onTouchStart={onPause}
+      className="relative h-[230px] self-start overflow-hidden rounded-[26px] border border-gold/20 bg-gradient-to-bl from-primary via-[#182231] to-[#0c1119] p-5 text-white shadow-xl outline-none focus:ring-2 focus:ring-gold/30 sm:h-[240px] sm:p-6"
+    >
+      <div className="pointer-events-none absolute -left-8 -top-12 h-32 w-32 rounded-full bg-gold/20 blur-3xl" />
+
+      <div className="pointer-events-none absolute bottom-2 left-4 opacity-[0.07]">
+        <Quote className="h-16 w-16" />
+      </div>
+
+      <div
+        className={`relative h-full transition-opacity ease-in-out ${
+          visible ? "opacity-100" : "opacity-0"
+        }`}
+        style={{
+          transitionDuration: visible
+            ? `${FEATURED_FADE_IN_DURATION}ms`
+            : `${FEATURED_FADE_OUT_DURATION}ms`,
+        }}
+      >
+        <FeaturedReviewContent review={review} />
+      </div>
+    </article>
+  );
+}
+
+/* ================== بطاقة تقييم عادية ================== */
+
+function ReviewCard({ review, expanded, onToggle, index }) {
+  const name = getPublicName(
+    review.customerName || review.userName || review.displayName,
+  );
+
+  const comment = String(review.comment || "").trim();
+  const longComment = comment.length > 135;
+
+  return (
+    <article
+      className="group rounded-[24px] border border-gray-100 bg-white p-5 shadow-sm transition duration-300 hover:-translate-y-1 hover:border-gold/25 hover:shadow-lg"
+      style={{
+        transitionDelay: `${index * 40}ms`,
+      }}
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-bl from-primary to-gray-700 text-sm font-black text-gold shadow-sm">
+            {getInitials(name)}
+          </div>
+
+          <div className="min-w-0 text-right">
+            <div className="truncate font-black text-gray-900">{name}</div>
+
+            <div className="mt-1 text-xs font-medium text-gray-400">
+              {formatTimeAgo(review.createdAt)}
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-xl bg-amber-50 px-2 py-1">
+          <StarRow value={review.rating} readonly size={16} />
+        </div>
+      </div>
+
+      {comment ? (
+        <div className="mt-4 text-right">
+          <p
+            className="text-sm font-medium leading-7 text-gray-600"
+            style={
+              expanded
+                ? undefined
+                : {
+                    display: "-webkit-box",
+                    WebkitLineClamp: 3,
+                    WebkitBoxOrient: "vertical",
+                    overflow: "hidden",
+                  }
+            }
+          >
+            {comment}
+          </p>
+
+          {longComment && (
+            <button
+              type="button"
+              onClick={onToggle}
+              className="mt-2 text-xs font-black text-amber-700 transition hover:text-amber-900 hover:underline"
+            >
+              {expanded ? "عرض أقل" : "قراءة التقييم كاملًا"}
+            </button>
+          )}
+        </div>
+      ) : (
+        <p className="mt-4 text-right text-sm italic text-gray-400">
+          قيّم التجربة بدون إضافة تعليق.
+        </p>
+      )}
+    </article>
+  );
+}
+
+/* ================== القسم الرئيسي ================== */
+
+export default function BarberRatingSection() {
+  const sectionRef = useRef(null);
+  const formRef = useRef(null);
+  const listTopRef = useRef(null);
+
+  const fadeTimeoutRef = useRef(null);
+  const fadeAnimationFrameRef = useRef(null);
+
+  const [sectionVisible, setSectionVisible] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  const [summary, setSummary] = useState({
+    count: 0,
+    sum: 0,
+    byStar: {
+      1: 0,
+      2: 0,
+      3: 0,
+      4: 0,
+      5: 0,
+    },
+  });
+
+  const [reviews, setReviews] = useState([]);
+  const [lastDocument, setLastDocument] = useState(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [expandedList, setExpandedList] = useState(false);
+  const [openReviewId, setOpenReviewId] = useState(null);
+
+  const [featuredReviewIndex, setFeaturedReviewIndex] = useState(0);
+  const [featuredVisible, setFeaturedVisible] = useState(true);
+  const [featuredPaused, setFeaturedPaused] = useState(false);
+
+  const [formOpen, setFormOpen] = useState(false);
+  const [rating, setRating] = useState(0);
+  const [customerName, setCustomerName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [comment, setComment] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+
+  const summaryReference = doc(
+    db,
+    "barbers",
+    BARBER_ID,
+    "meta",
+    "reviewsSummary",
+  );
+
+  const reviewsCollection = collection(db, "barbers", BARBER_ID, "reviews");
+
+  const count = Number(summary.count || 0);
+
+  const average = count > 0 ? Number(summary.sum || 0) / count : 0;
+
+  const featuredReviews = useMemo(() => {
+    return reviews.filter((review) => {
+      const reviewRating = Number(review.rating || 0);
+      const reviewComment = String(review.comment || "").trim();
+
+      return reviewRating >= 4 && reviewComment.length >= 8;
+    });
+  }, [reviews]);
+
+  const fallbackFeaturedReview = useMemo(() => {
+    const reviewWithComment = reviews.find(
+      (review) => String(review.comment || "").trim().length >= 8,
+    );
+
+    return reviewWithComment || reviews[0] || null;
+  }, [reviews]);
+
+  const currentFeaturedReview = useMemo(() => {
+    if (featuredReviews.length === 0) {
+      return fallbackFeaturedReview;
+    }
+
+    const safeIndex = featuredReviewIndex % featuredReviews.length;
+
+    return featuredReviews[safeIndex];
+  }, [featuredReviews, featuredReviewIndex, fallbackFeaturedReview]);
+
+  /*
+   * نثبت التقييم المستثنى من القائمة السفلية،
+   * حتى لا تتغير أماكن البطاقات مع كل تقليب.
+   */
+  const fixedFeaturedReview = useMemo(() => {
+    return featuredReviews[0] || fallbackFeaturedReview;
+  }, [featuredReviews, fallbackFeaturedReview]);
+
+  const regularReviews = useMemo(() => {
+    if (!fixedFeaturedReview) {
+      return reviews;
+    }
+
+    return reviews.filter((review) => review.id !== fixedFeaturedReview.id);
+  }, [reviews, fixedFeaturedReview]);
+
+  const visibleReviews = useMemo(() => {
+    if (expandedList) {
+      return regularReviews;
+    }
+
+    return regularReviews.slice(0, INITIAL_VISIBLE_REVIEWS);
+  }, [expandedList, regularReviews]);
+
+  function clearFeaturedFadeTimers() {
+    if (fadeTimeoutRef.current) {
+      window.clearTimeout(fadeTimeoutRef.current);
+      fadeTimeoutRef.current = null;
+    }
+
+    if (fadeAnimationFrameRef.current) {
+      window.cancelAnimationFrame(fadeAnimationFrameRef.current);
+      fadeAnimationFrameRef.current = null;
+    }
+  }
+
+  /*
+   * طبقة واحدة:
+   * 1. إخفاء المحتوى الحالي.
+   * 2. بعد اختفائه نغير التقييم.
+   * 3. نظهر التقييم الجديد.
+   */
+  function moveToNextFeaturedReview() {
+    if (featuredReviews.length <= 1) {
+      return;
+    }
+
+    clearFeaturedFadeTimers();
+
+    setFeaturedVisible(false);
+
+    fadeTimeoutRef.current = window.setTimeout(() => {
+      setFeaturedReviewIndex((currentIndex) => {
+        return (currentIndex + 1) % featuredReviews.length;
+      });
+
+      fadeAnimationFrameRef.current = window.requestAnimationFrame(() => {
+        fadeAnimationFrameRef.current = window.requestAnimationFrame(() => {
+          setFeaturedVisible(true);
+          fadeAnimationFrameRef.current = null;
+        });
+      });
+
+      fadeTimeoutRef.current = null;
+    }, FEATURED_FADE_OUT_DURATION);
+  }
+
+  useEffect(() => {
+    clearFeaturedFadeTimers();
+    setFeaturedReviewIndex(0);
+    setFeaturedVisible(true);
+  }, [featuredReviews.length]);
+
+  useEffect(() => {
+    if (featuredReviews.length <= 1 || featuredPaused) {
+      return undefined;
+    }
+
+    const intervalId = window.setInterval(() => {
+      moveToNextFeaturedReview();
+    }, FEATURED_CHANGE_INTERVAL);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [featuredReviews.length, featuredPaused]);
+
+  useEffect(() => {
+    return () => {
+      clearFeaturedFadeTimers();
+    };
+  }, []);
+
+  useEffect(() => {
+    const element = sectionRef.current;
+
+    if (!element) {
+      return undefined;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setSectionVisible(true);
+          observer.disconnect();
+        }
+      },
+      {
+        threshold: 0.13,
+      },
+    );
+
+    observer.observe(element);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
+  async function loadSummary() {
+    const snapshot = await getDoc(summaryReference);
+
+    if (!snapshot.exists()) {
+      setSummary({
+        count: 0,
+        sum: 0,
+        byStar: {
+          1: 0,
+          2: 0,
+          3: 0,
+          4: 0,
+          5: 0,
+        },
+      });
+
+      return;
+    }
+
+    setSummary(snapshot.data());
+  }
+
+  async function loadReviews({ reset = false } = {}) {
+    if (reset) {
+      setLoading(true);
+    } else {
+      setLoadingMore(true);
+    }
+
+    try {
+      if (!reset && !lastDocument) {
+        return;
+      }
+
+      const reviewsQuery = reset
+        ? query(
+            reviewsCollection,
+            orderBy("createdAt", "desc"),
+            limit(FEATURED_POOL_LIMIT),
+          )
+        : query(
+            reviewsCollection,
+            orderBy("createdAt", "desc"),
+            startAfter(lastDocument),
+            limit(PAGE_LIMIT),
+          );
+
+      const snapshot = await getDocs(reviewsQuery);
+
+      const newReviews = snapshot.docs
+        .map((documentSnapshot) => ({
+          id: documentSnapshot.id,
+          ...documentSnapshot.data(),
+        }))
+        .filter(isActiveReview);
+
+      setReviews((currentReviews) => {
+        if (reset) {
+          return newReviews;
+        }
+
+        const existingIds = new Set(currentReviews.map((review) => review.id));
+
+        const uniqueReviews = newReviews.filter(
+          (review) => !existingIds.has(review.id),
+        );
+
+        return [...currentReviews, ...uniqueReviews];
+      });
+
+      setLastDocument(snapshot.docs.at(-1) || null);
+
+      const requestedLimit = reset ? FEATURED_POOL_LIMIT : PAGE_LIMIT;
+
+      setHasMore(snapshot.docs.length === requestedLimit);
+
+      if (reset) {
+        setExpandedList(false);
+        setOpenReviewId(null);
+        setFeaturedReviewIndex(0);
+        setFeaturedVisible(true);
+      }
+    } catch (error) {
+      console.error("Failed to load reviews:", error);
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
+  }
+
+  useEffect(() => {
+    async function loadRatingSection() {
+      try {
+        await Promise.all([
+          loadSummary(),
+          loadReviews({
+            reset: true,
+          }),
+        ]);
+      } catch (error) {
+        console.error("Failed to load rating section:", error);
+
+        setLoading(false);
+      }
+    }
+
+    loadRatingSection();
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function openReviewForm() {
+    setFormOpen(true);
+    setFormError("");
+    setSuccessMessage("");
+
+    window.setTimeout(() => {
+      formRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }, 80);
+  }
+
+  function closeReviewForm() {
+    if (submitting) {
+      return;
+    }
+
+    setFormOpen(false);
+    setFormError("");
+  }
+
+  function validateForm() {
+    if (!rating) {
+      return "اختار عدد النجوم أولًا.";
+    }
+
+    if (!customerName.trim()) {
+      return "اكتب اسمك.";
+    }
+
+    const normalizedPhone = toILPhoneE164(phone);
+
+    if (!normalizedPhone || !isILPhoneE164(normalizedPhone)) {
+      return "اكتب رقم هاتف صحيح يبدأ بـ 05.";
+    }
+
+    if (comment.trim().length > 500) {
+      return "التعليق طويل جدًا، الحد الأقصى 500 حرف.";
+    }
+
+    return "";
+  }
+
+  async function submitReview() {
+    const validationError = validateForm();
+
+    if (validationError) {
+      setFormError(validationError);
+      return;
+    }
+
+    const normalizedPhone = toILPhoneE164(phone);
+
+    setSubmitting(true);
+    setFormError("");
+
+    try {
+      await runTransaction(db, async (transaction) => {
+        const summarySnapshot = await transaction.get(summaryReference);
+
+        const currentSummary = summarySnapshot.exists()
+          ? summarySnapshot.data()
+          : {
+              count: 0,
+              sum: 0,
+              byStar: {},
+            };
+
+        const newReviewReference = doc(reviewsCollection);
+
+        transaction.set(newReviewReference, {
+          rating,
+          comment: comment.trim(),
+          customerName: customerName.trim(),
+          phoneKey: normalizedPhone,
+          phonePrivate: true,
+          status: "active",
+          isNew: true,
+          createdAt: serverTimestamp(),
+        });
+
+        transaction.set(
+          summaryReference,
+          {
+            count: Number(currentSummary.count || 0) + 1,
+
+            sum: Number(currentSummary.sum || 0) + rating,
+
+            byStar: {
+              ...currentSummary.byStar,
+
+              [rating]: Number(currentSummary.byStar?.[rating] || 0) + 1,
+            },
+
+            updatedAt: serverTimestamp(),
+          },
+          {
+            merge: true,
+          },
+        );
+      });
+
+      setRating(0);
+      setCustomerName("");
+      setPhone("");
+      setComment("");
+      setFormOpen(false);
+
+      setSuccessMessage("شكرًا، تم إرسال تقييمك بنجاح.");
+
+      await Promise.all([
+        loadSummary(),
+        loadReviews({
+          reset: true,
+        }),
+      ]);
+
+      window.setTimeout(() => {
+        setSuccessMessage("");
+      }, 5000);
+    } catch (error) {
+      console.error("Failed to submit review:", error);
+
+      setFormError("تعذر إرسال التقييم الآن، حاول مرة ثانية.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function showMoreReviews() {
+    if (!expandedList) {
+      setExpandedList(true);
+      return;
+    }
+
+    if (hasMore) {
+      await loadReviews();
+    }
+  }
+
+  function showLessReviews() {
+    setOpenReviewId(null);
+
+    listTopRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+
+    window.setTimeout(() => {
+      setExpandedList(false);
+    }, 180);
+  }
+
+  return (
+    <section
+      ref={sectionRef}
+      id="ratings"
+      dir="rtl"
+      className="relative overflow-hidden bg-gradient-to-b from-white via-[#fffdfa] to-[#faf7f1] px-4 py-16 font-body sm:py-20"
+    >
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -right-20 top-10 h-72 w-72 rounded-full bg-gold/10 blur-3xl" />
+
+        <div className="absolute -left-24 bottom-12 h-64 w-64 rounded-full bg-primary/5 blur-3xl" />
+
+        <div className="absolute right-[12%] top-24 h-2 w-2 rounded-full bg-gold/50" />
+
+        <div className="absolute left-[18%] top-40 h-1.5 w-1.5 rounded-full bg-gold/40" />
+      </div>
+
+      <div
+        className={`relative mx-auto max-w-5xl transition-all duration-700 ${
+          sectionVisible
+            ? "translate-y-0 opacity-100"
+            : "translate-y-8 opacity-0"
+        }`}
+      >
+        <div className="text-center">
+          <SectionTitle
+            icon={
+              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gold/15 ring-1 ring-gold/20">
+                <MessageSquare className="h-5 w-5 text-gold" />
+              </div>
+            }
+          >
+            تقييمات وتجربة الزبائن
+          </SectionTitle>
+
+          <p className="mx-auto mt-3 max-w-xl text-sm font-medium leading-7 text-gray-500 sm:text-base">
+            رضا الزبون هو أهم جزء من شغلنا، وهذه بعض التجارب الحقيقية لزبائن
+            المحل.
+          </p>
+        </div>
+
+        <div className="mt-8 grid items-start gap-5 lg:grid-cols-[0.78fr_1.5fr]">
+          <div className="h-fit rounded-[26px] border border-gold/15 bg-white p-5 shadow-lg shadow-black/5 sm:p-6">
+            <div className="text-center">
+              <div className="text-sm font-black text-gray-500">
+                معدل رضا الزبائن
+              </div>
+
+              <div className="mt-1 flex items-end justify-center gap-2">
+                <div className="text-5xl font-black tracking-tight text-primary sm:text-6xl">
+                  {count ? average.toFixed(1) : "—"}
+                </div>
+
+                <div className="pb-1.5 text-base font-black text-gray-400">
+                  / 5
+                </div>
+              </div>
+
+              <div className="mt-2">
+                <StarRow value={average} readonly size={23} />
+              </div>
+
+              <div className="mt-1 text-xs font-bold text-gray-500 sm:text-sm">
+                {count ? `بناءً على ${count} تقييم` : "لا يوجد تقييمات بعد"}
+              </div>
+            </div>
+
+            <RatingBars byStar={summary.byStar} total={count} />
+          </div>
+
+          {loading ? (
+            <div className="flex h-[230px] items-center justify-center rounded-[26px] border border-gray-100 bg-white p-5 text-sm font-bold text-gray-500 shadow-sm sm:h-[240px]">
+              جارٍ تحميل تجربة الزبائن...
+            </div>
+          ) : currentFeaturedReview ? (
+            <FeaturedReview
+              review={currentFeaturedReview}
+              visible={featuredVisible}
+              onPause={() => setFeaturedPaused(true)}
+              onResume={() => setFeaturedPaused(false)}
+            />
+          ) : (
+            <div className="flex h-[230px] flex-col items-center justify-center rounded-[26px] border border-dashed border-gold/30 bg-white p-6 text-center shadow-sm sm:h-[240px]">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gold/10 text-xl text-gold">
+                ★
+              </div>
+
+              <h3 className="mt-3 text-lg font-black text-gray-900">
+                كن أول من يشارك تجربته
+              </h3>
+
+              <p className="mt-1 max-w-sm text-sm leading-6 text-gray-500">
+                رأيك يساعدنا نحافظ على أفضل خدمة ونطور تجربة الزبائن.
+              </p>
+
+              <button
+                type="button"
+                onClick={openReviewForm}
+                className="mt-4 rounded-2xl bg-gold px-5 py-2.5 font-black text-primary shadow-md transition hover:-translate-y-0.5 hover:brightness-95"
+              >
+                أضف أول تقييم
+              </button>
+            </div>
+          )}
+        </div>
+
+        {successMessage && (
+          <div className="mx-auto mt-6 flex max-w-2xl items-center justify-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm font-black text-emerald-800 shadow-sm">
+            <CheckCircle2 className="h-5 w-5 shrink-0" />
+
+            {successMessage}
+          </div>
+        )}
+
+        <div className="mt-10 flex flex-col gap-5 border-b border-gray-200/70 pb-6 sm:flex-row sm:items-end sm:justify-between">
+          <div className="text-right">
+            <div className="inline-flex items-center gap-2 text-xs font-black text-amber-700">
+              <Sparkles className="h-4 w-4" />
+              آراء حقيقية
+            </div>
+
+            <h3 className="mt-2 text-2xl font-black text-gray-900">
+              ماذا قال زبائننا؟
+            </h3>
+
+            <p className="mt-2 text-sm leading-6 text-gray-500">
+              أحدث التجارب والتقييمات من زبائن المحل.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={openReviewForm}
+            className="group flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-6 py-3.5 font-black text-white shadow-lg shadow-primary/15 transition duration-300 hover:-translate-y-1 hover:bg-gray-900 hover:shadow-xl sm:w-auto"
+          >
+            <MessageSquare className="h-5 w-5 text-gold transition group-hover:scale-110" />
+            شاركنا تجربتك
+          </button>
+        </div>
+
+        {formOpen && (
+          <div
+            ref={formRef}
+            className="mx-auto mt-7 max-w-2xl rounded-[28px] border border-gold/20 bg-white p-5 shadow-xl shadow-black/5 sm:p-7"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div className="text-right">
+                <h3 className="text-xl font-black text-gray-900">
+                  كيف كانت تجربتك؟
+                </h3>
+
+                <p className="mt-1 text-sm leading-6 text-gray-500">
+                  اختار النجوم وبعدها أكمل البيانات البسيطة.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={closeReviewForm}
+                className="rounded-full p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700"
+                aria-label="إغلاق نموذج التقييم"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="mt-6 rounded-2xl border border-amber-100 bg-amber-50/60 p-5">
+              <StarRow value={rating} onChange={setRating} size={38} />
+
+              <div className="mt-3 text-center text-sm font-black text-gray-700">
+                {rating ? `${rating} من 5` : "اضغط على عدد النجوم"}
+              </div>
+            </div>
+
+            {rating > 0 && (
+              <div className="mt-5 grid gap-4">
+                <div>
+                  <label className="mb-2 block text-right text-sm font-black text-gray-700">
+                    الاسم
+                  </label>
+
+                  <input
+                    type="text"
+                    value={customerName}
+                    onChange={(event) => setCustomerName(event.target.value)}
+                    placeholder="اكتب اسمك"
+                    maxLength={60}
+                    className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3.5 text-right outline-none transition focus:border-gold focus:bg-white focus:ring-2 focus:ring-gold/20"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-right text-sm font-black text-gray-700">
+                    رقم الهاتف
+                  </label>
+
+                  <input
+                    type="tel"
+                    inputMode="tel"
+                    value={phone}
+                    onChange={(event) => setPhone(event.target.value)}
+                    placeholder="05XXXXXXXX"
+                    className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3.5 text-right outline-none transition focus:border-gold focus:bg-white focus:ring-2 focus:ring-gold/20"
+                  />
+
+                  <div className="mt-2 flex items-center gap-2 text-xs font-medium text-gray-500">
+                    <ShieldCheck className="h-4 w-4 shrink-0 text-emerald-600" />
+                    رقم الهاتف للتحقق فقط ولن يظهر للزبائن.
+                  </div>
+                </div>
+
+                <div>
+                  <div className="mb-2 flex items-center justify-between">
+                    <label className="text-right text-sm font-black text-gray-700">
+                      تعليقك
+                    </label>
+
+                    <span className="text-xs text-gray-400">اختياري</span>
+                  </div>
+
+                  <textarea
+                    value={comment}
+                    onChange={(event) => setComment(event.target.value)}
+                    placeholder="احكيلنا عن تجربتك..."
+                    maxLength={500}
+                    className="min-h-[115px] w-full resize-y rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3.5 text-right leading-7 outline-none transition focus:border-gold focus:bg-white focus:ring-2 focus:ring-gold/20"
+                  />
+
+                  <div className="mt-1 text-left text-xs font-medium text-gray-400">
+                    {comment.length}/500
+                  </div>
+                </div>
+
+                {formError && (
+                  <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-black text-red-700">
+                    {formError}
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={submitReview}
+                  disabled={submitting}
+                  className="w-full rounded-2xl bg-gold py-3.5 font-black text-primary shadow-md transition hover:brightness-95 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {submitting ? "جارٍ إرسال التقييم..." : "إرسال التقييم"}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        <div ref={listTopRef} className="scroll-mt-24" />
+
+        {loading ? (
+          <div className="mt-8 rounded-3xl border border-gray-100 bg-white p-8 text-center text-sm font-bold text-gray-500 shadow-sm">
+            جارٍ تحميل التقييمات...
+          </div>
+        ) : visibleReviews.length === 0 && currentFeaturedReview ? (
+          <div className="mt-8 rounded-3xl border border-dashed border-gray-200 bg-white p-7 text-center text-sm font-medium text-gray-500">
+            سيتم عرض المزيد من تجارب الزبائن هنا.
+          </div>
+        ) : (
+          <div className="mt-8 grid gap-5 md:grid-cols-2">
+            {visibleReviews.map((review, index) => (
+              <ReviewCard
+                key={review.id}
+                review={review}
+                index={index}
+                expanded={openReviewId === review.id}
+                onToggle={() => {
+                  setOpenReviewId((currentId) =>
+                    currentId === review.id ? null : review.id,
+                  );
+                }}
+              />
+            ))}
+          </div>
+        )}
+
+        {!loading && regularReviews.length > 0 && (
+          <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
+            {!expandedList && (
+              <button
+                type="button"
+                onClick={showMoreReviews}
+                className="group flex w-full items-center justify-center gap-3 rounded-2xl border-2 border-primary bg-white px-7 py-3.5 font-black text-primary shadow-sm transition duration-300 hover:-translate-y-0.5 hover:bg-primary hover:text-white hover:shadow-lg sm:w-auto"
+              >
+                عرض كل التقييمات
+                <ArrowDown className="h-5 w-5 transition duration-300 group-hover:translate-y-1" />
+              </button>
+            )}
+
+            {expandedList && hasMore && (
+              <button
+                type="button"
+                onClick={showMoreReviews}
+                disabled={loadingMore}
+                className="group flex w-full items-center justify-center gap-3 rounded-2xl border-2 border-primary bg-white px-7 py-3.5 font-black text-primary shadow-sm transition duration-300 hover:-translate-y-0.5 hover:bg-primary hover:text-white hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+              >
+                {loadingMore
+                  ? "جارٍ تحميل التقييمات..."
+                  : "تحميل تقييمات إضافية"}
+
+                {!loadingMore && (
+                  <ArrowDown className="h-5 w-5 transition duration-300 group-hover:translate-y-1" />
+                )}
+              </button>
+            )}
+
+            {expandedList && (
+              <button
+                type="button"
+                onClick={showLessReviews}
+                className="w-full rounded-2xl border border-gray-200 bg-white px-6 py-3.5 font-black text-gray-600 transition hover:bg-gray-100 sm:w-auto"
+              >
+                عرض أقل
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+</file>
+
 <file path="src/components/home/InstagramSlider.jsx">
 import { useTranslation } from "react-i18next";
 import { useState, useEffect } from "react";
@@ -15648,55 +16255,95 @@ function HeroSection() {
   useEffect(() => {
     const ref = doc(db, "barberSettings", "general");
 
-    const unsub = onSnapshot(ref, (snap) => {
-      const data = snap.exists() ? snap.data() : {};
+    const unsubscribe = onSnapshot(ref, (snapshot) => {
+      const data = snapshot.exists() ? snapshot.data() : {};
+
       setHeroNote(data.heroNote || null);
       setNoteClosed(false);
     });
 
-    return () => unsub();
+    return () => unsubscribe();
   }, []);
 
   const smoothScrollTo = (id) => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.scrollIntoView({ behavior: "smooth", block: "start" });
+    const element = document.getElementById(id);
+
+    if (!element) {
+      return;
+    }
+
+    element.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
   };
 
-  const onCheckClick = (e) => {
-    e.preventDefault();
+  const onCheckClick = (event) => {
+    event.preventDefault();
     smoothScrollTo("check-booking");
   };
 
-  const onBookClick = (e) => {
-    e.preventDefault();
+  const onBookClick = (event) => {
+    event.preventDefault();
 
-    const el = document.getElementById("booking-form-start");
-    if (el) {
-      const y = el.getBoundingClientRect().top + window.pageYOffset - 100;
+    const element = document.getElementById("booking-form-start");
 
-      window.scrollTo({
-        top: y,
-        behavior: "smooth",
-      });
+    if (!element) {
+      return;
     }
+
+    const y = element.getBoundingClientRect().top + window.pageYOffset - 100;
+
+    window.scrollTo({
+      top: y,
+      behavior: "smooth",
+    });
   };
 
+  const getNoteAppearance = () => {
+    if (heroNote?.type === "important") {
+      return {
+        title: "تنبيه مهم",
+        icon: "!",
+        iconClass: "border-rose-300/60 bg-rose-100/80 text-rose-700",
+        titleClass: "text-rose-700",
+      };
+    }
+
+    if (heroNote?.type === "offer") {
+      return {
+        title: "عرض مميز",
+        icon: "%",
+        iconClass: "border-emerald-300/60 bg-emerald-100/80 text-emerald-700",
+        titleClass: "text-emerald-700",
+      };
+    }
+
+    return {
+      title: "ملاحظة",
+      icon: "i",
+      iconClass: "border-amber-300/60 bg-amber-100/80 text-amber-700",
+      titleClass: "text-amber-700",
+    };
+  };
+
+  const noteAppearance = getNoteAppearance();
+
   return (
-    <section className="hero-overlay relative w-full min-h-[100svh] h-screen overflow-hidden flex items-center justify-center">
+    <section className="hero-overlay relative flex h-screen min-h-[100svh] w-full items-center justify-center overflow-hidden">
       <img
         src="/barber-hero.jpg"
         alt="Barber Hero"
-        className="hero-media absolute inset-0 w-full h-full object-cover object-center z-0"
+        className="hero-media absolute inset-0 z-0 h-full w-full object-cover object-center"
         loading="eager"
       />
 
       <div
-        className="hero-content text-center px-4 max-w-2xl"
+        className="hero-content max-w-2xl px-4 text-center"
         data-aos="fade-up"
       >
         <h1
-          className="font-notokufi text-4xl sm:text-5xl md:text-6xl font-extrabold mb-4 leading-tight tracking-tight text-gold"
+          className="mb-4 font-notokufi text-4xl font-extrabold leading-tight tracking-tight text-gold sm:text-5xl md:text-6xl"
           style={{
             textShadow:
               "0 2px 6px rgba(0,0,0,0.85), 0 6px 24px rgba(0,0,0,0.6)",
@@ -15705,37 +16352,43 @@ function HeroSection() {
           {t("hero_title") || "أسلوب يليق بك، بكل بساطة"}
         </h1>
 
-        <p className="text-base sm:text-lg md:text-xl mb-6 font-tajawal text-beige max-w-xl mx-auto leading-relaxed">
+        <p className="mx-auto mb-6 max-w-xl font-tajawal text-base leading-relaxed text-beige sm:text-lg md:text-xl">
           {t("hero_subtitle") || "لمحة مُظهرك، يناسبك ويعبر عنك"}
         </p>
 
-        {heroNote?.enabled && heroNote?.text && !noteClosed && (
-          <div
-            className={`relative mx-auto mb-6 max-w-xl rounded-2xl border px-5 py-3 pr-10 text-sm sm:text-base font-bold shadow-lg animate-pulse ${
-              heroNote.type === "important"
-                ? "bg-rose-100 text-rose-900 border-rose-300"
-                : heroNote.type === "offer"
-                  ? "bg-emerald-100 text-emerald-900 border-emerald-300"
-                  : "bg-yellow-100 text-yellow-900 border-yellow-300"
-            }`}
-            style={{
-              display: "-webkit-box",
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: "vertical",
-              overflow: "hidden",
-            }}
-          >
-            <span className="ml-2">📌</span>
-            {heroNote.text}
-
+        {heroNote?.enabled && heroNote?.text?.trim() && !noteClosed && (
+          <div className="relative mx-auto mb-6 max-w-lg rounded-xl border border-gold/35 bg-white/78 px-4 py-3 text-right shadow-[0_8px_30px_rgba(0,0,0,0.14)] backdrop-blur-md sm:px-5">
             <button
               type="button"
               onClick={() => setNoteClosed(true)}
-              className="absolute top-2 right-3 text-lg leading-none opacity-70 hover:opacity-100"
+              className="absolute left-2.5 top-2.5 flex h-7 w-7 items-center justify-center rounded-full border border-black/5 bg-white/50 text-lg leading-none text-gray-500 transition hover:bg-white/80 hover:text-gray-800"
               aria-label="إغلاق الملاحظة"
+              title="إغلاق"
             >
               ×
             </button>
+
+            <div className="flex items-start gap-3 pl-8">
+              <div
+                className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-sm font-black shadow-sm ${noteAppearance.iconClass}`}
+                aria-hidden="true"
+              >
+                {noteAppearance.icon}
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <div
+                  className={`text-[11px] font-black tracking-wide ${noteAppearance.titleClass}`}
+                >
+                  {noteAppearance.title}
+                </div>
+
+                <div className="mt-1 text-sm font-extrabold leading-6 text-white drop-shadow-sm sm:text-[15px]">
+                  {" "}
+                  {heroNote.text}
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
@@ -15743,8 +16396,7 @@ function HeroSection() {
           <a
             href="#booking-form-start"
             onClick={onBookClick}
-            className="inline-flex items-center justify-center bg-gold hover:bg-yellow-400 text-primary font-semibold px-7 py-3.5 rounded-xl shadow-md transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gold"
-            style={{ minHeight: 44 }}
+            className="inline-flex min-h-11 items-center justify-center rounded-xl bg-gold px-7 py-3.5 font-semibold text-primary shadow-md transition hover:bg-yellow-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2"
           >
             {t("book_now") || "احجز الآن"}
           </a>
@@ -15754,9 +16406,10 @@ function HeroSection() {
           <a
             href="#check-booking"
             onClick={onCheckClick}
-            className="inline-flex items-center gap-2 text-sm font-tajawal font-semibold text-beige/90 hover:text-gold transition underline underline-offset-4 decoration-white/30 hover:decoration-gold/60"
+            className="inline-flex items-center gap-2 font-tajawal text-sm font-semibold text-beige/90 underline decoration-white/30 underline-offset-4 transition hover:text-gold hover:decoration-gold/60"
           >
             <span aria-hidden="true">↓</span>
+
             <span>{t("check_booking") || "تحقق من الحجز"}</span>
           </a>
         </div>

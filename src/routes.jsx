@@ -1,28 +1,25 @@
 import { Routes, Route, Navigate } from "react-router-dom";
+
 import React, { useEffect, useState } from "react";
-import Dashboard from "./pages/Dashboard";
-import BlockedPhones from "./pages/BlockedPhones";
-import ReviewsManagerPage from "./pages/barberPanel/reviews/ReviewsManagerPage";
 
 import Home from "./pages/Home";
 import BookingIntro from "./pages/BookingIntro";
 import NotFound from "./pages/NotFound";
 import Contact from "./pages/Contact";
-import BarberPanel from "./pages/barberPanel/BarberPanel";
-import WeeklyHoursPage from "./pages/barberPanel/WeeklyHoursPage"; // ✅ NEW
 import BookingForm from "./pages/BookingForm";
-import AdminBookings from "./pages/AdminBookings";
 import Login from "./pages/Login";
-import AdminBookingsV2 from "./pages/AdminBookingsV2.jsx";
 
-// PrivateRoute يستخدم localStorage للتحقق من تسجيل الدخول اليدوي
+import BarberMobileApp from "./pages/barberPanel/BarberMobileApp";
+
 function PrivateRoute({ children }) {
   const [loading, setLoading] = useState(true);
+
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
     const user = localStorage.getItem("barberUser");
-    setIsLoggedIn(!!user);
+
+    setIsLoggedIn(Boolean(user));
     setLoading(false);
   }, []);
 
@@ -34,23 +31,47 @@ function PrivateRoute({ children }) {
     );
   }
 
-  return isLoggedIn ? children : <Navigate to="/login" />;
+  return isLoggedIn ? children : <Navigate to="/login" replace />;
+}
+
+function ProtectedBarberApp() {
+  return (
+    <PrivateRoute>
+      <BarberMobileApp />
+    </PrivateRoute>
+  );
 }
 
 export default function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<Home />} />
+
       <Route path="/booking" element={<BookingIntro />} />
+
       <Route path="/booking-form" element={<BookingForm />} />
+
       <Route path="/contact" element={<Contact />} />
+
       <Route path="/login" element={<Login />} />
 
+      <Route path="/barber" element={<ProtectedBarberApp />} />
+
+      <Route path="/barber/bookings" element={<ProtectedBarberApp />} />
+
+      <Route path="/barber/weekly-hours" element={<ProtectedBarberApp />} />
+
+      <Route path="/barber/reviews" element={<ProtectedBarberApp />} />
+
+      <Route path="/barber/blocked" element={<ProtectedBarberApp />} />
+
+      <Route path="/barber/stats" element={<ProtectedBarberApp />} />
+
       <Route
-        path="/dashboard"
+        path="/admin-bookings"
         element={
           <PrivateRoute>
-            <Dashboard />
+            <Navigate to="/barber/bookings" replace />
           </PrivateRoute>
         }
       />
@@ -59,7 +80,7 @@ export default function AppRoutes() {
         path="/admin-bookings-v2"
         element={
           <PrivateRoute>
-            <AdminBookingsV2 />
+            <Navigate to="/barber/bookings" replace />
           </PrivateRoute>
         }
       />
@@ -68,44 +89,16 @@ export default function AppRoutes() {
         path="/blocked-phones"
         element={
           <PrivateRoute>
-            <BlockedPhones />
-          </PrivateRoute>
-        }
-      />
-
-      {/* مسارات خاصة محمية */}
-      <Route
-        path="/barber"
-        element={
-          <PrivateRoute>
-            <BarberPanel />
-          </PrivateRoute>
-        }
-      />
-
-      {/* ✅ صفحة مستقلة لساعات الأسبوع */}
-      <Route
-        path="/barber/weekly-hours"
-        element={
-          <PrivateRoute>
-            <WeeklyHoursPage />
-          </PrivateRoute>
-        }
-      />
-      <Route
-        path="/barber/reviews"
-        element={
-          <PrivateRoute>
-            <ReviewsManagerPage />
+            <Navigate to="/barber/blocked" replace />
           </PrivateRoute>
         }
       />
 
       <Route
-        path="/admin-bookings"
+        path="/dashboard"
         element={
           <PrivateRoute>
-            <AdminBookings />
+            <Navigate to="/barber/stats" replace />
           </PrivateRoute>
         }
       />
