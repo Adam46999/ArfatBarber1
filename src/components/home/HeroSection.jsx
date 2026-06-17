@@ -7,6 +7,42 @@ import "aos/dist/aos.css";
 
 import "../../styles/heroEnhancements.css";
 
+function CalendarIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-5 w-5"
+      aria-hidden="true"
+    >
+      <rect x="3" y="5" width="18" height="16" rx="2" />
+      <path d="M16 3v4M8 3v4M3 10h18" />
+    </svg>
+  );
+}
+
+function SearchIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-5 w-5"
+      aria-hidden="true"
+    >
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20 20-3.5-3.5" />
+    </svg>
+  );
+}
+
 function HeroSection() {
   const { t } = useTranslation();
 
@@ -14,7 +50,11 @@ function HeroSection() {
   const [noteClosed, setNoteClosed] = useState(false);
 
   useEffect(() => {
-    AOS.init({ duration: 1000 });
+    AOS.init({
+      duration: 700,
+      once: true,
+      offset: 0,
+    });
   }, []);
 
   useEffect(() => {
@@ -33,9 +73,7 @@ function HeroSection() {
   const smoothScrollTo = (id) => {
     const element = document.getElementById(id);
 
-    if (!element) {
-      return;
-    }
+    if (!element) return;
 
     element.scrollIntoView({
       behavior: "smooth",
@@ -53,11 +91,9 @@ function HeroSection() {
 
     const element = document.getElementById("booking-form-start");
 
-    if (!element) {
-      return;
-    }
+    if (!element) return;
 
-    const y = element.getBoundingClientRect().top + window.pageYOffset - 100;
+    const y = element.getBoundingClientRect().top + window.pageYOffset - 90;
 
     window.scrollTo({
       top: y,
@@ -70,8 +106,8 @@ function HeroSection() {
       return {
         title: "تنبيه مهم",
         icon: "!",
-        iconClass: "border-rose-300/60 bg-rose-100/80 text-rose-700",
-        titleClass: "text-rose-700",
+        iconClass: "hero-note-icon hero-note-icon--important",
+        titleClass: "hero-note-title hero-note-title--important",
       };
     }
 
@@ -79,106 +115,100 @@ function HeroSection() {
       return {
         title: "عرض مميز",
         icon: "%",
-        iconClass: "border-emerald-300/60 bg-emerald-100/80 text-emerald-700",
-        titleClass: "text-emerald-700",
+        iconClass: "hero-note-icon hero-note-icon--offer",
+        titleClass: "hero-note-title hero-note-title--offer",
       };
     }
 
     return {
       title: "ملاحظة",
       icon: "i",
-      iconClass: "border-amber-300/60 bg-amber-100/80 text-amber-700",
-      titleClass: "text-amber-700",
+      iconClass: "hero-note-icon",
+      titleClass: "hero-note-title",
     };
   };
 
   const noteAppearance = getNoteAppearance();
 
   return (
-    <section className="hero-overlay relative flex h-screen min-h-[100svh] w-full items-center justify-center overflow-hidden">
+    <section className="hero-overlay">
       <img
         src="/barber-hero.jpg"
-        alt="Barber Hero"
-        className="hero-media absolute inset-0 z-0 h-full w-full object-cover object-center"
+        alt="حلاق أثناء قص الشعر"
+        className="hero-media"
         loading="eager"
+        fetchPriority="high"
       />
 
-      <div
-        className="hero-content max-w-2xl px-4 text-center"
-        data-aos="fade-up"
-      >
-        <h1
-          className="mb-4 font-notokufi text-4xl font-extrabold leading-tight tracking-tight text-gold sm:text-5xl md:text-6xl"
-          style={{
-            textShadow:
-              "0 2px 6px rgba(0,0,0,0.85), 0 6px 24px rgba(0,0,0,0.6)",
-          }}
-        >
-          {t("hero_title") || "أسلوب يليق بك، بكل بساطة"}
-        </h1>
+      <div className="hero-content-shell">
+        <div className="hero-content" data-aos="fade-up">
+          <div className="hero-copy">
+            <p className="hero-eyebrow">
+              {t("hero_eyebrow", {
+                defaultValue: "قصّة مرتبة. تفاصيل أدق.",
+              })}{" "}
+            </p>
 
-        <p className="mx-auto mb-6 max-w-xl font-tajawal text-base leading-relaxed text-beige sm:text-lg md:text-xl">
-          {t("hero_subtitle") || "لمحة مُظهرك، يناسبك ويعبر عنك"}
-        </p>
+            <h1 className="hero-title">
+              {t("hero_title") || "أسلوب يليق بك، بكل بساطة"}
+            </h1>
 
-        {heroNote?.enabled && heroNote?.text?.trim() && !noteClosed && (
-          <div className="relative mx-auto mb-6 max-w-lg rounded-xl border border-gold/35 bg-white/78 px-4 py-3 text-right shadow-[0_8px_30px_rgba(0,0,0,0.14)] backdrop-blur-md sm:px-5">
-            <button
-              type="button"
-              onClick={() => setNoteClosed(true)}
-              className="absolute left-2.5 top-2.5 flex h-7 w-7 items-center justify-center rounded-full border border-black/5 bg-white/50 text-lg leading-none text-gray-500 transition hover:bg-white/80 hover:text-gray-800"
-              aria-label="إغلاق الملاحظة"
-              title="إغلاق"
-            >
-              ×
-            </button>
+            <p className="hero-subtitle">
+              {t("hero_subtitle") || "نمنحك مظهرًا يناسبك ويعبّر عنك"}
+            </p>
+          </div>
 
-            <div className="flex items-start gap-3 pl-8">
-              <div
-                className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-sm font-black shadow-sm ${noteAppearance.iconClass}`}
-                aria-hidden="true"
+          {heroNote?.enabled && heroNote?.text?.trim() && !noteClosed && (
+            <div className="hero-note">
+              <button
+                type="button"
+                onClick={() => setNoteClosed(true)}
+                className="hero-note-close"
+                aria-label="إغلاق الملاحظة"
+                title="إغلاق"
               >
-                {noteAppearance.icon}
-              </div>
+                ×
+              </button>
 
-              <div className="min-w-0 flex-1">
-                <div
-                  className={`text-[11px] font-black tracking-wide ${noteAppearance.titleClass}`}
-                >
-                  {noteAppearance.title}
+              <div className="hero-note-inner">
+                <div className={noteAppearance.iconClass} aria-hidden="true">
+                  {noteAppearance.icon}
                 </div>
 
-                <div className="mt-1 text-sm font-extrabold leading-6 text-white drop-shadow-sm sm:text-[15px]">
-                  {" "}
-                  {heroNote.text}
+                <div className="hero-note-copy">
+                  <div className={noteAppearance.titleClass}>
+                    {noteAppearance.title}
+                  </div>
+
+                  <div className="hero-note-text">{heroNote.text}</div>
                 </div>
               </div>
             </div>
+          )}
+
+          <div className="hero-actions">
+            <a
+              href="#booking-form-start"
+              onClick={onBookClick}
+              className="hero-button hero-button--primary"
+            >
+              <CalendarIcon />
+              <span>{t("book_now") || "احجز الآن"}</span>
+            </a>
+
+            <a
+              href="#check-booking"
+              onClick={onCheckClick}
+              className="hero-button hero-button--secondary"
+            >
+              <SearchIcon />
+              <span>{t("check_booking") || "تحقق من الحجز"}</span>
+            </a>
           </div>
-        )}
-
-        <div>
-          <a
-            href="#booking-form-start"
-            onClick={onBookClick}
-            className="inline-flex min-h-11 items-center justify-center rounded-xl bg-gold px-7 py-3.5 font-semibold text-primary shadow-md transition hover:bg-yellow-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2"
-          >
-            {t("book_now") || "احجز الآن"}
-          </a>
-        </div>
-
-        <div className="mt-3">
-          <a
-            href="#check-booking"
-            onClick={onCheckClick}
-            className="inline-flex items-center gap-2 font-tajawal text-sm font-semibold text-beige/90 underline decoration-white/30 underline-offset-4 transition hover:text-gold hover:decoration-gold/60"
-          >
-            <span aria-hidden="true">↓</span>
-
-            <span>{t("check_booking") || "تحقق من الحجز"}</span>
-          </a>
         </div>
       </div>
+
+      <div className="hero-bottom-fade" aria-hidden="true" />
     </section>
   );
 }
