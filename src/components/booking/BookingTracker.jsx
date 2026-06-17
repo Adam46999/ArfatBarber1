@@ -1,48 +1,54 @@
 // src/components/booking/BookingTracker.jsx
+
 import { useState } from "react";
-import { db } from "../../firebase";
-import SectionTitle from "../common/SectionTitle";
-import { collection, query, where, getDocs } from "firebase/firestore";
+import { collection, getDocs, query, where } from "firebase/firestore";
 import { useTranslation } from "react-i18next";
 import {
   CalendarCheck,
-  Phone,
-  Clock3,
   CalendarDays,
+  CheckCircle2,
+  Clock3,
+  KeyRound,
+  LoaderCircle,
+  Phone,
   Scissors,
+  Search,
+  ShieldCheck,
+  Trash2,
+  UserRound,
 } from "lucide-react";
-import {
-  toILPhoneE164,
-  isILPhoneE164,
-  e164ToLocalPretty,
-  normalizeDigits,
-} from "../../utils/phone";
 
-// ✅ بدل deleteDoc: استخدم الإلغاء الصحيح اللي بنقص العداد الشهري
+import { db } from "../../firebase";
+import SectionTitle from "../common/SectionTitle";
+import {
+  e164ToLocalPretty,
+  isILPhoneE164,
+  normalizeDigits,
+  toILPhoneE164,
+} from "../../utils/phone";
 import { cancelBooking } from "../../services/bookingService";
 
 const CANCELLATION_WINDOW_MIN = 50;
 
-/* ============================
-   Helpers
-   ============================ */
-
 function diffMinutes(fromDate, toDate) {
-  const ms = toDate.getTime() - fromDate.getTime();
-  return Math.floor(ms / 60000);
+  const milliseconds = toDate.getTime() - fromDate.getTime();
+
+  return Math.floor(milliseconds / 60000);
 }
 
 function getStartAtDate(booking) {
   if (!booking) return null;
 
   if (booking?.startAt?.toDate) {
-    const d = booking.startAt.toDate();
-    return d instanceof Date && !isNaN(d) ? d : null;
+    const date = booking.startAt.toDate();
+
+    return date instanceof Date && !Number.isNaN(date.getTime()) ? date : null;
   }
 
   if (booking?.selectedDate && booking?.selectedTime) {
-    const d = new Date(`${booking.selectedDate}T${booking.selectedTime}:00`);
-    return d instanceof Date && !isNaN(d) ? d : null;
+    const date = new Date(`${booking.selectedDate}T${booking.selectedTime}:00`);
+
+    return date instanceof Date && !Number.isNaN(date.getTime()) ? date : null;
   }
 
   return null;
@@ -50,23 +56,32 @@ function getStartAtDate(booking) {
 
 function isBookingActiveNow(booking) {
   if (!booking || booking.cancelledAt) return false;
-  const d = getStartAtDate(booking);
-  if (!d) return false;
-  return d.getTime() > Date.now();
+
+  const startAtDate = getStartAtDate(booking);
+
+  if (!startAtDate) return false;
+
+  return startAtDate.getTime() > Date.now();
 }
 
 function canCancelFixed(startAtDate) {
-  if (!(startAtDate instanceof Date) || isNaN(startAtDate)) {
-    return { ok: false, reason: "بيانات الموعد غير صالحة." };
+  if (!(startAtDate instanceof Date) || Number.isNaN(startAtDate.getTime())) {
+    return {
+      ok: false,
+      reason: "بيانات الموعد غير صالحة.",
+    };
   }
 
-  const left = diffMinutes(new Date(), startAtDate);
+  const minutesLeft = diffMinutes(new Date(), startAtDate);
 
-  if (left < 0) {
-    return { ok: false, reason: "لا يمكن الإلغاء: موعد الحجز انتهى بالفعل." };
+  if (minutesLeft < 0) {
+    return {
+      ok: false,
+      reason: "لا يمكن الإلغاء: موعد الحجز انتهى بالفعل.",
+    };
   }
 
-  if (left < CANCELLATION_WINDOW_MIN) {
+  if (minutesLeft < CANCELLATION_WINDOW_MIN) {
     return {
       ok: false,
       reason: `لا يمكن الإلغاء: تبقّى أقل من ${CANCELLATION_WINDOW_MIN} دقيقة على موعدك.`,
@@ -76,11 +91,14 @@ function canCancelFixed(startAtDate) {
   return { ok: true };
 }
 
-// تنسيق التاريخ + اسم اليوم بالعربي
 function formatDayAndDate(dateYMD) {
   if (!dateYMD) return "";
-  const d = new Date(`${dateYMD}T00:00:00`);
-  if (!(d instanceof Date) || isNaN(d)) return dateYMD;
+
+  const date = new Date(`${dateYMD}T00:00:00`);
+
+  if (Number.isNaN(date.getTime())) {
+    return dateYMD;
+  }
 
   const weekdayNames = [
     "الأحد",
@@ -91,20 +109,56 @@ function formatDayAndDate(dateYMD) {
     "الجمعة",
     "السبت",
   ];
-  const dayName = weekdayNames[d.getDay()];
-  const dd = String(d.getDate()).padStart(2, "0");
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const yyyy = d.getFullYear();
 
-  return `${dayName} ${dd}-${mm}-${yyyy}`;
+  const dayName = weekdayNames[date.getDay()];
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const year = date.getFullYear();
+
+  return `${dayName}، ${day}-${month}-${year}`;
 }
 
-/* ============================
-   Component
-   ============================ */
+function DetailItem({ icon, label, value, featured = false, className = "" }) {
+  return (
+    <div
+      className={[
+        "min-w-0 rounded-2xl border p-3.5",
+        featured
+          ? "border-[#dec47f] bg-[#fff9e9]"
+          : "border-slate-200 bg-slate-50",
+        className,
+      ].join(" ")}
+    >
+      <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
+        <span
+          className={[
+            "flex h-7 w-7 shrink-0 items-center justify-center rounded-lg",
+            featured
+              ? "bg-[#f2dda5] text-[#76550f]"
+              : "bg-white text-slate-500 shadow-sm",
+          ].join(" ")}
+        >
+          {icon}
+        </span>
+
+        <span>{label}</span>
+      </div>
+
+      <p
+        className={[
+          "mt-2 break-words text-sm font-black",
+          featured ? "text-[#5e430d]" : "text-slate-900",
+        ].join(" ")}
+      >
+        {value || "—"}
+      </p>
+    </div>
+  );
+}
 
 function BookingTracker() {
   const { t } = useTranslation();
+
   const [phone, setPhone] = useState("");
   const [results, setResults] = useState([]);
   const [notFound, setNotFound] = useState(false);
@@ -112,50 +166,85 @@ function BookingTracker() {
   const [successMessage, setSuccessMessage] = useState("");
   const [codeInputs, setCodeInputs] = useState({});
   const [errorMessages, setErrorMessages] = useState({});
+  const [cancellingId, setCancellingId] = useState("");
 
-  const align = "text-right";
+  const handlePhoneChange = (event) => {
+    setPhone(event.target.value);
 
-  const handleCheck = async () => {
+    if (notFound) {
+      setNotFound(false);
+    }
+
+    if (successMessage) {
+      setSuccessMessage("");
+    }
+  };
+
+  const handleCheck = async (event) => {
+    event?.preventDefault();
+
     setResults([]);
     setNotFound(false);
     setSuccessMessage("");
     setErrorMessages({});
 
     const input = phone.trim();
+
     if (!input) return;
 
-    const localNumber = normalizeDigits(input); // 050...
-    const phoneE164 = toILPhoneE164(input); // +972...
+    const localNumber = normalizeDigits(input);
+    const phoneE164 = toILPhoneE164(input);
     const hasValidE164 = isILPhoneE164(phoneE164);
 
     setLoading(true);
+
     try {
-      const byId = {};
+      const bookingsById = {};
 
       if (hasValidE164) {
-        const q1 = query(
+        const e164Query = query(
           collection(db, "bookings"),
           where("phoneNumber", "==", phoneE164),
         );
-        const snap1 = await getDocs(q1);
-        snap1.forEach((d) => {
-          byId[d.id] = { docId: d.id, ...d.data() };
+
+        const e164Snapshot = await getDocs(e164Query);
+
+        e164Snapshot.forEach((document) => {
+          bookingsById[document.id] = {
+            docId: document.id,
+            ...document.data(),
+          };
         });
       }
 
       if (localNumber) {
-        const q2 = query(
+        const localQuery = query(
           collection(db, "bookings"),
           where("phoneNumber", "==", localNumber),
         );
-        const snap2 = await getDocs(q2);
-        snap2.forEach((d) => {
-          byId[d.id] = { docId: d.id, ...d.data() };
+
+        const localSnapshot = await getDocs(localQuery);
+
+        localSnapshot.forEach((document) => {
+          bookingsById[document.id] = {
+            docId: document.id,
+            ...document.data(),
+          };
         });
       }
 
-      const rawData = Object.values(byId);
-      const activeBookings = rawData.filter(isBookingActiveNow);
+      const activeBookings = Object.values(bookingsById)
+        .filter(isBookingActiveNow)
+        .sort((firstBooking, secondBooking) => {
+          const firstDate = getStartAtDate(firstBooking);
+          const secondDate = getStartAtDate(secondBooking);
+
+          if (!firstDate && !secondDate) return 0;
+          if (!firstDate) return 1;
+          if (!secondDate) return -1;
+
+          return firstDate.getTime() - secondDate.getTime();
+        });
 
       if (activeBookings.length === 0) {
         setNotFound(true);
@@ -165,44 +254,84 @@ function BookingTracker() {
     } catch (error) {
       console.error("Error fetching bookings:", error);
       setNotFound(true);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
+  };
+
+  const handleCodeChange = (bookingId, nextCode) => {
+    setCodeInputs((previous) => ({
+      ...previous,
+      [bookingId]: nextCode,
+    }));
+
+    if (errorMessages[bookingId]) {
+      setErrorMessages((previous) => ({
+        ...previous,
+        [bookingId]: "",
+      }));
+    }
   };
 
   const handleCancel = async (booking) => {
-    const code = codeInputs[booking.docId] || "";
+    const code = (codeInputs[booking.docId] || "").trim();
+
     if (!code || code !== booking.bookingCode) {
-      setErrorMessages((prev) => ({
-        ...prev,
-        [booking.docId]: "رمز التحقق غير صحيح",
+      setErrorMessages((previous) => ({
+        ...previous,
+        [booking.docId]: "رمز التحقق غير صحيح.",
       }));
       return;
     }
 
     if (!isBookingActiveNow(booking)) {
-      setErrorMessages((prev) => ({
-        ...prev,
-        [booking.docId]: "هذا الحجز لم يعد فعّالاً، لا يمكن إلغاؤه.",
+      setErrorMessages((previous) => ({
+        ...previous,
+        [booking.docId]: "هذا الحجز لم يعد فعّالًا، ولا يمكن إلغاؤه.",
       }));
       return;
     }
 
     const startAtDate = getStartAtDate(booking);
-    const check = canCancelFixed(startAtDate);
-    if (!check.ok) {
-      setErrorMessages((prev) => ({ ...prev, [booking.docId]: check.reason }));
+    const cancellationCheck = canCancelFixed(startAtDate);
+
+    if (!cancellationCheck.ok) {
+      setErrorMessages((previous) => ({
+        ...previous,
+        [booking.docId]: cancellationCheck.reason,
+      }));
       return;
     }
 
+    setCancellingId(booking.docId);
+
     try {
-      // ✅ الإلغاء الصحيح (بيحط cancelledAt وبيعمل decrement للعداد الشهري)
       await cancelBooking(booking.docId);
 
-      setResults((prev) => prev.filter((b) => b.docId !== booking.docId));
-      setSuccessMessage("✅ تم إلغاء الحجز بنجاح");
+      setResults((previous) =>
+        previous.filter(
+          (currentBooking) => currentBooking.docId !== booking.docId,
+        ),
+      );
+
+      setSuccessMessage("تم إلغاء الحجز بنجاح.");
+
+      setCodeInputs((previous) => {
+        const nextInputs = { ...previous };
+
+        delete nextInputs[booking.docId];
+
+        return nextInputs;
+      });
     } catch (error) {
       console.error("Error while cancelling:", error);
-      alert("حدث خطأ أثناء محاولة الإلغاء.");
+
+      setErrorMessages((previous) => ({
+        ...previous,
+        [booking.docId]: "حدث خطأ أثناء الإلغاء. حاول مرة أخرى.",
+      }));
+    } finally {
+      setCancellingId("");
     }
   };
 
@@ -210,76 +339,121 @@ function BookingTracker() {
     <section
       id="check-booking"
       dir="rtl"
-      className="relative bg-[#f8f6f1] py-20 px-4 text-primary font-body scroll-mt-28 md:scroll-mt-32 overflow-hidden"
-      style={{ scrollMarginTop: 120 }} // ✅ دقّة أعلى لو عندك هيدر sticky
+      className="relative scroll-mt-28 overflow-hidden bg-[#f8f6f1] px-4 py-16 font-body text-primary md:scroll-mt-32 md:py-20"
+      style={{ scrollMarginTop: 120 }}
     >
-      {/* ديكور خفيف جداً (شكل فقط) */}
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -bottom-24 left-10 w-72 h-72 rounded-full bg-gold/10 blur-3xl" />
+      <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+        <div className="absolute -bottom-24 left-10 h-72 w-72 rounded-full bg-gold/10 blur-3xl" />
       </div>
 
-      {/* العنوان */}
-      <SectionTitle
-        icon={
-          <div className="flex items-center justify-center w-10 h-10 rounded-full bg-gold/15 text-gold shadow-sm">
-            <CalendarCheck className="w-6 h-6" />
-          </div>
-        }
-      >
-        <span className="tracking-wide text-lg font-semibold">
-          {t("check_booking", { defaultValue: "تحقّق من الحجز" })}
-        </span>
-      </SectionTitle>
+      <div className="relative mx-auto max-w-2xl">
+        <SectionTitle
+          icon={
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gold/15 text-gold shadow-sm">
+              <CalendarCheck className="h-6 w-6" aria-hidden="true" />
+            </div>
+          }
+        >
+          <span className="text-lg font-semibold tracking-wide">
+            {t("check_booking", {
+              defaultValue: "تحقّق من الحجز",
+            })}
+          </span>
+        </SectionTitle>
 
-      {/* الصندوق الرئيسي */}
-      <div className="max-w-xl mx-auto bg-[#fcfaf7] border border-gold/20 rounded-3xl shadow-lg p-6 md:p-8 mt-6 backdrop-blur-sm ring-1 ring-black/5 transition-transform duration-300 hover:-translate-y-1">
-        {/* إدخال الرقم + زر التحقق */}
-        <div className="flex flex-row-reverse gap-3 items-center">
-          <input
-            type="tel"
-            placeholder={t("phone", { defaultValue: "رقم الهاتف" })}
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            className={`w-full border border-gray-300 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-gold shadow-sm bg-white ${align}`}
-          />
-          <button
-            onClick={handleCheck}
-            disabled={loading || !phone.trim()}
-            className={`rounded-2xl px-6 py-3 font-bold shadow-sm transition ${
-              loading || !phone.trim()
-                ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                : "bg-gold text-primary hover:bg-yellow-400"
-            }`}
+        <div className="mt-6 rounded-[26px] border border-[#e3dccf] bg-white p-4 shadow-[0_16px_40px_rgba(40,32,20,0.08)] sm:p-6">
+          <form
+            onSubmit={handleCheck}
+            className="flex flex-col gap-3 sm:flex-row"
           >
-            {loading ? (
-              <span className="inline-flex items-center gap-2">
-                <span className="h-4 w-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
-                {t("loading", { defaultValue: "جارٍ التحقق..." })}
-              </span>
-            ) : (
-              t("check", { defaultValue: "تحقّق" })
-            )}
-          </button>
+            <div className="relative min-w-0 flex-1">
+              <Phone
+                className="pointer-events-none absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"
+                aria-hidden="true"
+              />
+
+              <input
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                placeholder={t("phone", {
+                  defaultValue: "رقم الهاتف",
+                })}
+                value={phone}
+                onChange={handlePhoneChange}
+                disabled={loading}
+                className="h-[52px] w-full rounded-2xl border border-slate-300 bg-white py-3 pl-4 pr-12 text-right text-base font-semibold text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#b88a25] focus:ring-4 focus:ring-[#d7b55c]/20 disabled:bg-slate-50"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading || !phone.trim()}
+              className={[
+                "flex min-h-[52px] items-center justify-center gap-2 rounded-2xl px-6 text-sm font-extrabold transition sm:min-w-[145px]",
+                loading || !phone.trim()
+                  ? "cursor-not-allowed bg-slate-200 text-slate-500"
+                  : "bg-gradient-to-br from-[#d7b457] to-[#bd9135] text-[#172033] shadow-[0_8px_18px_rgba(157,112,21,0.20)] hover:brightness-105",
+              ].join(" ")}
+            >
+              {loading ? (
+                <>
+                  <LoaderCircle
+                    className="h-5 w-5 animate-spin"
+                    aria-hidden="true"
+                  />
+
+                  <span>
+                    {t("loading", {
+                      defaultValue: "جارٍ التحقق...",
+                    })}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <Search className="h-5 w-5" aria-hidden="true" />
+
+                  <span>
+                    {t("check", {
+                      defaultValue: "تحقّق",
+                    })}
+                  </span>
+                </>
+              )}
+            </button>
+          </form>
+
+          {successMessage && (
+            <div
+              className="mt-4 flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-800"
+              role="status"
+            >
+              <CheckCircle2 className="h-5 w-5 shrink-0" aria-hidden="true" />
+
+              <span>{successMessage}</span>
+            </div>
+          )}
+
+          {notFound && (
+            <div
+              className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-right"
+              role="status"
+            >
+              <p className="text-sm font-extrabold text-amber-900">
+                {t("no_booking_found", {
+                  defaultValue: "لا يوجد حجز فعّال مرتبط بهذا الرقم.",
+                })}
+              </p>
+
+              <p className="mt-1 text-xs leading-6 text-amber-800">
+                تأكد أن الرقم هو نفسه المستخدم عند الحجز.
+              </p>
+            </div>
+          )}
         </div>
 
-        {/* رسائل */}
-        {successMessage && (
-          <div className="mt-4 bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-xl text-right shadow-sm">
-            {successMessage}
-          </div>
-        )}
-
-        {notFound && (
-          <div className="mt-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-right shadow-sm">
-            {t("no_booking_found", {
-              defaultValue: "لا يوجد حجز فعّال مرتبط بهذا الرقم.",
-            })}
-          </div>
-        )}
-
-        {/* النتائج */}
         {results.length > 0 && (
-          <div className="mt-6 space-y-6">
+          <div className="mt-5 space-y-4">
             {results.map((booking) => {
               const prettyDate = formatDayAndDate(booking.selectedDate);
 
@@ -287,118 +461,207 @@ function BookingTracker() {
                 defaultValue: booking.selectedService || "—",
               });
 
+              const isCancelling = cancellingId === booking.docId;
+
+              const enteredCode = codeInputs[booking.docId] || "";
+
               return (
-                <div
+                <article
                   key={booking.docId}
-                  className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm hover:shadow-xl transition-all"
-                  dir="rtl"
+                  className="overflow-hidden rounded-[26px] border border-[#e2dbcf] bg-white shadow-[0_14px_36px_rgba(38,31,20,0.08)]"
                 >
-                  {/* الهيدر */}
-                  <div className="flex flex-row-reverse justify-between items-start mb-6">
-                    {/* يمين: الاسم + الهاتف فقط */}
-                    <div className="space-y-3 text-right w-full">
-                      <div className="text-xl font-extrabold text-gray-900 leading-tight">
-                        {booking.fullName || "بدون اسم"}
+                  <header className="border-b border-[#eee8dc] bg-[#fcfaf5] p-4 sm:p-5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#ead698] text-[#6d500e]">
+                          <UserRound className="h-6 w-6" aria-hidden="true" />
+                        </div>
+
+                        <div className="min-w-0">
+                          <h3 className="truncate text-lg font-black text-slate-900">
+                            {booking.fullName || "بدون اسم"}
+                          </h3>
+
+                          <div className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-slate-500">
+                            <Phone className="h-4 w-4" aria-hidden="true" />
+
+                            <span dir="ltr">
+                              {e164ToLocalPretty(booking.phoneNumber)}
+                            </span>
+                          </div>
+                        </div>
                       </div>
 
-                      <div className="flex flex-row-reverse items-center gap-2 text-sm text-gray-700">
-                        <Phone className="w-4 h-4 opacity-70" />
-                        <span>
-                          {t("phone", { defaultValue: "رقم الهاتف" })}:{" "}
-                          {e164ToLocalPretty(booking.phoneNumber)}
-                        </span>
-                      </div>
+                      <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-extrabold text-emerald-700">
+                        <ShieldCheck className="h-4 w-4" aria-hidden="true" />
+
+                        {t("active_booking", {
+                          defaultValue: "حجز نشط",
+                        })}
+                      </span>
+                    </div>
+                  </header>
+
+                  <div className="p-4 sm:p-5">
+                    <div className="grid grid-cols-2 gap-3">
+                      <DetailItem
+                        label={t("date", {
+                          defaultValue: "التاريخ",
+                        })}
+                        value={prettyDate}
+                        icon={
+                          <CalendarDays
+                            className="h-4 w-4"
+                            aria-hidden="true"
+                          />
+                        }
+                        featured
+                      />
+
+                      <DetailItem
+                        label={t("time", {
+                          defaultValue: "الساعة",
+                        })}
+                        value={booking.selectedTime}
+                        icon={<Clock3 className="h-4 w-4" aria-hidden="true" />}
+                        featured
+                      />
+
+                      <DetailItem
+                        label={t("service", {
+                          defaultValue: "الخدمة",
+                        })}
+                        value={serviceTitle}
+                        icon={
+                          <Scissors className="h-4 w-4" aria-hidden="true" />
+                        }
+                        className="col-span-2"
+                      />
                     </div>
 
-                    {/* يسار: بادج */}
-                    <span className="px-4 py-1 text-sm rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 shadow-sm whitespace-nowrap">
-                      {t("active_booking", { defaultValue: "حجز نشط" })}
-                    </span>
-                  </div>
+                    <div className="mt-5 rounded-2xl border border-red-100 bg-red-50/45 p-4">
+                      <div className="flex items-start gap-3">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-red-500 shadow-sm">
+                          <KeyRound className="h-5 w-5" aria-hidden="true" />
+                        </div>
 
-                  {/* Grid المعلومات */}
-                  <div className="grid grid-cols-1 gap-3 mb-6">
-                    <InfoRow
-                      label={t("service", { defaultValue: "الخدمة" })}
-                      value={serviceTitle}
-                      icon={<Scissors className="w-4 h-4 opacity-70" />}
-                    />
-                    <InfoRow
-                      label={t("time", { defaultValue: "الساعة" })}
-                      value={booking.selectedTime}
-                      icon={<Clock3 className="w-4 h-4 opacity-70" />}
-                    />
-                    <InfoRow
-                      label={t("date", { defaultValue: "التاريخ" })}
-                      value={prettyDate}
-                      icon={<CalendarDays className="w-4 h-4 opacity-70" />}
-                    />
-                  </div>
+                        <div>
+                          <h4 className="text-sm font-extrabold text-slate-900">
+                            {t("cancel_booking", {
+                              defaultValue: "إلغاء الحجز",
+                            })}
+                          </h4>
 
-                  {/* إدخال الكود */}
-                  <div className="space-y-2 text-right">
-                    <label className="block text-sm font-semibold">
-                      {t("enter_code", {
-                        defaultValue: "أدخل رمز التحقق لإلغاء الحجز",
-                      })}
-                    </label>
-                    <input
-                      type="text"
-                      inputMode="text"
-                      autoComplete="one-time-code"
-                      value={codeInputs[booking.docId] || ""}
-                      onChange={(e) =>
-                        setCodeInputs((prev) => ({
-                          ...prev,
-                          [booking.docId]: e.target.value,
-                        }))
-                      }
-                      className="w-full border border-gray-300 rounded-xl px-4 py-3 text-right shadow-sm focus:ring-2 focus:ring-gold bg-white"
-                      placeholder={t("enter_code", {
-                        defaultValue: "أدخل الكود",
-                      })}
-                    />
+                          <p className="mt-1 text-xs leading-5 text-slate-600">
+                            أدخل كود الحجز الذي حصلت عليه عند التأكيد.
+                          </p>
+                        </div>
+                      </div>
 
-                    {errorMessages[booking.docId] && (
-                      <p className="text-red-600 text-sm mt-1">
-                        {errorMessages[booking.docId]}
-                      </p>
-                    )}
-                  </div>
+                      <div className="mt-4">
+                        <label
+                          htmlFor={`cancel-code-${booking.docId}`}
+                          className="mb-2 block text-sm font-extrabold text-slate-800"
+                        >
+                          {t("booking_code", {
+                            defaultValue: "كود الحجز",
+                          })}
+                        </label>
 
-                  {/* زر الإلغاء */}
-                  <div className="flex justify-start mt-5">
-                    <button
-                      onClick={() => handleCancel(booking)}
-                      className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-xl font-bold shadow-sm"
-                    >
-                      {t("cancel_booking", { defaultValue: "إلغاء الحجز" })}
-                    </button>
+                        <div className="flex flex-col gap-3 sm:flex-row">
+                          <div className="relative min-w-0 flex-1">
+                            <KeyRound
+                              className="pointer-events-none absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"
+                              aria-hidden="true"
+                            />
+
+                            <input
+                              id={`cancel-code-${booking.docId}`}
+                              type="text"
+                              inputMode="text"
+                              autoComplete="one-time-code"
+                              value={enteredCode}
+                              onChange={(event) =>
+                                handleCodeChange(
+                                  booking.docId,
+                                  event.target.value,
+                                )
+                              }
+                              placeholder={t("enter_code", {
+                                defaultValue: "أدخل كود الحجز",
+                              })}
+                              disabled={isCancelling}
+                              className={[
+                                "h-[54px] w-full rounded-2xl border bg-white py-3 pl-4 pr-12",
+                                "text-right text-base font-extrabold tracking-wide text-slate-900",
+                                "outline-none transition",
+                                "placeholder:font-normal placeholder:tracking-normal placeholder:text-slate-400",
+                                "focus:border-[#b98a21] focus:ring-4 focus:ring-[#d7b55c]/20",
+                                "disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-70",
+                                errorMessages[booking.docId]
+                                  ? "border-red-300"
+                                  : "border-slate-300",
+                              ].join(" ")}
+                            />
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => handleCancel(booking)}
+                            disabled={isCancelling || !enteredCode.trim()}
+                            className={[
+                              "flex min-h-[54px] items-center justify-center gap-2 rounded-2xl px-5",
+                              "text-sm font-extrabold transition",
+                              "sm:min-w-[150px]",
+                              isCancelling || !enteredCode.trim()
+                                ? "cursor-not-allowed bg-slate-200 text-slate-500"
+                                : "bg-red-600 text-white shadow-[0_8px_18px_rgba(220,38,38,0.18)] hover:bg-red-700",
+                            ].join(" ")}
+                          >
+                            {isCancelling ? (
+                              <>
+                                <LoaderCircle
+                                  className="h-5 w-5 animate-spin"
+                                  aria-hidden="true"
+                                />
+
+                                <span>جارٍ الإلغاء</span>
+                              </>
+                            ) : (
+                              <>
+                                <Trash2
+                                  className="h-5 w-5"
+                                  aria-hidden="true"
+                                />
+
+                                <span>
+                                  {t("cancel_booking", {
+                                    defaultValue: "إلغاء الحجز",
+                                  })}
+                                </span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+
+                        {errorMessages[booking.docId] && (
+                          <p
+                            className="mt-2 text-sm font-bold text-red-600"
+                            role="alert"
+                          >
+                            {errorMessages[booking.docId]}
+                          </p>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                </div>
+                </article>
               );
             })}
           </div>
         )}
       </div>
     </section>
-  );
-}
-
-function InfoRow({ label, value, icon }) {
-  return (
-    <div
-      className="bg-gray-50 border border-gray-200 rounded-2xl p-4 flex flex-col gap-1 text-right shadow-sm"
-      dir="rtl"
-    >
-      <div className="text-xs text-gray-500 flex flex-row-reverse items-center gap-1">
-        {icon}
-        <span>{label}</span>
-      </div>
-      <div className="text-base font-semibold text-gray-900">
-        {value || "—"}
-      </div>
-    </div>
   );
 }
 
