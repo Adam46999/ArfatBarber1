@@ -9,10 +9,12 @@ import {
   normalizeWeekly,
   validateWeekly,
 } from "../utils/weeklyHours";
+
 import {
   saveWeeklyHours,
   resetWeeklyHoursToDefault,
 } from "../../../services/barberWeeklyHours";
+
 import defaultWorkingHours from "../../../constants/workingHours";
 
 function nowTime() {
@@ -26,18 +28,21 @@ function nowTime() {
   }
 }
 
-function clone(obj) {
-  return JSON.parse(JSON.stringify(obj));
+function clone(value) {
+  return JSON.parse(JSON.stringify(value));
 }
 
 export default function WeeklyHoursEditorMobile({
   loading = false,
   initialWeekly,
   onDirtyChange,
-  isArabic = true, // صفحة الحلاق غالباً عربي، لكن صار قابل للتغيير
+  onSaved,
+  isArabic = true,
 }) {
-  const [weekly, setWeekly] = useState(() => normalizeWeekly(initialWeekly));
-  const baseRef = useRef(normalizeWeekly(initialWeekly));
+  const normalizedInitial = normalizeWeekly(initialWeekly);
+
+  const [weekly, setWeekly] = useState(() => clone(normalizedInitial));
+  const baseRef = useRef(clone(normalizedInitial));
 
   const [expanded, setExpanded] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -47,19 +52,35 @@ export default function WeeklyHoursEditorMobile({
 
   const [lastSavedAt, setLastSavedAt] = useState(null);
 
-  // ✅ لما تتغير initialWeekly (مثلاً دخول/خروج edit mode)
+  /**
+   * عندما تصل نسخة جديدة من الصفحة الأم:
+   * نعتمدها فقط إذا المحرر ليس في منتصف الحفظ.
+   */
   useEffect(() => {
-    const n = normalizeWeekly(initialWeekly);
-    setWeekly(n);
-    baseRef.current = n;
+    if (saving) return;
+
+    const normalized = normalizeWeekly(initialWeekly);
+    const nextWeekly = clone(normalized);
+
+    setWeekly(nextWeekly);
+    baseRef.current = clone(nextWeekly);
     setExpanded(null);
     setLastSavedAt(null);
-  }, [initialWeekly]);
+  }, [initialWeekly, saving]);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) {
+        window.clearTimeout(toastTimerRef.current);
+      }
+    };
+  }, []);
 
   const errors = useMemo(
     () => validateWeekly(weekly, isArabic),
     [weekly, isArabic],
   );
+
   const hasErrors = useMemo(() => Object.keys(errors).length > 0, [errors]);
 
   const dirty = useMemo(() => !deepEqual(baseRef.current, weekly), [weekly]);
@@ -68,15 +89,23 @@ export default function WeeklyHoursEditorMobile({
     onDirtyChange?.(dirty);
   }, [dirty, onDirtyChange]);
 
-  // ✅ تحذير عند إغلاق التبويب وفيه تغييرات غير محفوظة
+  /**
+   * تحذير عند إغلاق أو تحديث الصفحة
+   * إذا كانت هناك تغييرات غير محفوظة.
+   */
   useEffect(() => {
-    const handler = (e) => {
+    const handler = (event) => {
       if (!dirty) return;
-      e.preventDefault();
-      e.returnValue = "";
+
+      event.preventDefault();
+      event.returnValue = "";
     };
+
     window.addEventListener("beforeunload", handler);
-    return () => window.removeEventListener("beforeunload", handler);
+
+    return () => {
+      window.removeEventListener("beforeunload", handler);
+    };
   }, [dirty]);
 
   const t = useMemo(() => {
@@ -87,12 +116,15 @@ export default function WeeklyHoursEditorMobile({
       saved: "محفوظ",
       lastSaved: "آخر حفظ",
       fixErrors: "أصلح الأخطاء قبل الحفظ.",
-      savedOk: "✅ تم الحفظ",
-      saveFail: "❌ فشل الحفظ",
+      savedOk: "✅ تم حفظ ساعات العمل",
+      saveFail: "❌ فشل حفظ ساعات العمل",
+      conflict:
+        "⚠️ تم تعديل نفس اليوم من جهاز أو صفحة ثانية. حدّث الصفحة وشوف آخر ساعات محفوظة.",
       resetConfirm: "راح نرجّع ساعات الأسبوع للوضع الافتراضي. متأكد؟",
-      resetOk: "✅ تم الإرجاع",
-      resetFail: "❌ فشل الإرجاع",
+      resetOk: "✅ تم إرجاع الساعات الافتراضية",
+      resetFail: "❌ فشل إرجاع الساعات",
     };
+
     const en = {
       loading: "Loading…",
       hasErrors: "Fix errors before saving",
@@ -100,71 +132,160 @@ export default function WeeklyHoursEditorMobile({
       saved: "Saved",
       lastSaved: "Last saved",
       fixErrors: "Fix errors before saving.",
-      savedOk: "✅ Saved",
-      saveFail: "❌ Save failed",
+      savedOk: "✅ Working hours saved",
+      saveFail: "❌ Failed to save working hours",
+      conflict:
+        "⚠️ The same day was changed from another device or tab. Refresh to view the latest saved hours.",
       resetConfirm: "Reset weekly hours to default. Continue?",
-      resetOk: "✅ Reset done",
-      resetFail: "❌ Reset failed",
+      resetOk: "✅ Default hours restored",
+      resetFail: "❌ Failed to reset hours",
     };
+
     return isArabic ? ar : en;
   }, [isArabic]);
 
-  const showToast = (msg, ms = 2200) => {
-    setToast(msg);
-    if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
-    toastTimerRef.current = window.setTimeout(() => setToast(""), ms);
+  const showToast = (message, duration = 2200) => {
+    setToast(message);
+
+    if (toastTimerRef.current) {
+      window.clearTimeout(toastTimerRef.current);
+    }
+
+    toastTimerRef.current = window.setTimeout(() => {
+      setToast("");
+    }, duration);
   };
 
   const status = useMemo(() => {
-    if (loading) return { tone: "neutral", text: t.loading };
-    if (hasErrors) return { tone: "danger", text: t.hasErrors };
-    if (dirty) return { tone: "warn", text: t.dirty };
-    return { tone: "success", text: t.saved };
+    if (loading) {
+      return {
+        tone: "neutral",
+        text: t.loading,
+      };
+    }
+
+    if (hasErrors) {
+      return {
+        tone: "danger",
+        text: t.hasErrors,
+      };
+    }
+
+    if (dirty) {
+      return {
+        tone: "warn",
+        text: t.dirty,
+      };
+    }
+
+    return {
+      tone: "success",
+      text: t.saved,
+    };
   }, [loading, hasErrors, dirty, t]);
 
   const onToggleDay = (dayKey, open) => {
-    setWeekly((p) => {
-      if (!open) return { ...p, [dayKey]: null };
+    setWeekly((previous) => {
+      if (!open) {
+        /**
+         * null تعني أن اليوم مغلق أسبوعيًا.
+         * هذه القيمة تُحفظ كما هي في Firebase.
+         */
+        return {
+          ...previous,
+          [dayKey]: null,
+        };
+      }
 
-      // ✅ لما نفتح يوم مغلق: استخدم الافتراضي الرسمي لنفس اليوم (أو fallback)
-      const def = defaultWorkingHours?.[dayKey] ?? {
+      /**
+       * إذا فتح الحلاق يومًا مغلقًا:
+       * استخدم الساعات الافتراضية لذلك اليوم.
+       */
+      const defaultDay = defaultWorkingHours?.[dayKey] ?? {
         from: "12:00",
         to: "20:00",
       };
-      return { ...p, [dayKey]: def };
+
+      return {
+        ...previous,
+        [dayKey]: clone(defaultDay),
+      };
     });
   };
 
   const onChangeDay = (dayKey, patch) => {
-    setWeekly((p) => {
-      const cur = p[dayKey];
-      if (cur === null) return p;
-      return { ...p, [dayKey]: { ...cur, ...patch } };
+    setWeekly((previous) => {
+      const currentDay = previous[dayKey];
+
+      if (currentDay === null) {
+        return previous;
+      }
+
+      return {
+        ...previous,
+        [dayKey]: {
+          ...currentDay,
+          ...patch,
+        },
+      };
     });
   };
 
   const onSave = async () => {
-    console.log("onSave fired");
     if (loading || saving) return;
+
     if (hasErrors) {
-      showToast(t.fixErrors, 2400);
+      showToast(t.fixErrors, 2600);
       return;
     }
+
     if (!dirty) return;
 
     try {
       setSaving(true);
-      await saveWeeklyHours(weekly);
 
-      // ✅ ثبّت baseline كنسخة (مش نفس المرجع)
-      const n = normalizeWeekly(clone(weekly));
-      baseRef.current = n;
-      setWeekly(n);
+      /**
+       * نرسل:
+       * 1. الجدول الجديد.
+       * 2. الجدول الأصلي الذي بدأ منه الحلاق.
+       *
+       * الخدمة ستمنع نسخة قديمة من الكتابة
+       * فوق تعديل أحدث موجود في Firebase.
+       */
+      const result = await saveWeeklyHours(
+        clone(weekly),
+        clone(baseRef.current),
+      );
+
+      /**
+       * نعتمد النسخة التي أكد Firebase حفظها،
+       * وليس النسخة المحلية فقط.
+       */
+      const savedWeekly = normalizeWeekly(result?.weekly ?? weekly);
+
+      const confirmedWeekly = clone(savedWeekly);
+
+      setWeekly(confirmedWeekly);
+      baseRef.current = clone(confirmedWeekly);
+
       setLastSavedAt(nowTime());
+      onDirtyChange?.(false);
+
+      /**
+       * نرسل النسخة المحفوظة للصفحة الأم
+       * حتى لا تبقى محتفظة بساعات قديمة.
+       */
+      onSaved?.(clone(confirmedWeekly), result);
+
       showToast(t.savedOk);
-    } catch (e) {
-      console.error(e);
-      showToast(t.saveFail, 2400);
+    } catch (error) {
+      console.error("Weekly hours save error:", error);
+
+      if (error?.code === "weekly-hours-conflict") {
+        showToast(t.conflict, 5000);
+      } else {
+        showToast(t.saveFail, 3000);
+      }
     } finally {
       setSaving(false);
     }
@@ -173,24 +294,32 @@ export default function WeeklyHoursEditorMobile({
   const onReset = async () => {
     if (loading || saving) return;
 
-    const ok = window.confirm(t.resetConfirm);
-    if (!ok) return;
+    const confirmed = window.confirm(t.resetConfirm);
+    if (!confirmed) return;
 
     try {
       setSaving(true);
 
-      // ✅ يرجّع Firestore للافتراضي الرسمي
-      await resetWeeklyHoursToDefault(defaultWorkingHours);
+      const result = await resetWeeklyHoursToDefault(defaultWorkingHours);
 
-      const n = normalizeWeekly(defaultWorkingHours);
-      setWeekly(n);
-      baseRef.current = n;
+      const savedWeekly = normalizeWeekly(
+        result?.weekly ?? defaultWorkingHours,
+      );
+
+      const confirmedWeekly = clone(savedWeekly);
+
+      setWeekly(confirmedWeekly);
+      baseRef.current = clone(confirmedWeekly);
 
       setLastSavedAt(nowTime());
+      onDirtyChange?.(false);
+
+      onSaved?.(clone(confirmedWeekly), result);
+
       showToast(t.resetOk);
-    } catch (e) {
-      console.error(e);
-      showToast(t.resetFail, 2400);
+    } catch (error) {
+      console.error("Weekly hours reset error:", error);
+      showToast(t.resetFail, 3000);
     } finally {
       setSaving(false);
     }
@@ -198,10 +327,11 @@ export default function WeeklyHoursEditorMobile({
 
   return (
     <div className="space-y-3">
-      {/* Status */}
+      {/* حالة الحفظ */}
       <div
         className={[
-          "rounded-2xl border px-4 py-3 text-sm font-extrabold flex items-center justify-between",
+          "rounded-2xl border px-4 py-3 text-sm font-extrabold",
+          "flex items-center justify-between",
           status.tone === "success"
             ? "bg-emerald-50 border-emerald-200 text-emerald-800"
             : status.tone === "warn"
@@ -212,42 +342,48 @@ export default function WeeklyHoursEditorMobile({
         ].join(" ")}
       >
         <span>{status.text}</span>
+
         <span className="text-xs font-black text-slate-500">
           {lastSavedAt ? `${t.lastSaved}: ${lastSavedAt}` : " "}
         </span>
       </div>
 
-      {/* Days */}
+      {/* أيام الأسبوع */}
       <div className="space-y-2 pb-60">
-        {DAYS.map((d) => (
+        {DAYS.map((day) => (
           <WeeklyDayCard
-            key={d.key}
+            key={day.key}
             day={{
-              ...d,
-              // ✅ لو بدك إنجليزي، وفره هنا بدون ما نكسر الكود القديم
-              en: d.en || d.key,
+              ...day,
+              en: day.en || day.key,
             }}
             isArabic={isArabic}
-            value={weekly[d.key]}
-            error={errors[d.key]}
-            expanded={expanded === d.key}
-            onExpand={() => setExpanded((x) => (x === d.key ? null : d.key))}
-            onToggleOpen={(open) => onToggleDay(d.key, open)}
-            onChange={(patch) => onChangeDay(d.key, patch)}
+            value={weekly[day.key]}
+            error={errors[day.key]}
+            expanded={expanded === day.key}
+            onExpand={() => {
+              setExpanded((current) => (current === day.key ? null : day.key));
+            }}
+            onToggleOpen={(open) => {
+              onToggleDay(day.key, open);
+            }}
+            onChange={(patch) => {
+              onChangeDay(day.key, patch);
+            }}
           />
         ))}
       </div>
 
-      {/* Toast */}
+      {/* رسالة النتيجة */}
       {toast ? (
         <div className="fixed left-1/2 -translate-x-1/2 bottom-24 z-20">
-          <div className="rounded-2xl bg-slate-900 text-white px-4 py-2 text-sm font-extrabold shadow-xl">
+          <div className="rounded-2xl bg-slate-900 text-white px-4 py-2 text-sm font-extrabold shadow-xl text-center">
             {toast}
           </div>
         </div>
       ) : null}
 
-      {/* Sticky Save */}
+      {/* شريط الحفظ */}
       <StickySaveBar
         isArabic={isArabic}
         disabled={loading || saving || !dirty || hasErrors}

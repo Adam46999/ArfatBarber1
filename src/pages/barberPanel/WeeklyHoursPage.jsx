@@ -1,5 +1,6 @@
 // src/pages/barberPanel/WeeklyHoursPage.jsx
-import { useEffect, useMemo, useState, useCallback } from "react";
+
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
@@ -16,148 +17,187 @@ import {
 
 function formatUpdatedAt(updatedAt) {
   if (!updatedAt) return null;
+
   try {
-    const d = updatedAt.toDate ? updatedAt.toDate() : new Date(updatedAt);
-    return d.toLocaleString();
+    const date = updatedAt.toDate ? updatedAt.toDate() : new Date(updatedAt);
+
+    return date.toLocaleString();
   } catch {
     return null;
   }
 }
 
 export default function WeeklyHoursPage() {
-  const nav = useNavigate();
+  const navigate = useNavigate();
   const { i18n } = useTranslation();
 
   const isArabic = String(i18n.language || "")
     .toLowerCase()
     .startsWith("ar");
+
   const rtl = isRtlLang(i18n.language);
 
   const [loading, setLoading] = useState(true);
-  const [weekly, setWeekly] = useState(
+
+  const [weekly, setWeekly] = useState(() =>
     normalizeWeekly(barberDefaultWeeklyHours),
   );
-  const [updatedAt, setUpdatedAt] = useState(null);
 
-  // ✅ Inline Edit mode (بدون مودال)
+  const [updatedAt, setUpdatedAt] = useState(null);
+  const [loadError, setLoadError] = useState("");
+
   const [editMode, setEditMode] = useState(false);
   const [dirty, setDirty] = useState(false);
 
-  const reloadFromServer = useCallback(async () => {
+  /**
+   * تحميل الجدول الحقيقي من Firebase.
+   *
+   * إنشاء الافتراضي يحصل فقط من صفحة إدارة الحلاق،
+   * وفقط إذا لم يكن هناك جدول محفوظ أصلًا.
+   */
+  const loadWeeklyHours = useCallback(async () => {
     try {
       setLoading(true);
+      setLoadError("");
+
       const ensured = await ensureDefaultWeeklyHours(barberDefaultWeeklyHours);
-      const docData = await getWeeklyHoursDoc();
 
-      const srcWeekly =
-        docData?.weekly || ensured?.weekly || barberDefaultWeeklyHours;
+      const documentData = await getWeeklyHoursDoc();
 
-      setWeekly(normalizeWeekly(srcWeekly));
-      setUpdatedAt(docData?.updatedAt || null);
-    } catch (e) {
-      console.error(e);
-      setWeekly(normalizeWeekly(barberDefaultWeeklyHours));
-      setUpdatedAt(null);
+      const savedWeekly = documentData?.weekly ?? ensured?.weekly;
+
+      if (!savedWeekly) {
+        throw new Error("Weekly hours data is missing.");
+      }
+
+      setWeekly(normalizeWeekly(savedWeekly));
+      setUpdatedAt(documentData?.updatedAt ?? new Date());
+    } catch (error) {
+      console.error("Weekly hours loading error:", error);
+
+      /**
+       * مهم:
+       * لا نستبدل الحالة الحالية بالساعات الافتراضية عند الخطأ.
+       * نبقي آخر نسخة ظاهرة بدل إظهار جدول قديم أو خاطئ.
+       */
+      setLoadError(
+        isArabic
+          ? "تعذّر تحميل ساعات العمل. لم يتم تغيير الساعات المحفوظة."
+          : "Could not load working hours. Saved hours were not changed.",
+      );
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isArabic]);
 
   useEffect(() => {
-    let alive = true;
-
-    (async () => {
-      try {
-        setLoading(true);
-        const ensured = await ensureDefaultWeeklyHours(
-          barberDefaultWeeklyHours,
-        );
-        const docData = await getWeeklyHoursDoc();
-
-        if (!alive) return;
-
-        const srcWeekly =
-          docData?.weekly || ensured?.weekly || barberDefaultWeeklyHours;
-
-        setWeekly(normalizeWeekly(srcWeekly));
-        setUpdatedAt(docData?.updatedAt || null);
-      } catch (e) {
-        console.error(e);
-        if (!alive) return;
-        setWeekly(normalizeWeekly(barberDefaultWeeklyHours));
-        setUpdatedAt(null);
-      } finally {
-        if (alive) setLoading(false);
-      }
-    })();
-
-    return () => {
-      alive = false;
-    };
-  }, []);
+    loadWeeklyHours();
+  }, [loadWeeklyHours]);
 
   const updatedText = useMemo(() => formatUpdatedAt(updatedAt), [updatedAt]);
 
-  // ✅ زر الرجوع لصفحة الحلاق
-  const onBackToBarber = async () => {
+  /**
+   * يتم استدعاؤها من المحرر بعد نجاح Firebase بالحفظ.
+   *
+   * savedWeekly هي النسخة التي أكد Firebase حفظها،
+   * لذلك نثبتها فورًا في الصفحة الأم.
+   */
+  const handleEditorSaved = useCallback((savedWeekly) => {
+    const confirmedWeekly = normalizeWeekly(savedWeekly);
+
+    setWeekly(confirmedWeekly);
+    setUpdatedAt(new Date());
+    setDirty(false);
+    setLoadError("");
+  }, []);
+
+  const onBackToBarber = () => {
     if (editMode && dirty) {
-      const ok = window.confirm(
+      const confirmed = window.confirm(
         isArabic
           ? "لديك تغييرات غير محفوظة. هل تريد الخروج بدون حفظ؟"
           : "You have unsaved changes. Leave without saving?",
       );
-      if (!ok) return;
+
+      if (!confirmed) return;
     }
-    nav("/barber"); // عدّل المسار إذا عندك مختلف
+
+    navigate("/barber");
   };
 
   const onResetToDefault = async () => {
-    const ok = window.confirm(
+    if (loading) return;
+
+    const confirmed = window.confirm(
       isArabic
-        ? "هل تريد إرجاع ساعات العمل للوضع الافتراضي؟"
-        : "Reset working hours to default?",
+        ? "سيتم إرجاع جميع ساعات الأسبوع للوضع الافتراضي. هل أنت متأكد؟"
+        : "All weekly hours will be reset to default. Continue?",
     );
-    if (!ok) return;
+
+    if (!confirmed) return;
 
     try {
       setLoading(true);
-      await resetWeeklyHoursToDefault(barberDefaultWeeklyHours);
-      const docData = await getWeeklyHoursDoc();
-      setWeekly(normalizeWeekly(docData?.weekly || barberDefaultWeeklyHours));
-      setUpdatedAt(docData?.updatedAt || null);
-    } catch (e) {
-      console.error(e);
-      alert(
-        isArabic ? "فشل الإرجاع. حاول مرة أخرى." : "Reset failed. Try again.",
+      setLoadError("");
+
+      /**
+       * نعتمد نتيجة عملية الحفظ نفسها،
+       * ولا نعمل قراءة ثانية قد ترجع نسخة قديمة من Cache.
+       */
+      const result = await resetWeeklyHoursToDefault(barberDefaultWeeklyHours);
+
+      const confirmedWeekly = normalizeWeekly(
+        result?.weekly ?? barberDefaultWeeklyHours,
+      );
+
+      setWeekly(confirmedWeekly);
+      setUpdatedAt(new Date());
+      setDirty(false);
+    } catch (error) {
+      console.error("Weekly hours reset error:", error);
+
+      window.alert(
+        isArabic
+          ? "فشل إرجاع الساعات. لم يتم تغيير الجدول الحالي."
+          : "Reset failed. The current schedule was not changed.",
       );
     } finally {
       setLoading(false);
     }
   };
 
-  const onToggleEditMode = async () => {
-    // entering edit
+  const onToggleEditMode = () => {
+    /**
+     * الدخول إلى وضع التعديل.
+     */
     if (!editMode) {
       setEditMode(true);
       setDirty(false);
       return;
     }
 
-    // leaving edit
+    /**
+     * الخروج من وضع التعديل.
+     */
     if (dirty) {
-      const ok = window.confirm(
+      const confirmed = window.confirm(
         isArabic
-          ? "لديك تغييرات غير محفوظة. هل تريد الخروج بدون حفظ؟"
-          : "You have unsaved changes. Leave without saving?",
+          ? "لديك تغييرات غير محفوظة. هل تريد إلغاءها والخروج؟"
+          : "You have unsaved changes. Discard them and leave?",
       );
-      if (!ok) return;
+
+      if (!confirmed) return;
     }
 
     setEditMode(false);
     setDirty(false);
 
-    // ✅ Refresh بعد الخروج حتى يتحدث updatedAt + weekly في حال تم حفظ من داخل المحرر
-    await reloadFromServer();
+    /**
+     * لا نعيد التحميل هنا.
+     *
+     * المحرر أرسل لنا النسخة المؤكدة بعد الحفظ،
+     * وإعادة التحميل هنا كانت قد تعيد نسخة قديمة أو Cached.
+     */
   };
 
   return (
@@ -166,25 +206,25 @@ export default function WeeklyHoursPage() {
       className="min-h-screen bg-[#f8f8f8] px-4 pt-4 pb-6"
     >
       <div className="max-w-xl mx-auto pt-24">
-        {/* ✅ Premium Top Bar */}
+        {/* الشريط العلوي */}
         <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-3">
           <div className="flex items-center gap-3">
-            {/* Back */}
             <button
+              type="button"
               onClick={onBackToBarber}
-              className="h-11 w-11 rounded-2xl bg-white border border-slate-200 hover:bg-slate-50 transition font-black"
+              className="h-11 w-11 shrink-0 rounded-2xl bg-white border border-slate-200 hover:bg-slate-50 transition font-black"
               aria-label={isArabic ? "رجوع" : "Back"}
               title={isArabic ? "رجوع" : "Back"}
             >
               {rtl ? "→" : "←"}
             </button>
 
-            {/* Title */}
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <div className="text-lg font-black text-slate-900">
                 {isArabic ? "ساعات العمل" : "Working hours"}
               </div>
-              <div className="text-xs font-black text-slate-500 mt-0.5">
+
+              <div className="text-xs font-black text-slate-500 mt-0.5 truncate">
                 {updatedText
                   ? isArabic
                     ? `آخر تعديل: ${updatedText}`
@@ -193,21 +233,22 @@ export default function WeeklyHoursPage() {
               </div>
             </div>
 
-            {/* Secondary: Default */}
             <button
+              type="button"
               onClick={onResetToDefault}
               disabled={loading}
-              className="h-11 px-4 rounded-2xl bg-white border border-slate-200 text-slate-900 text-sm font-black hover:bg-slate-50 transition disabled:opacity-60"
+              className="h-11 px-4 rounded-2xl bg-white border border-slate-200 text-slate-900 text-sm font-black hover:bg-slate-50 transition disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {isArabic ? "افتراضي" : "Default"}
             </button>
 
-            {/* Primary: Edit / Done */}
             <button
+              type="button"
               onClick={onToggleEditMode}
               disabled={loading}
               className={[
-                "h-11 px-4 rounded-2xl text-sm font-black transition disabled:opacity-60",
+                "h-11 px-4 rounded-2xl text-sm font-black transition",
+                "disabled:opacity-60 disabled:cursor-not-allowed",
                 editMode
                   ? "bg-white border border-slate-200 text-slate-900 hover:bg-slate-50"
                   : "bg-slate-900 text-white hover:bg-slate-800",
@@ -215,28 +256,42 @@ export default function WeeklyHoursPage() {
             >
               {editMode
                 ? isArabic
-                  ? "تم"
-                  : "Done"
+                  ? "إلغاء"
+                  : "Cancel"
                 : isArabic
                   ? "تعديل"
                   : "Edit"}
             </button>
           </div>
 
-          {/* Tiny helper line */}
           <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-black text-slate-700 leading-5">
             ℹ️{" "}
             {isArabic
               ? editMode
-                ? "التعديل يتم داخل نفس الصفحة. لن يُطبّق أي شيء إلا بعد الضغط على حفظ."
+                ? "عدّل الأيام والساعات، ثم اضغط حفظ من الشريط السفلي."
                 : "عرض ساعات الأسبوع. اضغط تعديل للتغيير."
               : editMode
-                ? "Editing inline. Nothing applies unless you press Save."
+                ? "Change the days and hours, then press Save in the bottom bar."
                 : "Viewing weekly hours. Press Edit to change."}
           </div>
+
+          {loadError ? (
+            <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-black text-rose-800 leading-5">
+              {loadError}
+
+              <button
+                type="button"
+                onClick={loadWeeklyHours}
+                disabled={loading}
+                className="block mt-2 underline underline-offset-2 disabled:opacity-60"
+              >
+                {isArabic ? "إعادة المحاولة" : "Try again"}
+              </button>
+            </div>
+          ) : null}
         </div>
 
-        {/* Content */}
+        {/* المحتوى */}
         <div className="mt-10">
           {!editMode ? (
             <WeeklyHoursReadOnly
@@ -244,9 +299,12 @@ export default function WeeklyHoursPage() {
               isArabic={isArabic}
               loading={loading}
               updatedText={updatedText}
-              onEdit={() => setEditMode(true)}
+              onEdit={() => {
+                setEditMode(true);
+                setDirty(false);
+              }}
               onResetToDefault={onResetToDefault}
-              showHeader={false} // ✅ لا تكرار للهيدر
+              showHeader={false}
             />
           ) : (
             <div className="bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden">
@@ -256,10 +314,11 @@ export default function WeeklyHoursPage() {
                     ? "تعديل ساعات العمل الأسبوعية"
                     : "Edit weekly hours"}
                 </div>
+
                 <div className="text-xs font-black text-slate-500 mt-1">
                   {isArabic
-                    ? "افتح/أغلق الأيام وعدّل From/To. احفظ من الشريط السفلي."
-                    : "Open/close days and adjust From/To. Save from the bottom bar."}
+                    ? "أغلق اليوم أو افتحه، وعدّل وقت البداية والنهاية، ثم احفظ."
+                    : "Open or close each day, adjust the start and end times, then save."}
                 </div>
               </div>
 
@@ -268,6 +327,8 @@ export default function WeeklyHoursPage() {
                   loading={loading}
                   initialWeekly={weekly}
                   onDirtyChange={setDirty}
+                  onSaved={handleEditorSaved}
+                  isArabic={isArabic}
                 />
               </div>
             </div>

@@ -1,127 +1,203 @@
 // src/hooks/useWeeklyWorkingHours.js
+
 import { useEffect, useMemo, useState } from "react";
-import { doc, getDoc, onSnapshot, setDoc } from "firebase/firestore";
+import { doc, getDoc, onSnapshot } from "firebase/firestore";
+
 import { db } from "../firebase";
 import defaultWorkingHours from "../constants/workingHours";
 
-/** تحقق بسيط من HH:mm */
-function isHHmm(v) {
-  return typeof v === "string" && /^\d{2}:\d{2}$/.test(v);
+const WEEKLY_HOURS_DOC = ["barberSettings", "hours"];
+const DAY_KEYS = Object.keys(defaultWorkingHours);
+
+/**
+ * التحقق من الوقت بصيغة HH:mm.
+ */
+function isValidHHmm(value) {
+  if (typeof value !== "string") return false;
+
+  const match = /^(\d{2}):(\d{2})$/.exec(value);
+  if (!match) return false;
+
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+
+  return (
+    Number.isInteger(hours) &&
+    Number.isInteger(minutes) &&
+    hours >= 0 &&
+    hours <= 23 &&
+    minutes >= 0 &&
+    minutes <= 59
+  );
 }
 
-function sanitizeWeeklyHours(input, fallback) {
-  const out = { ...fallback };
-  if (!input || typeof input !== "object") return out;
-
-  for (const day of Object.keys(fallback)) {
-    const v = input[day];
-
-    if (v === null) {
-      out[day] = null;
-      continue;
-    }
-
-    const from = v?.from;
-    const to = v?.to;
-
-    // لازم يكونوا HH:mm وبترتيب منطقي
-    if (isHHmm(from) && isHHmm(to)) {
-      // مقارنة زمنية بسيطة باستخدام Date
-      const a = new Date(`2000-01-01T${from}:00`);
-      const b = new Date(`2000-01-01T${to}:00`);
-      if (a < b) out[day] = { from, to };
-      else out[day] = fallback[day] ?? null;
-    } else {
-      out[day] = fallback[day] ?? null;
-    }
-  }
-
-  return out;
+function timeToMinutes(value) {
+  const [hours, minutes] = value.split(":").map(Number);
+  return hours * 60 + minutes;
 }
 
 /**
- * useWeeklyWorkingHours:
- * - يقرأ barberSettings/hours.weekly
- * - لو مش موجود/فيه مشكلة -> يرجع defaultWorkingHours
- * - (optional) createIfMissing: ينشئ doc لأول مرة بدون ما يغيّر شي ثاني
+ * أسبوع مغلق بالكامل.
+ *
+ * نستخدمه فقط عندما تكون البيانات الموجودة في Firebase ناقصة أو تالفة،
+ * حتى لا نفتح يومًا بالخطأ اعتمادًا على الساعات الافتراضية.
  */
-export default function useWeeklyWorkingHours({
-  live = true,
-  createIfMissing = true,
-} = {}) {
-  const [weeklyHours, setWeeklyHours] = useState(defaultWorkingHours);
+function createClosedWeek() {
+  return DAY_KEYS.reduce((result, day) => {
+    result[day] = null;
+    return result;
+  }, {});
+}
+
+/**
+ * تنظيف البيانات القادمة من Firebase.
+ *
+ * مهم:
+ * - null تعني اليوم مغلق وتبقى null.
+ * - اليوم الناقص أو ذو الساعات الخاطئة يصبح مغلقًا.
+ * - لا نستبدل يومًا ناقصًا بالساعات الافتراضية؛ لأن ذلك قد يفتحه بالخطأ.
+ */
+function sanitizeWeeklyHours(input) {
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    return createClosedWeek();
+  }
+
+  return DAY_KEYS.reduce((result, day) => {
+    const dayHours = input[day];
+
+    if (dayHours === null) {
+      result[day] = null;
+      return result;
+    }
+
+    const from = dayHours?.from;
+    const to = dayHours?.to;
+
+    if (
+      isValidHHmm(from) &&
+      isValidHHmm(to) &&
+      timeToMinutes(from) < timeToMinutes(to)
+    ) {
+      result[day] = { from, to };
+    } else {
+      // لا نفتح اليوم بالافتراضي إذا كانت بياناته ناقصة أو خاطئة.
+      result[day] = null;
+    }
+
+    return result;
+  }, {});
+}
+
+/**
+ * قراءة ساعات العمل الأسبوعية.
+ *
+ * هذا الـ Hook للقراءة فقط:
+ * - لا ينشئ مستندًا.
+ * - لا يكتب الساعات الافتراضية.
+ * - لا يستبدل الساعات المحفوظة عند حصول خطأ.
+ * - يستمع للتحديثات المباشرة من Firebase عند live=true.
+ */
+export default function useWeeklyWorkingHours({ live = true } = {}) {
+  const [weeklyHours, setWeeklyHours] = useState(null);
   const [loadingWeekly, setLoadingWeekly] = useState(true);
+  const [weeklyHoursError, setWeeklyHoursError] = useState(null);
 
   useEffect(() => {
-    const ref = doc(db, "barberSettings", "hours");
+    const hoursRef = doc(db, ...WEEKLY_HOURS_DOC);
 
-    let unsub = null;
     let alive = true;
+    let unsubscribe = null;
 
-    async function ensureExists() {
-      try {
-        const snap = await getDoc(ref);
-        if (!alive) return;
+    const applySnapshot = (snapshot) => {
+      if (!alive) return;
 
-        if (!snap.exists() && createIfMissing) {
-          await setDoc(ref, { weekly: defaultWorkingHours }, { merge: true });
-        }
-
-        const weekly = snap.exists() ? snap.data()?.weekly : null;
-        setWeeklyHours(sanitizeWeeklyHours(weekly, defaultWorkingHours));
-      } catch (e) {
-        console.warn("useWeeklyWorkingHours getDoc error:", e);
-        setWeeklyHours(defaultWorkingHours);
-      } finally {
-        if (alive) setLoadingWeekly(false);
+      /**
+       * أول Snapshot قد يأتي من Cache قديم.
+       * لا نعتمد "المستند غير موجود" من Cache حتى يصل الرد الحقيقي من السيرفر.
+       */
+      if (!snapshot.exists() && snapshot.metadata?.fromCache) {
+        return;
       }
-    }
 
-    if (!live) {
-      ensureExists();
-      return () => {
-        alive = false;
-      };
-    }
-
-    // LIVE sync
-    setLoadingWeekly(true);
-    unsub = onSnapshot(
-      ref,
-      async (snap) => {
-        if (!alive) return;
-
-        if (!snap.exists() && createIfMissing) {
-          try {
-            await setDoc(ref, { weekly: defaultWorkingHours }, { merge: true });
-            // eslint-disable-next-line no-unused-vars
-          } catch (e) {
-            // ignore
-          }
-          setWeeklyHours(defaultWorkingHours);
-          setLoadingWeekly(false);
-          return;
-        }
-
-        const weekly = snap.exists() ? snap.data()?.weekly : null;
-        setWeeklyHours(sanitizeWeeklyHours(weekly, defaultWorkingHours));
-        setLoadingWeekly(false);
-      },
-      (err) => {
-        console.warn("useWeeklyWorkingHours onSnapshot error:", err);
+      if (!snapshot.exists()) {
+        /**
+         * المستند غير موجود فعلًا:
+         * نستخدم الافتراضي داخل الواجهة فقط، بدون أي كتابة إلى Firebase.
+         *
+         * إنشاء المستند يجب أن يحصل فقط من لوحة الحلاق أو إعداد أولي مخصص.
+         */
         setWeeklyHours(defaultWorkingHours);
+        setWeeklyHoursError("weekly-hours-document-missing");
         setLoadingWeekly(false);
+        return;
       }
-    );
+
+      const savedWeekly = snapshot.data()?.weekly;
+
+      if (!savedWeekly || typeof savedWeekly !== "object") {
+        /**
+         * المستند موجود لكن weekly ناقص أو تالف.
+         * نغلق الأيام احتياطيًا بدل فتحها بالافتراضي.
+         */
+        setWeeklyHours(createClosedWeek());
+        setWeeklyHoursError("weekly-hours-data-invalid");
+        setLoadingWeekly(false);
+        return;
+      }
+
+      setWeeklyHours(sanitizeWeeklyHours(savedWeekly));
+      setWeeklyHoursError(null);
+      setLoadingWeekly(false);
+    };
+
+    const handleError = (error) => {
+      console.error("Weekly hours read error:", error);
+
+      if (!alive) return;
+
+      /**
+       * لا نضع defaultWorkingHours هنا.
+       * إذا كان عندنا جدول مقروء سابقًا، نبقيه كما هو.
+       * وإذا لم نقرأ شيئًا بعد، تبقى weeklyHours = null.
+       */
+      setWeeklyHoursError(error);
+      setLoadingWeekly(false);
+    };
+
+    if (live) {
+      setLoadingWeekly(true);
+
+      unsubscribe = onSnapshot(
+        hoursRef,
+        { includeMetadataChanges: true },
+        applySnapshot,
+        handleError,
+      );
+    } else {
+      setLoadingWeekly(true);
+
+      getDoc(hoursRef)
+        .then((snapshot) => {
+          applySnapshot(snapshot);
+        })
+        .catch(handleError);
+    }
 
     return () => {
       alive = false;
-      if (unsub) unsub();
+
+      if (typeof unsubscribe === "function") {
+        unsubscribe();
+      }
     };
-  }, [live, createIfMissing]);
+  }, [live]);
 
   return useMemo(
-    () => ({ weeklyHours, loadingWeekly }),
-    [weeklyHours, loadingWeekly]
+    () => ({
+      weeklyHours,
+      loadingWeekly,
+      weeklyHoursError,
+    }),
+    [weeklyHours, loadingWeekly, weeklyHoursError],
   );
 }

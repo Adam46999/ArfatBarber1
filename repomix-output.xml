@@ -915,48 +915,6 @@ function AboutContent() {
 export default AboutContent;
 </file>
 
-<file path="src/components/booking/parts/DateField.jsx">
-// src/components/booking/parts/DateField.jsx
-import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
-
-function DateField({ valueYMD, onChangeYMD, t }) {
-  // حوّل التاريخ النصي "yyyy-mm-dd" إلى كائن Date
-  const selectedDate = valueYMD
-    ? new Date(
-        Number(valueYMD.split("-")[0]),
-        Number(valueYMD.split("-")[1]) - 1,
-        Number(valueYMD.split("-")[2])
-      )
-    : null;
-
-  return (
-    <DatePicker
-      selected={selectedDate}
-      onChange={(date) => {
-        if (date) {
-          const y = date.getFullYear();
-          const m = String(date.getMonth() + 1).padStart(2, "0");
-          const d = String(date.getDate()).padStart(2, "0");
-          onChangeYMD(`${y}-${m}-${d}`);
-        } else {
-          onChangeYMD("");
-        }
-      }}
-      dateFormat="yyyy-MM-dd"
-      minDate={new Date()}
-      filterDate={(date) => date.getDay() !== 0} // إلغاء أيام الأحد
-      className="w-full border border-gray-300 p-3 rounded-xl focus:border-gold focus:ring-2 focus:ring-gold/40 transition"
-      placeholderText={t("choose_date")}
-      calendarClassName="z-50"
-      required
-    />
-  );
-}
-
-export default DateField;
-</file>
-
 <file path="src/components/booking/parts/DateSelector.jsx">
 // src/components/booking/DateSelector.jsx
 import DatePicker from "react-datepicker";
@@ -1028,52 +986,6 @@ export default function ServiceOption({
         />
       </div>
     </Card>
-  );
-}
-</file>
-
-<file path="src/components/booking/parts/TimeSelector.jsx">
-// src/components/booking/TimeSelector.jsx
-export default function TimeSelector({
-  selectedDate,
-  selectedTime,
-  onSelectTime,
-  availableTimes,
-  workingHours,
-  t,
-}) {
-  if (!selectedDate) return null;
-
-  const [yyyy, mm, dd] = selectedDate.split("-");
-  const dateObj = new Date(Number(yyyy), Number(mm) - 1, Number(dd));
-  const weekday = dateObj.toLocaleDateString("en-US", { weekday: "long" });
-  const hours = workingHours[weekday];
-
-  if (!hours) {
-    return <p className="text-red-500">{t("closed_day")}</p>;
-  }
-
-  return (
-    <div className="grid grid-cols-3 md:grid-cols-4 gap-3">
-      {availableTimes.map((time) => {
-        const isSelected = selectedTime === time;
-        return (
-          <button
-            key={time}
-            type="button"
-            onClick={() => onSelectTime(time)}
-            className={`py-2 px-3 rounded-md text-sm font-medium border transition
-              ${
-                isSelected
-                  ? "bg-gold text-primary border-gold shadow"
-                  : "bg-gray-100 text-gray-800 border-gray-300 hover:bg-gold hover:text-primary"
-              }`}
-          >
-            {time}
-          </button>
-        );
-      })}
-    </div>
   );
 }
 </file>
@@ -7984,6 +7896,420 @@ function BackToTopButton() {
 export default BackToTopButton;
 </file>
 
+<file path="src/components/booking/parts/DateField.jsx">
+// src/components/booking/parts/DateField.jsx
+
+import { useTranslation } from "react-i18next";
+import DatePicker, { registerLocale } from "react-datepicker";
+import { ar, enUS, he } from "date-fns/locale";
+
+import "react-datepicker/dist/react-datepicker.css";
+
+registerLocale("ar", ar);
+registerLocale("he", he);
+registerLocale("en", enUS);
+
+function parseYMD(valueYMD) {
+  if (!valueYMD) return null;
+
+  const [year, month, day] = valueYMD.split("-").map(Number);
+
+  if (!year || !month || !day) return null;
+
+  return new Date(year, month - 1, day);
+}
+
+function formatYMD(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function DateField({
+  valueYMD,
+  onChangeYMD,
+  onBlur,
+  t,
+  ...accessibilityProps
+}) {
+  const { i18n } = useTranslation();
+
+  const currentLanguage = i18n.resolvedLanguage || i18n.language || "ar";
+  const language = currentLanguage.startsWith("he")
+    ? "he"
+    : currentLanguage.startsWith("en")
+      ? "en"
+      : "ar";
+
+  const isRTL = language === "ar" || language === "he";
+  const selectedDate = parseYMD(valueYMD);
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const isSunday = (date) => date.getDay() === 0;
+
+  const getDayClassName = (date) => {
+    const normalizedDate = new Date(date);
+    normalizedDate.setHours(0, 0, 0, 0);
+
+    const isToday = normalizedDate.getTime() === today.getTime();
+    const isPast = normalizedDate < today;
+    const isClosed = isSunday(date);
+
+    const classes = [];
+
+    if (isToday) {
+      classes.push("booking-calendar__day--today");
+    }
+
+    if (isPast || isClosed) {
+      classes.push("booking-calendar__day--unavailable");
+    }
+
+    return classes.join(" ");
+  };
+
+  const handleChange = (date) => {
+    if (!date) {
+      onChangeYMD("");
+      onBlur?.();
+      return;
+    }
+
+    onChangeYMD(formatYMD(date));
+    onBlur?.();
+  };
+
+  return (
+    <div
+      className={`booking-calendar-wrapper ${
+        isRTL ? "booking-calendar-wrapper--rtl" : ""
+      }`}
+      dir={isRTL ? "rtl" : "ltr"}
+      {...accessibilityProps}
+    >
+      <DatePicker
+        inline
+        selected={selectedDate}
+        onChange={handleChange}
+        minDate={today}
+        filterDate={(date) => !isSunday(date)}
+        locale={language}
+        calendarStartDay={language === "en" ? 0 : 1}
+        dayClassName={getDayClassName}
+        calendarClassName="booking-inline-calendar"
+        previousMonthButtonLabel={
+          t?.("previous_month") ||
+          (language === "en" ? "Previous month" : "الشهر السابق")
+        }
+        nextMonthButtonLabel={
+          t?.("next_month") ||
+          (language === "en" ? "Next month" : "الشهر التالي")
+        }
+        ariaLabelledBy="booking-date-label"
+      />
+
+      <style>{`
+        .booking-calendar-wrapper {
+          width: 100%;
+          overflow: hidden;
+          border: 1px solid #e5e7eb;
+          border-radius: 18px;
+          background: #ffffff;
+          box-shadow:
+            0 10px 28px rgba(15, 23, 42, 0.06),
+            0 2px 8px rgba(15, 23, 42, 0.04);
+        }
+
+        .booking-calendar-wrapper .react-datepicker {
+          width: 100%;
+          border: 0;
+          border-radius: 18px;
+          background: transparent;
+          font-family: inherit;
+          color: #172033;
+        }
+
+        .booking-calendar-wrapper .react-datepicker__month-container {
+          width: 100%;
+          float: none;
+        }
+
+        .booking-calendar-wrapper .react-datepicker__header {
+          padding: 16px 12px 10px;
+          border-bottom: 1px solid #f0f1f3;
+          border-radius: 18px 18px 0 0;
+          background: linear-gradient(
+            180deg,
+            rgba(250, 246, 234, 0.95) 0%,
+            rgba(255, 255, 255, 1) 100%
+          );
+        }
+
+        .booking-calendar-wrapper .react-datepicker__current-month {
+          min-height: 34px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 0 42px;
+          color: #172033;
+          font-size: 16px;
+          font-weight: 800;
+          line-height: 1.4;
+        }
+
+        .booking-calendar-wrapper .react-datepicker__navigation {
+          top: 15px;
+          width: 36px;
+          height: 36px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border: 1px solid #e8e4da;
+          border-radius: 11px;
+          background: #ffffff;
+          box-shadow: 0 3px 10px rgba(15, 23, 42, 0.06);
+          transition:
+            transform 160ms ease,
+            border-color 160ms ease,
+            background-color 160ms ease;
+        }
+
+        .booking-calendar-wrapper
+          .react-datepicker__navigation:hover {
+          transform: scale(1.04);
+          border-color: #caa94d;
+          background: #fffaf0;
+        }
+
+        .booking-calendar-wrapper
+          .react-datepicker__navigation--previous {
+          left: 12px;
+        }
+
+        .booking-calendar-wrapper
+          .react-datepicker__navigation--next {
+          right: 12px;
+        }
+
+        .booking-calendar-wrapper--rtl
+          .react-datepicker__navigation--previous {
+          left: auto;
+          right: 12px;
+        }
+
+        .booking-calendar-wrapper--rtl
+          .react-datepicker__navigation--next {
+          right: auto;
+          left: 12px;
+        }
+
+        .booking-calendar-wrapper
+          .react-datepicker__navigation-icon::before {
+          top: 10px;
+          width: 8px;
+          height: 8px;
+          border-color: #8a6b1f;
+          border-width: 2px 2px 0 0;
+        }
+
+        .booking-calendar-wrapper .react-datepicker__day-names,
+        .booking-calendar-wrapper .react-datepicker__week {
+          display: grid;
+          grid-template-columns: repeat(7, minmax(0, 1fr));
+          width: 100%;
+          gap: 4px;
+          margin: 0;
+        }
+
+        .booking-calendar-wrapper .react-datepicker__day-names {
+          margin-top: 12px;
+        }
+
+        .booking-calendar-wrapper .react-datepicker__day-name {
+          width: auto;
+          height: 28px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin: 0;
+          color: #7a7f89;
+          font-size: 11px;
+          font-weight: 800;
+          line-height: 1;
+        }
+
+        .booking-calendar-wrapper .react-datepicker__month {
+          margin: 0;
+          padding: 10px 10px 14px;
+        }
+
+        .booking-calendar-wrapper .react-datepicker__week {
+          margin-bottom: 4px;
+        }
+
+        .booking-calendar-wrapper .react-datepicker__day {
+          width: auto;
+          aspect-ratio: 1;
+          min-height: 38px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin: 0;
+          border: 1px solid transparent;
+          border-radius: 12px;
+          color: #252b38;
+          font-size: 13px;
+          font-weight: 700;
+          line-height: 1;
+          transition:
+            transform 150ms ease,
+            color 150ms ease,
+            border-color 150ms ease,
+            background-color 150ms ease,
+            box-shadow 150ms ease;
+        }
+
+        .booking-calendar-wrapper
+          .react-datepicker__day:not(
+            .react-datepicker__day--disabled,
+            .react-datepicker__day--selected
+          ):hover {
+          transform: translateY(-1px);
+          border-color: rgba(202, 169, 77, 0.5);
+          background: #fff8e8;
+          color: #6f5311;
+        }
+
+        .booking-calendar-wrapper
+          .react-datepicker__day--keyboard-selected:not(
+            .react-datepicker__day--selected
+          ) {
+          background: transparent;
+          color: inherit;
+        }
+
+        .booking-calendar-wrapper .react-datepicker__day--selected,
+        .booking-calendar-wrapper
+          .react-datepicker__day--selected:hover {
+          border-color: #b58a26;
+          background: linear-gradient(135deg, #d3ad4d, #f0cf72);
+          color: #172033;
+          box-shadow: 0 7px 16px rgba(181, 138, 38, 0.28);
+          transform: translateY(-1px);
+        }
+
+        .booking-calendar-wrapper .booking-calendar__day--today:not(
+            .react-datepicker__day--selected
+          ) {
+          position: relative;
+          border-color: #caa94d;
+          color: #8a6717;
+          background: #fffaf0;
+        }
+
+        .booking-calendar-wrapper
+          .booking-calendar__day--today:not(
+            .react-datepicker__day--selected
+          )::after {
+          content: "";
+          position: absolute;
+          bottom: 4px;
+          left: 50%;
+          width: 4px;
+          height: 4px;
+          border-radius: 999px;
+          background: #b58a26;
+          transform: translateX(-50%);
+        }
+
+        .booking-calendar-wrapper .react-datepicker__day--disabled,
+        .booking-calendar-wrapper
+          .booking-calendar__day--unavailable {
+          cursor: not-allowed;
+          border-color: transparent;
+          background: #f5f5f5;
+          color: #b8bbc2;
+          text-decoration: line-through;
+          box-shadow: none;
+          opacity: 0.72;
+        }
+
+        .booking-calendar-wrapper
+          .react-datepicker__day--outside-month {
+          color: #d0d2d7;
+          opacity: 0.55;
+        }
+
+        .booking-calendar-wrapper
+          .react-datepicker__day--outside-month.react-datepicker__day--disabled {
+          visibility: hidden;
+        }
+
+        .booking-calendar-wrapper .react-datepicker__aria-live {
+          position: absolute;
+        }
+
+        @media (min-width: 480px) {
+          .booking-calendar-wrapper .react-datepicker__header {
+            padding: 18px 16px 12px;
+          }
+
+          .booking-calendar-wrapper .react-datepicker__month {
+            padding: 12px 16px 18px;
+          }
+
+          .booking-calendar-wrapper .react-datepicker__day-names,
+          .booking-calendar-wrapper .react-datepicker__week {
+            gap: 7px;
+          }
+
+          .booking-calendar-wrapper .react-datepicker__day {
+            min-height: 44px;
+            font-size: 14px;
+          }
+
+          .booking-calendar-wrapper .react-datepicker__day-name {
+            font-size: 12px;
+          }
+        }
+
+        @media (max-width: 360px) {
+          .booking-calendar-wrapper .react-datepicker__month {
+            padding-inline: 7px;
+          }
+
+          .booking-calendar-wrapper .react-datepicker__day-names,
+          .booking-calendar-wrapper .react-datepicker__week {
+            gap: 2px;
+          }
+
+          .booking-calendar-wrapper .react-datepicker__day {
+            min-height: 34px;
+            border-radius: 10px;
+            font-size: 12px;
+          }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .booking-calendar-wrapper *,
+          .booking-calendar-wrapper *::before,
+          .booking-calendar-wrapper *::after {
+            scroll-behavior: auto !important;
+            transition: none !important;
+          }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+export default DateField;
+</file>
+
 <file path="src/components/booking/parts/PhoneInput.jsx">
 // src/components/booking/parts/PhoneInput.jsx
 import React, { forwardRef } from "react";
@@ -8067,37 +8393,6 @@ function FloatingWhatsappButton() {
 }
 
 export default FloatingWhatsappButton;
-</file>
-
-<file path="src/components/layout/LanguageSwitcher.jsx">
-import { useTranslation } from "react-i18next";
-
-function LanguageSwitcher() {
-  const { i18n } = useTranslation();
-
-  const changeLanguage = (lng) => {
-    i18n.changeLanguage(lng);
-    document.documentElement.dir = lng === "ar" || lng === "he" ? "rtl" : "ltr";
-    document.documentElement.lang = lng;
-    localStorage.setItem("lang", lng);
-  };
-
-  return (
-    <div className="relative">
-      <select
-        onChange={(e) => changeLanguage(e.target.value)}
-        value={i18n.language}
-        className="bg-white text-primary px-3 py-2 rounded-md border text-sm shadow focus:outline-none"
-      >
-        <option value="en">English</option>
-        <option value="ar">عربي</option>
-        <option value="he">עברית</option>
-      </select>
-    </div>
-  );
-}
-
-export default LanguageSwitcher;
 </file>
 
 <file path="src/components/reviews/AllReviewsModal.jsx">
@@ -11108,169 +11403,6 @@ messaging.onBackgroundMessage(function(payload) {
 });
 </file>
 
-<file path="src/components/booking/parts/OpeningStatusCard.jsx">
-// src/components/booking/parts/OpeningStatusCard.jsx
-import React from "react";
-import { FaClock, FaDoorOpen, FaDoorClosed } from "react-icons/fa";
-import { useTranslation } from "react-i18next";
-
-/**
- * Props:
- * - status?: { isOpen?: boolean, nextOpen?: Date }  (اختياري)
- * - workingHours: { Sunday:null|{from,to}, Monday:..., ... }
- */
-export default function OpeningStatusCard({ status, workingHours }) {
-  const { t, i18n } = useTranslation();
-  const dir = i18n.dir();
-
-  // ترتيب الأيام (مفاتيح كائن ساعات العمل)
-  const dayKeys = [
-    "Sunday",
-    "Monday",
-    "Tuesday",
-    "Wednesday",
-    "Thursday",
-    "Friday",
-    "Saturday",
-  ];
-
-  // أسماء الأيام من الترجمة (مصفوفة)
-  const dayLabels = t("weekdays", { returnObjects: true });
-
-  const now = new Date();
-  const todayIdx = now.getDay(); // 0=Sunday
-  const todayKey = dayKeys[todayIdx];
-  const todayHours = workingHours?.[todayKey] || null;
-
-  const toTodayTime = (hhmm) => {
-    const [h, m] = String(hhmm || "00:00")
-      .split(":")
-      .map(Number);
-    const d = new Date();
-    d.setHours(h || 0, m || 0, 0, 0);
-    return d;
-  };
-
-  // هل مفتوح الآن؟ (لو status?.isOpen موجود نستخدمه، وإلا نحسب)
-  const isOpenNow =
-    typeof status?.isOpen === "boolean"
-      ? status.isOpen
-      : (() => {
-          if (!todayHours) return false;
-          const from = toTodayTime(todayHours.from);
-          const to = toTodayTime(todayHours.to);
-          return now >= from && now <= to;
-        })();
-
-  // إغلاق اليوم (إن كان مفتوحًا)
-  const closesAtText = isOpenNow && todayHours ? todayHours.to : null;
-
-  // موعد الفتح القادم (لو مغلق الآن)
-  const nextOpen = (() => {
-    // لو اليوم فيه ساعات لكن قبل الفتح
-    if (todayHours) {
-      const from = toTodayTime(todayHours.from);
-      if (now < from) return { dayIdx: todayIdx, from: todayHours.from };
-    }
-    // أول يوم قادم فيه ساعات
-    for (let offset = 1; offset <= 7; offset++) {
-      const idx = (todayIdx + offset) % 7;
-      const key = dayKeys[idx];
-      const hours = workingHours?.[key];
-      if (hours && hours.from) return { dayIdx: idx, from: hours.from };
-    }
-    return null;
-  })();
-
-  const statusLine = isOpenNow
-    ? {
-        text: t("shop_open_now"),
-        sub: closesAtText ? `${t("open_until")} ${closesAtText}` : null,
-        color: "text-emerald-600",
-        icon: <FaDoorOpen className="text-emerald-600" />,
-      }
-    : {
-        text: t("shop_closed_now"),
-        sub: nextOpen
-          ? `${t("opens_at")} ${dayLabels?.[nextOpen.dayIdx]} ${nextOpen.from}`
-          : null,
-        color: "text-rose-600",
-        icon: <FaDoorClosed className="text-rose-600" />,
-      };
-
-  return (
-    <div
-      className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
-      dir={dir}
-      lang={i18n.language}
-    >
-      {/* الرأس */}
-      <div className="flex items-center gap-2 px-5 pt-4">
-        <FaClock className="text-[#3B82F6]" />
-        <h3 className="text-lg font-bold text-[#1F2937]">
-          {t("working_hours")}
-        </h3>
-      </div>
-
-      {/* سطر الحالة */}
-      <div className="px-5 pb-3">
-        <p
-          className={`mt-1 text-sm font-semibold ${statusLine.color} flex items-center gap-2`}
-        >
-          {statusLine.icon}
-          <span>{statusLine.text}</span>
-        </p>
-        {statusLine.sub && (
-          <p className="text-xs text-gray-500 mt-1">{statusLine.sub}</p>
-        )}
-      </div>
-
-      {/* جدول الأيام */}
-      <div className="px-3 pb-4">
-        <ul className="divide-y divide-gray-100 rounded-xl overflow-hidden bg-white">
-          {dayKeys.map((k, i) => {
-            const hours = workingHours?.[k] || null;
-            const isToday = i === todayIdx;
-            const closed = !hours;
-
-            return (
-              <li
-                key={k}
-                className={`flex items-center justify-between px-4 py-3 ${
-                  isToday ? "bg-slate-50" : "bg-white"
-                }`}
-              >
-                <span
-                  className={`text-sm ${
-                    isToday ? "font-semibold text-[#1F2937]" : "text-gray-600"
-                  }`}
-                >
-                  {dayLabels?.[i]}
-                </span>
-
-                {closed ? (
-                  <span className="text-sm font-semibold text-rose-600">
-                    {t("closed_all_day")}
-                  </span>
-                ) : (
-                  <span
-                    className={`text-sm ${
-                      isToday ? "font-semibold text-gray-700" : "text-gray-700"
-                    }`}
-                  >
-                    {hours.from} – {hours.to}
-                  </span>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-      </div>
-    </div>
-  );
-}
-</file>
-
 <file path="src/components/booking/parts/ServiceSelector.jsx">
 // src/components/booking/parts/ServiceSelector.jsx
 import ServiceOption from "./ServiceOption";
@@ -11307,6 +11439,155 @@ export default function ServiceSelector({ selectedService, onSelect, rtl }) {
           desc={t(`services_desc.${s.id}`, { defaultValue: "" })}
         />
       ))}
+    </div>
+  );
+}
+</file>
+
+<file path="src/components/booking/parts/TimeSelector.jsx">
+// src/components/booking/parts/TimeSelector.jsx
+
+function CheckIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-4 w-4"
+      aria-hidden="true"
+    >
+      <path d="m5 12 4 4L19 6" />
+    </svg>
+  );
+}
+
+function ClockIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.9"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-5 w-5"
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 2" />
+    </svg>
+  );
+}
+
+export default function TimeSelector({
+  selectedDate,
+  selectedTime,
+  onSelectTime,
+  availableTimes = [],
+  workingHours,
+  t,
+}) {
+  if (!selectedDate) return null;
+
+  const [year, month, day] = selectedDate.split("-");
+
+  const dateObject = new Date(Number(year), Number(month) - 1, Number(day));
+
+  const weekday = dateObject.toLocaleDateString("en-US", {
+    weekday: "long",
+  });
+
+  const hours = workingHours?.[weekday];
+
+  if (!hours) {
+    return (
+      <div
+        className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-4 text-right"
+        role="status"
+      >
+        <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-red-500 shadow-sm">
+          <ClockIcon />
+        </div>
+
+        <div>
+          <p className="text-sm font-bold text-red-700">{t("closed_day")}</p>
+
+          <p className="mt-1 text-xs leading-5 text-red-600">
+            {t("choose_another_day") ||
+              "اختر يومًا آخر لمشاهدة الساعات المتاحة."}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (availableTimes.length === 0) {
+    return (
+      <div
+        className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-right"
+        role="status"
+      >
+        <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-amber-700 shadow-sm">
+          <ClockIcon />
+        </div>
+
+        <div>
+          <p className="text-sm font-bold text-amber-900">
+            {t("no_available_times") || "لا توجد ساعات متاحة في هذا اليوم"}
+          </p>
+
+          <p className="mt-1 text-xs leading-5 text-amber-800">
+            {t("choose_another_day") || "اختر يومًا آخر لمشاهدة مواعيد إضافية."}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="grid grid-cols-3 gap-2.5 sm:grid-cols-4"
+      role="radiogroup"
+      aria-label={t("choose_time") || "اختر الساعة"}
+    >
+      {availableTimes.map((time) => {
+        const isSelected = selectedTime === time;
+
+        return (
+          <button
+            key={time}
+            type="button"
+            role="radio"
+            aria-checked={isSelected}
+            onClick={() => onSelectTime(time)}
+            className={[
+              "relative flex min-h-[46px] w-full items-center justify-center",
+              "rounded-xl border px-2 py-2.5",
+              "text-sm font-bold tabular-nums",
+              "outline-none",
+              "transition-colors duration-150",
+              "focus-visible:ring-4 focus-visible:ring-gold/25",
+              isSelected
+                ? "border-[#b98a21] bg-gradient-to-br from-[#e6bd57] to-[#f3d77f] text-[#172033] shadow-[0_6px_14px_rgba(185,138,33,0.22)]"
+                : "border-slate-300 bg-white text-slate-800 hover:border-[#c9a64d] hover:bg-[#fffaf0]",
+            ].join(" ")}
+          >
+            <span>{time}</span>
+
+            {isSelected && (
+              <span
+                className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-white/80 text-[#806013]"
+                aria-hidden="true"
+              >
+                <CheckIcon />
+              </span>
+            )}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -11444,6 +11725,74 @@ export default function RamadanCurve({
     </div>
   );
 }
+</file>
+
+<file path="src/components/layout/LanguageSwitcher.jsx">
+// src/components/layout/LanguageSwitcher.jsx
+
+import { useTranslation } from "react-i18next";
+import { Languages } from "lucide-react";
+
+function LanguageSwitcher({ compact = false }) {
+  const { i18n } = useTranslation();
+
+  const currentLanguage = i18n.resolvedLanguage || i18n.language || "ar";
+
+  const changeLanguage = (language) => {
+    i18n.changeLanguage(language);
+
+    const isRTL = language === "ar" || language === "he";
+
+    document.documentElement.dir = isRTL ? "rtl" : "ltr";
+
+    document.documentElement.lang = language;
+
+    localStorage.setItem("lang", language);
+  };
+
+  return (
+    <div className="relative shrink-0">
+      {!compact && (
+        <Languages
+          className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-[#8a6a20]"
+          aria-hidden="true"
+        />
+      )}
+
+      <select
+        value={currentLanguage}
+        onChange={(event) => changeLanguage(event.target.value)}
+        aria-label="Language"
+        className={[
+          "h-10 appearance-none rounded-xl",
+          "border border-white/[0.10]",
+          "bg-[#f8f7f3] text-[#282828]",
+          "text-sm font-bold",
+          "outline-none transition",
+          "shadow-[0_3px_10px_rgba(0,0,0,0.16)]",
+          "focus:border-[#c5a04a] focus:ring-4 focus:ring-[#c8a34e]/20",
+          compact ? "w-[88px] px-3" : "min-w-[118px] py-2 pl-9 pr-4",
+        ].join(" ")}
+      >
+        <option value="ar">عربي</option>
+        <option value="he">עברית</option>
+        <option value="en">English</option>
+      </select>
+
+      <span
+        className={[
+          "pointer-events-none absolute top-1/2 -translate-y-1/2",
+          "border-x-[4px] border-t-[5px]",
+          "border-x-transparent border-t-[#585858]",
+          compact ? "left-3" : "right-3",
+        ].join(" ")}
+        aria-hidden="true"
+      />
+    </div>
+  );
+}
+
+export default LanguageSwitcher;
 </file>
 
 <file path="src/hooks/useBookingSubmit.js">
@@ -12908,6 +13257,332 @@ export default {
 };
 </file>
 
+<file path="src/components/booking/parts/OpeningStatusCard.jsx">
+// src/components/booking/parts/OpeningStatusCard.jsx
+
+import { FaClock, FaDoorClosed, FaDoorOpen } from "react-icons/fa";
+import { useTranslation } from "react-i18next";
+
+const DAY_KEYS = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+];
+
+const FALLBACK_DAY_LABELS = {
+  ar: ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"],
+  he: ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"],
+  en: [
+    "Sunday",
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+  ],
+};
+
+function timeToToday(time) {
+  const [hours, minutes] = String(time || "00:00")
+    .split(":")
+    .map(Number);
+
+  const date = new Date();
+
+  date.setHours(
+    Number.isFinite(hours) ? hours : 0,
+    Number.isFinite(minutes) ? minutes : 0,
+    0,
+    0,
+  );
+
+  return date;
+}
+
+function normalizeLanguage(language) {
+  if (language?.startsWith("he")) return "he";
+  if (language?.startsWith("en")) return "en";
+
+  return "ar";
+}
+
+function getDayLabels(t, language) {
+  const translatedLabels = t("weekdays", {
+    returnObjects: true,
+    defaultValue: FALLBACK_DAY_LABELS[language],
+  });
+
+  if (Array.isArray(translatedLabels) && translatedLabels.length >= 7) {
+    return translatedLabels;
+  }
+
+  return FALLBACK_DAY_LABELS[language];
+}
+
+function formatHours(hours) {
+  if (!hours?.from || !hours?.to) return null;
+
+  return `${hours.from} – ${hours.to}`;
+}
+
+export default function OpeningStatusCard({ status, workingHours = {} }) {
+  const { t, i18n } = useTranslation();
+
+  const language = normalizeLanguage(i18n.resolvedLanguage || i18n.language);
+
+  const isRTL = language === "ar" || language === "he";
+  const dayLabels = getDayLabels(t, language);
+
+  const now = new Date();
+  const todayIndex = now.getDay();
+  const todayKey = DAY_KEYS[todayIndex];
+  const todayHours = workingHours?.[todayKey] || null;
+
+  const calculatedIsOpen = (() => {
+    if (!todayHours?.from || !todayHours?.to) {
+      return false;
+    }
+
+    const opensAt = timeToToday(todayHours.from);
+    const closesAt = timeToToday(todayHours.to);
+
+    return now >= opensAt && now < closesAt;
+  })();
+
+  const isOpenNow =
+    typeof status?.isOpen === "boolean" ? status.isOpen : calculatedIsOpen;
+
+  const nextOpening = (() => {
+    if (status?.nextOpen instanceof Date) {
+      const nextOpenDate = status.nextOpen;
+
+      if (!Number.isNaN(nextOpenDate.getTime())) {
+        return {
+          dayIndex: nextOpenDate.getDay(),
+          time: `${String(nextOpenDate.getHours()).padStart(2, "0")}:${String(
+            nextOpenDate.getMinutes(),
+          ).padStart(2, "0")}`,
+        };
+      }
+    }
+
+    if (todayHours?.from) {
+      const opensAt = timeToToday(todayHours.from);
+
+      if (now < opensAt) {
+        return {
+          dayIndex: todayIndex,
+          time: todayHours.from,
+        };
+      }
+    }
+
+    for (let offset = 1; offset <= 7; offset += 1) {
+      const dayIndex = (todayIndex + offset) % 7;
+      const hours = workingHours?.[DAY_KEYS[dayIndex]];
+
+      if (hours?.from) {
+        return {
+          dayIndex,
+          time: hours.from,
+        };
+      }
+    }
+
+    return null;
+  })();
+
+  const statusDescription = (() => {
+    if (isOpenNow && todayHours?.to) {
+      return t("open_until", {
+        time: todayHours.to,
+        defaultValue: `مفتوح حتى ${todayHours.to}`,
+      });
+    }
+
+    if (!nextOpening) {
+      return t("opening_time_unavailable", {
+        defaultValue: "موعد الفتح القادم غير محدد",
+      });
+    }
+
+    const nextDayLabel =
+      nextOpening.dayIndex === todayIndex
+        ? t("today", {
+            defaultValue:
+              language === "he"
+                ? "היום"
+                : language === "en"
+                  ? "Today"
+                  : "اليوم",
+          })
+        : dayLabels[nextOpening.dayIndex];
+
+    return t("opens_next", {
+      day: nextDayLabel,
+      time: nextOpening.time,
+      defaultValue:
+        language === "he"
+          ? `נפתח ${nextDayLabel} בשעה ${nextOpening.time}`
+          : language === "en"
+            ? `Opens ${nextDayLabel} at ${nextOpening.time}`
+            : `يفتح ${nextDayLabel} الساعة ${nextOpening.time}`,
+    });
+  })();
+
+  return (
+    <section
+      className="overflow-hidden rounded-2xl border border-[#e3ded4] bg-white shadow-[0_10px_28px_rgba(35,29,20,0.06)]"
+      dir={isRTL ? "rtl" : "ltr"}
+      aria-label={t("working_hours", {
+        defaultValue: "ساعات العمل",
+      })}
+    >
+      <div className="border-b border-[#eee9df] px-4 py-4 sm:px-5">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#f5ead0] text-[#99701c]">
+            <FaClock className="h-4 w-4" aria-hidden="true" />
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <h3 className="text-base font-black text-slate-900">
+              {t("working_hours", {
+                defaultValue: "ساعات العمل",
+              })}
+            </h3>
+
+            <div className="mt-1 flex items-center gap-2">
+              <span
+                className={[
+                  "h-2.5 w-2.5 shrink-0 rounded-full",
+                  isOpenNow ? "bg-emerald-500" : "bg-red-500",
+                ].join(" ")}
+                aria-hidden="true"
+              />
+
+              <p
+                className={[
+                  "text-sm font-extrabold",
+                  isOpenNow ? "text-emerald-700" : "text-red-600",
+                ].join(" ")}
+              >
+                {isOpenNow
+                  ? t("shop_open_now", {
+                      defaultValue: "المحل مفتوح الآن",
+                    })
+                  : t("shop_closed_now", {
+                      defaultValue: "المحل مغلق الآن",
+                    })}
+              </p>
+            </div>
+
+            <p className="mt-1 text-xs font-medium text-slate-500">
+              {statusDescription}
+            </p>
+          </div>
+
+          <div
+            className={[
+              "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl",
+              isOpenNow
+                ? "bg-emerald-50 text-emerald-600"
+                : "bg-red-50 text-red-500",
+            ].join(" ")}
+            aria-hidden="true"
+          >
+            {isOpenNow ? (
+              <FaDoorOpen className="h-4 w-4" />
+            ) : (
+              <FaDoorClosed className="h-4 w-4" />
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="px-3 py-2 sm:px-4">
+        {DAY_KEYS.map((dayKey, index) => {
+          const hours = workingHours?.[dayKey] || null;
+          const isToday = index === todayIndex;
+
+          return (
+            <div
+              key={dayKey}
+              className={[
+                "relative flex min-h-[44px] items-center justify-between gap-4",
+                "border-b border-slate-100 px-3 py-2.5 last:border-b-0",
+                isToday ? "rounded-xl bg-[#faf6ec]" : "bg-transparent",
+              ].join(" ")}
+              aria-current={isToday ? "date" : undefined}
+            >
+              {isToday && (
+                <span
+                  className={[
+                    "absolute inset-y-2 w-[3px] rounded-full bg-[#c79d3f]",
+                    isRTL ? "right-0" : "left-0",
+                  ].join(" ")}
+                  aria-hidden="true"
+                />
+              )}
+
+              <div className="flex min-w-0 items-center gap-2">
+                <span
+                  className={[
+                    "text-sm",
+                    isToday
+                      ? "font-black text-slate-900"
+                      : "font-semibold text-slate-600",
+                  ].join(" ")}
+                >
+                  {dayLabels[index]}
+                </span>
+
+                {isToday && (
+                  <span className="rounded-full bg-[#ead8a9] px-2 py-0.5 text-[10px] font-black text-[#72520f]">
+                    {t("today", {
+                      defaultValue:
+                        language === "he"
+                          ? "היום"
+                          : language === "en"
+                            ? "Today"
+                            : "اليوم",
+                    })}
+                  </span>
+                )}
+              </div>
+
+              {hours ? (
+                <span
+                  className={[
+                    "shrink-0 text-sm tabular-nums",
+                    isToday
+                      ? "font-black text-slate-900"
+                      : "font-semibold text-slate-700",
+                  ].join(" ")}
+                  dir="ltr"
+                >
+                  {formatHours(hours)}
+                </span>
+              ) : (
+                <span className="shrink-0 rounded-full bg-red-50 px-2.5 py-1 text-xs font-bold text-red-600">
+                  {t("closed_all_day", {
+                    defaultValue: "مغلق طوال اليوم",
+                  })}
+                </span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+</file>
+
 <file path="src/components/booking/parts/ProgressBar.jsx">
 // src/components/booking/parts/ProgressBar.jsx
 import React, { useMemo } from "react";
@@ -13822,179 +14497,6 @@ export default function WeeklyHoursEditorMobile({
 }
 </file>
 
-<file path="src/styles/heroEnhancements.css">
-/* src/styles/heroEnhancements.css */
-
-/* HERO LAYERS */
-.hero-overlay {
-  position: relative;
-  overflow: hidden;
-  overflow-x: clip;
-}
-@supports not (overflow-x: clip) {
-  .hero-overlay {
-    overflow-x: hidden;
-  }
-}
-
-.hero-overlay::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    to top,
-    rgba(0, 0, 0, 0.72),
-    rgba(0, 0, 0, 0.42),
-    rgba(0, 0, 0, 0.18)
-  );
-  z-index: 1;
-  pointer-events: none;
-}
-
-.hero-media {
-  transform: scale(1.02);
-  will-change: transform;
-  animation: heroKenBurns 14s ease-in-out infinite alternate;
-}
-
-@keyframes heroKenBurns {
-  from {
-    transform: scale(1.02);
-  }
-  to {
-    transform: scale(1.055);
-  }
-}
-
-.hero-content {
-  position: relative;
-  z-index: 3;
-}
-
-/* RAMADAN POSITION */
-:root {
-  --header-h: 72px;
-  --ramadan-gap-desktop: 12px;
-  --ramadan-gap-mobile: 8px;
-}
-
-.hero-ramadan-wrap {
-  position: absolute;
-  inset-inline: 0;
-  top: calc(
-    var(--header-h) + env(safe-area-inset-top) + var(--ramadan-gap-desktop)
-  );
-  z-index: 4;
-  display: flex;
-  justify-content: center;
-  pointer-events: none;
-  overflow: visible;
-  opacity: 0;
-  animation: ramadanFadeIn 520ms ease forwards;
-}
-
-@keyframes ramadanFadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* RAMADAN CURVE */
-.hero-ramadan-curve {
-  position: relative;
-  pointer-events: none;
-  user-select: none;
-  overflow: visible;
-  filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.35))
-    drop-shadow(0 2px 6px rgba(0, 0, 0, 0.35));
-}
-
-.hero-ramadan-svg {
-  width: min(980px, calc(100% - 16px));
-  height: 170px;
-  display: block;
-  margin: 0 auto;
-  overflow: visible;
-}
-
-/* TEXT */
-.hero-ramadan-text {
-  /* أكبر بكثير خصوصاً للموبايل */
-  font-size: clamp(22px, 5.2vw, 34px);
-  font-weight: 900;
-  letter-spacing: 1.4px;
-  fill: rgba(255, 255, 255, 0.96);
-  unicode-bidi: bidi-override; /* دعم إضافي */
-  direction: rtl; /* دعم إضافي */
-}
-
-/* موبايل: أكبر كمان */
-@media (max-width: 768px) {
-  .hero-ramadan-text {
-    font-size: clamp(20px, 5.6vw, 28px);
-  }
-}
-html[dir="rtl"] .hero-ramadan-text {
-  direction: rtl;
-}
-
-/* Ribbon زجاجي */
-.hero-ramadan-ribbonGlass {
-  fill: none;
-  stroke-width: 36;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-/* خطوط ذهبية */
-.hero-ramadan-ribbonGoldTop {
-  fill: none;
-  stroke: rgba(247, 231, 183, 0.25);
-  stroke-width: 1.4;
-  transform: translateY(-0.8px);
-}
-
-.hero-ramadan-ribbonGoldBottom {
-  fill: none;
-  stroke: rgba(184, 146, 59, 0.18);
-  stroke-width: 1.4;
-  transform: translateY(0.8px);
-}
-
-/* Mobile */
-@media (max-width: 768px) {
-  .hero-ramadan-svg {
-    width: calc(100% - 12px);
-    height: 160px;
-  }
-
-  .hero-ramadan-text {
-    font-size: clamp(16px, 4vw, 24px);
-  }
-
-  .hero-ramadan-ribbonGlass {
-    stroke-width: 30;
-  }
-}
-
-.hero-ramadan-text {
-  font-size: 32px !important; /* كبير وواضح */
-  font-weight: 900 !important;
-  letter-spacing: 1.2px !important;
-}
-
-@media (max-width: 768px) {
-  .hero-ramadan-text {
-    font-size: 26px !important;
-  }
-}
-</file>
-
 <file path="src/pages/barberPanel/BarberPanel.jsx">
 // src/pages/barberPanel/BarberPanel.jsx
 import { useEffect, useMemo, useState } from "react";
@@ -14699,6 +15201,580 @@ export async function cancelBooking(bookingId) {
 }
 </file>
 
+<file path="src/styles/heroEnhancements.css">
+/* src/styles/heroEnhancements.css */
+
+.hero-overlay {
+  position: relative;
+  min-height: 720px;
+  height: calc(100svh - 72px);
+  max-height: 920px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  isolation: isolate;
+  background: #111111;
+}
+
+.hero-media {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+
+  /*
+    الصورة الأصلية فيها الحلاق بالجهة اليمنى.
+    هذا التركيز يحافظ عليه ويخفف المساحة الفارغة.
+  */
+  object-position: 55% 46%;
+
+  transform: scale(1.015);
+  filter: grayscale(1) contrast(1.06) brightness(0.88);
+}
+
+/* تعتيم عام خفيف */
+.hero-overlay::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.18) 0%,
+    rgba(0, 0, 0, 0.28) 38%,
+    rgba(0, 0, 0, 0.62) 100%
+  );
+}
+
+/* تعتيم مركز خلف النص فقط */
+.hero-overlay::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+
+  background: radial-gradient(
+    circle at 50% 48%,
+    rgba(0, 0, 0, 0.48) 0%,
+    rgba(0, 0, 0, 0.22) 34%,
+    rgba(0, 0, 0, 0) 66%
+  );
+}
+
+.hero-content-shell {
+  position: relative;
+  z-index: 3;
+  width: 100%;
+  max-width: 1280px;
+  margin-inline: auto;
+  padding: calc(42px + env(safe-area-inset-top)) 24px 42px;
+}
+
+.hero-content {
+  width: min(100%, 650px);
+  margin-inline: auto;
+  text-align: center;
+}
+
+.hero-copy {
+  margin-bottom: 22px;
+}
+
+.hero-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  margin: 0 0 13px;
+  padding: 6px 13px;
+  border: 1px solid rgba(207, 171, 83, 0.34);
+  border-radius: 999px;
+  background: rgba(13, 13, 13, 0.38);
+  color: #e8d39b;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.4;
+  letter-spacing: 0.02em;
+  backdrop-filter: blur(8px);
+}
+
+.hero-title {
+  max-width: 760px;
+  margin: 0 auto;
+  color: #cba857;
+  font-family: "Noto Kufi Arabic", "Cairo", sans-serif;
+  font-size: clamp(38px, 5.3vw, 72px);
+  font-weight: 900;
+  line-height: 1.2;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+
+  text-shadow:
+    0 3px 8px rgba(0, 0, 0, 0.78),
+    0 14px 40px rgba(0, 0, 0, 0.48);
+}
+
+.hero-subtitle {
+  max-width: 540px;
+  margin: 16px auto 0;
+  color: rgba(255, 255, 255, 0.92);
+  font-family: "Tajawal", sans-serif;
+  font-size: clamp(16px, 1.8vw, 21px);
+  font-weight: 600;
+  line-height: 1.8;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.72);
+}
+
+/* Note */
+.hero-note {
+  position: relative;
+  width: min(100%, 520px);
+  margin: 0 auto 22px;
+  padding: 13px 48px 13px 15px;
+
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 16px;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.17),
+    rgba(255, 255, 255, 0.09)
+  );
+
+  box-shadow:
+    0 14px 34px rgba(0, 0, 0, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+
+  backdrop-filter: blur(12px);
+}
+
+.hero-note-inner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-align: start;
+}
+
+.hero-note-icon {
+  width: 37px;
+  height: 37px;
+  flex: 0 0 37px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border: 1px solid rgba(232, 195, 104, 0.55);
+  border-radius: 50%;
+  background: rgba(244, 216, 145, 0.92);
+  color: #7b5812;
+
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.hero-note-icon--important {
+  border-color: rgba(253, 164, 175, 0.55);
+  background: rgba(255, 228, 230, 0.92);
+  color: #be123c;
+}
+
+.hero-note-icon--offer {
+  border-color: rgba(110, 231, 183, 0.55);
+  background: rgba(209, 250, 229, 0.92);
+  color: #047857;
+}
+
+.hero-note-copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.hero-note-title {
+  color: #e8c86e;
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1.4;
+}
+
+.hero-note-title--important {
+  color: #fda4af;
+}
+
+.hero-note-title--offer {
+  color: #6ee7b7;
+}
+
+.hero-note-text {
+  margin-top: 3px;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.65;
+}
+
+.hero-note-close {
+  position: absolute;
+  top: 10px;
+  inset-inline-end: 10px;
+
+  width: 29px;
+  height: 29px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.26);
+  color: rgba(255, 255, 255, 0.78);
+
+  font-size: 19px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.hero-note-close:hover {
+  background: rgba(255, 255, 255, 0.9);
+  color: #222222;
+}
+
+/* Actions */
+.hero-actions {
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.hero-button {
+  min-height: 52px;
+  min-width: 176px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+
+  padding: 13px 22px;
+  border-radius: 14px;
+
+  font-family: "Tajawal", sans-serif;
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1;
+
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    transform 160ms ease,
+    background-color 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.hero-button:hover {
+  transform: translateY(-2px);
+}
+
+.hero-button:focus-visible {
+  outline: 3px solid rgba(225, 190, 101, 0.48);
+  outline-offset: 3px;
+}
+
+.hero-button--primary {
+  border: 1px solid #d0aa4e;
+  background: linear-gradient(145deg, #d6b45c, #bd9340);
+  color: #151515;
+
+  box-shadow:
+    0 12px 28px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.38);
+}
+
+.hero-button--primary:hover {
+  background: linear-gradient(145deg, #e0c06b, #cda248);
+}
+
+.hero-button--secondary {
+  border: 1px solid rgba(255, 255, 255, 0.34);
+  background: rgba(15, 15, 15, 0.42);
+  color: #ffffff;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(10px);
+}
+
+.hero-button--secondary:hover {
+  border-color: rgba(217, 183, 96, 0.72);
+  background: rgba(15, 15, 15, 0.62);
+  color: #ead086;
+}
+
+.hero-bottom-fade {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 2;
+  height: 90px;
+  pointer-events: none;
+
+  background: linear-gradient(
+    to bottom,
+    rgba(17, 17, 17, 0),
+    rgba(17, 17, 17, 0.84)
+  );
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .hero-overlay {
+    min-height: 660px;
+    height: calc(100svh - 58px);
+    max-height: 820px;
+  }
+
+  .hero-media {
+    /*
+      بالموبايل نقصّ من الصورة أكثر ونحافظ على وجه الحلاق.
+    */
+    object-position: 58% center;
+    transform: scale(1.03);
+  }
+
+  .hero-overlay::after {
+    background: radial-gradient(
+      circle at 50% 48%,
+      rgba(0, 0, 0, 0.58) 0%,
+      rgba(0, 0, 0, 0.32) 42%,
+      rgba(0, 0, 0, 0.05) 76%
+    );
+  }
+
+  .hero-content-shell {
+    padding: calc(46px + env(safe-area-inset-top)) 16px
+      calc(34px + env(safe-area-inset-bottom));
+  }
+
+  .hero-content {
+    width: 100%;
+  }
+
+  .hero-copy {
+    margin-bottom: 18px;
+  }
+
+  .hero-eyebrow {
+    margin-bottom: 11px;
+    font-size: 11px;
+  }
+
+  .hero-title {
+    max-width: 360px;
+    font-size: clamp(34px, 10vw, 48px);
+    line-height: 1.3;
+  }
+
+  .hero-subtitle {
+    max-width: 340px;
+    margin-top: 12px;
+    font-size: 16px;
+    line-height: 1.65;
+  }
+
+  .hero-note {
+    width: min(100%, 390px);
+    margin-bottom: 18px;
+    padding: 12px 44px 12px 12px;
+    border-radius: 14px;
+  }
+
+  .hero-note-inner {
+    gap: 10px;
+  }
+
+  .hero-note-icon {
+    width: 34px;
+    height: 34px;
+    flex-basis: 34px;
+  }
+
+  .hero-note-text {
+    font-size: 13px;
+  }
+
+  .hero-actions {
+    width: min(100%, 390px);
+    margin-inline: auto;
+    gap: 10px;
+  }
+
+  .hero-button {
+    min-width: 0;
+    flex: 1 1 calc(50% - 5px);
+    min-height: 50px;
+    padding-inline: 14px;
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 420px) {
+  .hero-actions {
+    flex-direction: column;
+  }
+
+  .hero-button {
+    width: 100%;
+    flex-basis: auto;
+  }
+
+  .hero-title {
+    max-width: 330px;
+    font-size: clamp(32px, 10.5vw, 42px);
+  }
+}
+
+@media (max-height: 700px) and (min-width: 769px) {
+  .hero-overlay {
+    min-height: 620px;
+    height: 720px;
+  }
+
+  .hero-content-shell {
+    padding-top: 80px;
+    padding-bottom: 30px;
+  }
+
+  .hero-copy {
+    margin-bottom: 16px;
+  }
+
+  .hero-title {
+    font-size: clamp(42px, 5vw, 60px);
+  }
+
+  .hero-subtitle {
+    margin-top: 10px;
+  }
+
+  .hero-note {
+    margin-bottom: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-button,
+  .hero-note-close {
+    transition: none;
+  }
+}
+
+/* RAMADAN POSITION */
+:root {
+  --header-h: 72px;
+  --ramadan-gap-desktop: 12px;
+  --ramadan-gap-mobile: 8px;
+}
+
+.hero-ramadan-wrap {
+  position: absolute;
+  inset-inline: 0;
+  top: calc(
+    var(--header-h) + env(safe-area-inset-top) + var(--ramadan-gap-desktop)
+  );
+  z-index: 4;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  overflow: visible;
+  opacity: 0;
+  animation: ramadanFadeIn 520ms ease forwards;
+}
+
+@keyframes ramadanFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.hero-ramadan-curve {
+  position: relative;
+  pointer-events: none;
+  user-select: none;
+  overflow: visible;
+  filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.35))
+    drop-shadow(0 2px 6px rgba(0, 0, 0, 0.35));
+}
+
+.hero-ramadan-svg {
+  width: min(980px, calc(100% - 16px));
+  height: 170px;
+  display: block;
+  margin: 0 auto;
+  overflow: visible;
+}
+
+.hero-ramadan-text {
+  font-size: 32px !important;
+  font-weight: 900 !important;
+  letter-spacing: 1.2px !important;
+  fill: rgba(255, 255, 255, 0.96);
+  unicode-bidi: bidi-override;
+  direction: rtl;
+}
+
+.hero-ramadan-ribbonGlass {
+  fill: none;
+  stroke-width: 36;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.hero-ramadan-ribbonGoldTop {
+  fill: none;
+  stroke: rgba(247, 231, 183, 0.25);
+  stroke-width: 1.4;
+  transform: translateY(-0.8px);
+}
+
+.hero-ramadan-ribbonGoldBottom {
+  fill: none;
+  stroke: rgba(184, 146, 59, 0.18);
+  stroke-width: 1.4;
+  transform: translateY(0.8px);
+}
+
+@media (max-width: 768px) {
+  .hero-ramadan-wrap {
+    top: calc(
+      var(--header-h) + env(safe-area-inset-top) + var(--ramadan-gap-mobile)
+    );
+  }
+
+  .hero-ramadan-svg {
+    width: calc(100% - 12px);
+    height: 160px;
+  }
+
+  .hero-ramadan-text {
+    font-size: 26px !important;
+  }
+
+  .hero-ramadan-ribbonGlass {
+    stroke-width: 30;
+  }
+}
+</file>
+
 <file path="src/hooks/useAvailableTimes.js">
 // src/hooks/useAvailableTimes.js
 import { useEffect, useMemo, useState } from "react";
@@ -14941,308 +16017,6 @@ function App() {
 }
 
 export default App;
-</file>
-
-<file path="src/components/booking/CheckReservation.jsx">
-// src/components/booking/CheckReservation.jsx
-import { useState } from "react";
-import { collection, query, where, getDocs } from "firebase/firestore";
-import { db } from "../../firebase";
-import { useTranslation } from "react-i18next";
-import SectionTitle from "../common/SectionTitle";
-import {
-  toILPhoneE164,
-  isILPhoneE164,
-  e164ToLocalPretty,
-} from "../../utils/phone";
-import {
-  Phone,
-  CalendarDays,
-  Clock3,
-  Scissors,
-  ShieldCheck,
-} from "lucide-react";
-
-function InfoRow({ label, value, icon }) {
-  return (
-    <div
-      className="bg-gray-50 border border-gray-200 rounded-2xl p-4 flex flex-col gap-1 text-right"
-      dir="rtl"
-    >
-      <div className="text-xs text-gray-500 flex flex-row-reverse items-center gap-2">
-        {icon}
-        <span>{label}</span>
-      </div>
-      <div className="text-sm font-bold text-gray-900">{value || "-"}</div>
-    </div>
-  );
-}
-
-export default function CheckReservation() {
-  const [phone, setPhone] = useState("");
-  const [results, setResults] = useState([]);
-  const [notFound, setNotFound] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const { t } = useTranslation();
-
-  const handleCheck = async () => {
-    setResults([]);
-    setNotFound(false);
-    if (!phone) return;
-
-    const p = toILPhoneE164(phone);
-    if (!isILPhoneE164(p)) {
-      setNotFound(true);
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const qy = query(
-        collection(db, "bookings"),
-        where("phoneNumber", "==", p),
-        where("bookingCode", "!=", ""),
-      );
-      const querySnapshot = await getDocs(qy);
-
-      if (querySnapshot.empty) {
-        setNotFound(true);
-      } else {
-        const data = querySnapshot.docs
-          .map((doc) => ({ id: doc.id, ...doc.data() }))
-          .filter(
-            (doc) =>
-              doc.fullName &&
-              doc.selectedDate &&
-              doc.selectedTime &&
-              doc.bookingCode,
-          );
-
-        setResults(data);
-      }
-    } catch (error) {
-      console.error("Error fetching bookings:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <section className="bg-beige py-12 px-4 font-body">
-      <div className="max-w-2xl mx-auto">
-        <SectionTitle icon="🔎">
-          {t("check_booking") || "تحقق من الحجز"}
-        </SectionTitle>
-
-        <p className="text-center text-sm text-gray-600 mt-2">
-          أدخل رقم هاتفك لعرض حجوزاتك. احتفظ بالكود لأنه مهم للتحقق أو الإلغاء.
-        </p>
-
-        {/* Card */}
-        <div
-          className="mt-6 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm"
-          dir="rtl"
-        >
-          {/* Header mini */}
-          <div className="flex flex-row-reverse items-center justify-between gap-3 mb-4">
-            <div className="flex flex-row-reverse items-center gap-2">
-              <ShieldCheck className="w-5 h-5 opacity-70" />
-              <span className="font-extrabold text-gray-900">متابعة الحجز</span>
-            </div>
-            <span className="px-3 py-1 text-xs rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700">
-              خطوة 1
-            </span>
-          </div>
-
-          {/* Phone input */}
-          <div className="space-y-2">
-            <label className="block text-sm font-semibold text-gray-800">
-              {t("phone") || "رقم الهاتف"}
-            </label>
-
-            <div className="relative">
-              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
-                <Phone className="w-4 h-4" />
-              </span>
-
-              <input
-                type="tel"
-                placeholder="مثال: 05X-XXXXXXX"
-                className="w-full border border-gray-300 rounded-2xl pr-11 pl-4 py-3 text-right shadow-sm focus:ring-2 focus:ring-gold bg-white"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-              />
-            </div>
-
-            <button
-              onClick={handleCheck}
-              disabled={loading || !phone}
-              className={`w-full mt-2 bg-gold text-primary py-3 rounded-2xl font-extrabold transition ${
-                loading || !phone
-                  ? "opacity-60 cursor-not-allowed"
-                  : "hover:bg-darkText hover:text-light"
-              }`}
-            >
-              {loading
-                ? t("loading") || "جارٍ التحقق..."
-                : t("check") || "تحقق"}
-            </button>
-
-            {notFound && (
-              <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-right text-rose-700">
-                {t("no_booking_found") ||
-                  "لا يوجد حجوزات لهذا الرقم (أو الرقم غير صحيح)."}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Results */}
-        {results.length > 0 && (
-          <div className="mt-6 space-y-4">
-            {results.map((r) => (
-              <div
-                key={r.id}
-                className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm"
-                dir="rtl"
-              >
-                <div className="flex flex-row-reverse justify-between items-start mb-4">
-                  <div className="text-right">
-                    <div className="text-lg font-extrabold text-gray-900">
-                      {r.fullName}
-                    </div>
-                    <div className="text-sm text-gray-700 mt-1">
-                      {e164ToLocalPretty(r.phoneNumber)}
-                    </div>
-                  </div>
-                  <span className="px-3 py-1 text-xs rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700">
-                    حجز
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 gap-3">
-                  <InfoRow
-                    label="الخدمة"
-                    value={r.selectedService}
-                    icon={<Scissors className="w-4 h-4 opacity-70" />}
-                  />
-                  <InfoRow
-                    label="الساعة"
-                    value={r.selectedTime}
-                    icon={<Clock3 className="w-4 h-4 opacity-70" />}
-                  />
-                  <InfoRow
-                    label="التاريخ"
-                    value={r.selectedDate}
-                    icon={<CalendarDays className="w-4 h-4 opacity-70" />}
-                  />
-                </div>
-
-                <div className="mt-4 rounded-2xl border border-gray-200 bg-gray-50 p-4 text-right">
-                  <div className="text-xs text-gray-500 mb-1">🔐 كود الحجز</div>
-                  <div className="text-xl font-black font-mono tracking-widest text-gray-900">
-                    {r.bookingCode || "-"}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </section>
-  );
-}
-</file>
-
-<file path="src/components/layout/Footer.jsx">
-import { useTranslation } from "react-i18next";
-import {
-  FaInstagram,
-  FaFacebook,
-  FaTiktok,
-  FaPhone,
-} from "react-icons/fa";
-import { SiWaze } from "react-icons/si";
-
-function Footer() {
-  const { t } = useTranslation();
-
-  return (
-    <footer className="bg-primary text-light pt-16 pb-8 px-6 text-sm font-body relative">
-      <div className="max-w-7xl mx-auto text-center space-y-6">
-        {/* عنوان تواصل معنا */}
-        <h2 className="text-2xl md:text-3xl font-notokufi font-extrabold text-gold tracking-tight leading-snug">
-  {t("contact") || "تواصل معنا"}
-</h2>
-
-        {/* الموقع ورقم الهاتف */}
-        <div className="space-y-2 text-gold text-lg font-semibold">
-          <a
-            href="https://waze.com/ul?ll=32.93047,35.27657&navigate=yes"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex justify-center items-center gap-2 hover:text-white transition"
-          >
-            <SiWaze size={20} />
-            {t("address") || "البعنة - شارع غدارة"}
-          </a>
-
-          <a
-            href="tel:+972549896985"
-            className="flex justify-center items-center gap-2 hover:text-white transition"
-          >
-            <FaPhone size={18} />
-            +972 54-989-6985
-          </a>
-        </div>
-
-        {/* أيقونات السوشيال */}
-        <div className="flex justify-center gap-4 mt-4">
-          <a
-            href="https://www.instagram.com/arafat_barber/"
-            target="_blank"
-            rel="noreferrer"
-            className="w-11 h-11 flex items-center justify-center border-2 border-gold rounded-full text-gold hover:bg-gold hover:text-primary transition"
-          >
-            <FaInstagram size={20} />
-          </a>
-          <a
-            href="https://facebook.com"
-            target="_blank"
-            rel="noreferrer"
-            className="w-11 h-11 flex items-center justify-center border-2 border-gold rounded-full text-gold hover:bg-gold hover:text-primary transition"
-          >
-            <FaFacebook size={20} />
-          </a>
-          <a
-            href="https://www.tiktok.com/@arfatbarber"
-            target="_blank"
-            rel="noreferrer"
-            className="w-11 h-11 flex items-center justify-center border-2 border-gold rounded-full text-gold hover:bg-gold hover:text-primary transition"
-          >
-            <FaTiktok size={20} />
-          </a>
-        </div>
-
-        {/* الحقوق */}
-        <div className="text-center text-sm mt-6 space-y-1 text-light">
-          <p>© 2025 Arfat Barber. {t("all_rights")}</p>
-        </div>
-      </div>
-
-      {/* رابط صفحة الحلاق - ثابت أسفل اليسار */}
-      <a
-        href="/barber"
-        className="absolute bottom-2 left-6 text-gold text-lg font-heading font-bold hover:text-white transition"
-        title="دخول صفحة الحلاق"
-      >
-        Arfat Barber
-      </a>
-    </footer>
-  );
-}
-
-export default Footer;
 </file>
 
 <file path="src/components/reviews/BarberRatingSection.jsx">
@@ -16448,9 +17222,642 @@ export default function BarberRatingSection() {
 }
 </file>
 
-<file path="src/components/home/InstagramSlider.jsx">
+<file path="src/components/booking/CheckReservation.jsx">
+// src/components/booking/CheckReservation.jsx
+
+import { createElement, useState } from "react";
+import { collection, getDocs, query, where } from "firebase/firestore";
 import { useTranslation } from "react-i18next";
-import { useState, useEffect } from "react";
+import {
+  CalendarDays,
+  Clock3,
+  LoaderCircle,
+  Phone,
+  Scissors,
+  Search,
+  ShieldCheck,
+  UserRound,
+} from "lucide-react";
+
+import { db } from "../../firebase";
+import SectionTitle from "../common/SectionTitle";
+import {
+  e164ToLocalPretty,
+  isILPhoneE164,
+  toILPhoneE164,
+} from "../../utils/phone";
+
+function createBookingDate(booking) {
+  if (!booking?.selectedDate || !booking?.selectedTime) {
+    return null;
+  }
+
+  const date = new Date(`${booking.selectedDate}T${booking.selectedTime}`);
+
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function InfoRow({ icon, label, value, highlight = false }) {
+  return (
+    <div
+      className={[
+        "flex min-w-0 items-center gap-3 rounded-2xl border p-3.5",
+        highlight
+          ? "border-[#d2ad54] bg-[#fff8e7]"
+          : "border-slate-200 bg-slate-50",
+      ].join(" ")}
+    >
+      <div
+        className={[
+          "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
+          highlight
+            ? "bg-[#f4dfaa] text-[#76550f]"
+            : "bg-white text-slate-500 shadow-sm",
+        ].join(" ")}
+      >
+        {createElement(icon, {
+          className: "h-5 w-5",
+          "aria-hidden": true,
+        })}
+      </div>
+
+      <div className="min-w-0 flex-1">
+        <p className="text-xs font-semibold text-slate-500">{label}</p>
+
+        <p
+          className={[
+            "mt-0.5 break-words text-sm font-extrabold",
+            highlight ? "text-[#63470e]" : "text-slate-900",
+          ].join(" ")}
+        >
+          {value || "-"}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function EmptyState({ title, description }) {
+  return (
+    <div
+      className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-5 text-center"
+      role="status"
+    >
+      <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-white text-amber-700 shadow-sm">
+        <Search className="h-5 w-5" aria-hidden="true" />
+      </div>
+
+      <p className="mt-3 text-sm font-extrabold text-amber-900">{title}</p>
+
+      <p className="mx-auto mt-1 max-w-sm text-xs leading-6 text-amber-800">
+        {description}
+      </p>
+    </div>
+  );
+}
+
+export default function CheckReservation() {
+  const { t, i18n } = useTranslation();
+
+  const [phone, setPhone] = useState("");
+  const [results, setResults] = useState([]);
+  const [messageType, setMessageType] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const isRTL = i18n.dir() === "rtl";
+
+  const resetFeedback = () => {
+    setMessageType("");
+    setResults([]);
+  };
+
+  const handlePhoneChange = (event) => {
+    const nextValue = event.target.value;
+
+    setPhone(nextValue);
+
+    if (messageType || results.length > 0) {
+      resetFeedback();
+    }
+  };
+
+  const handleCheck = async (event) => {
+    event?.preventDefault();
+
+    const trimmedPhone = phone.trim();
+
+    setResults([]);
+    setMessageType("");
+
+    if (!trimmedPhone) {
+      setMessageType("empty");
+      return;
+    }
+
+    const normalizedPhone = toILPhoneE164(trimmedPhone);
+
+    if (!isILPhoneE164(normalizedPhone)) {
+      setMessageType("invalid");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const bookingsQuery = query(
+        collection(db, "bookings"),
+        where("phoneNumber", "==", normalizedPhone),
+        where("bookingCode", "!=", ""),
+      );
+
+      const snapshot = await getDocs(bookingsQuery);
+
+      const bookings = snapshot.docs
+        .map((document) => ({
+          id: document.id,
+          ...document.data(),
+        }))
+        .filter(
+          (booking) =>
+            booking.fullName &&
+            booking.selectedDate &&
+            booking.selectedTime &&
+            booking.bookingCode,
+        )
+        .sort((firstBooking, secondBooking) => {
+          const firstDate = createBookingDate(firstBooking);
+          const secondDate = createBookingDate(secondBooking);
+
+          if (!firstDate && !secondDate) return 0;
+          if (!firstDate) return 1;
+          if (!secondDate) return -1;
+
+          return firstDate.getTime() - secondDate.getTime();
+        });
+
+      if (bookings.length === 0) {
+        setMessageType("notFound");
+        return;
+      }
+
+      setResults(bookings);
+    } catch (error) {
+      console.error("Error fetching bookings:", error);
+      setMessageType("error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getServiceLabel = (service) => {
+    if (!service) return "-";
+
+    return t(`services.${service}`, {
+      defaultValue: service,
+    });
+  };
+
+  return (
+    <section
+      id="check-booking"
+      className="bg-[#f8f6f1] px-4 py-14 sm:px-6 md:py-20"
+      dir={isRTL ? "rtl" : "ltr"}
+    >
+      <div className="mx-auto max-w-3xl">
+        <div className="mb-7 text-center">
+          <SectionTitle>
+            {t("check_reservation", {
+              defaultValue: "تحقق من الحجز",
+            })}
+          </SectionTitle>
+
+          <p className="mx-auto mt-3 max-w-md text-sm leading-7 text-slate-600">
+            {t("check_reservation_description", {
+              defaultValue:
+                "أدخل رقم الهاتف المستخدم أثناء الحجز لعرض تفاصيل موعدك.",
+            })}
+          </p>
+        </div>
+
+        <div className="rounded-[26px] border border-[#e5ded0] bg-white p-4 shadow-[0_16px_45px_rgba(38,31,20,0.08)] sm:p-6">
+          <form onSubmit={handleCheck} noValidate>
+            <label
+              htmlFor="reservation-phone"
+              className="mb-2 block text-sm font-bold text-slate-700"
+            >
+              {t("phone_number", {
+                defaultValue: "رقم الهاتف",
+              })}
+            </label>
+
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <div className="relative min-w-0 flex-1">
+                <Phone
+                  className={[
+                    "pointer-events-none absolute top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400",
+                    isRTL ? "right-4" : "left-4",
+                  ].join(" ")}
+                  aria-hidden="true"
+                />
+
+                <input
+                  id="reservation-phone"
+                  type="tel"
+                  inputMode="tel"
+                  autoComplete="tel"
+                  value={phone}
+                  onChange={handlePhoneChange}
+                  placeholder={t("phone_placeholder", {
+                    defaultValue: "05X-XXXXXXX",
+                  })}
+                  disabled={loading}
+                  className={[
+                    "h-[52px] w-full rounded-2xl border bg-white py-3.5 text-base font-semibold text-slate-900 outline-none transition",
+                    "placeholder:text-slate-400",
+                    "focus:border-[#b98a21] focus:ring-4 focus:ring-[#d7b55c]/20",
+                    "disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-70",
+                    isRTL ? "pr-12 pl-4 text-right" : "pl-12 pr-4 text-left",
+                    messageType === "invalid" || messageType === "empty"
+                      ? "border-red-300"
+                      : "border-slate-300",
+                  ].join(" ")}
+                  aria-invalid={
+                    messageType === "invalid" || messageType === "empty"
+                  }
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className={[
+                  "flex min-h-[52px] shrink-0 items-center justify-center gap-2 rounded-2xl px-6",
+                  "bg-gradient-to-br from-[#d8b657] to-[#bd9134]",
+                  "text-sm font-extrabold text-[#172033]",
+                  "shadow-[0_8px_18px_rgba(157,112,21,0.22)]",
+                  "transition hover:brightness-105",
+                  "focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#d7b55c]/30",
+                  "disabled:cursor-not-allowed disabled:opacity-65",
+                  "sm:min-w-[150px]",
+                ].join(" ")}
+              >
+                {loading ? (
+                  <>
+                    <LoaderCircle
+                      className="h-5 w-5 animate-spin"
+                      aria-hidden="true"
+                    />
+
+                    <span>
+                      {t("checking", {
+                        defaultValue: "جاري التحقق",
+                      })}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <Search className="h-5 w-5" aria-hidden="true" />
+
+                    <span>
+                      {t("check", {
+                        defaultValue: "تحقق",
+                      })}
+                    </span>
+                  </>
+                )}
+              </button>
+            </div>
+
+            {messageType === "empty" && (
+              <p className="mt-2 text-sm font-semibold text-red-600">
+                {t("phone_required", {
+                  defaultValue: "أدخل رقم الهاتف أولًا.",
+                })}
+              </p>
+            )}
+
+            {messageType === "invalid" && (
+              <p className="mt-2 text-sm font-semibold text-red-600">
+                {t("invalid_phone", {
+                  defaultValue: "تأكد من كتابة رقم هاتف صحيح يبدأ بـ 05.",
+                })}
+              </p>
+            )}
+          </form>
+
+          {messageType === "notFound" && (
+            <EmptyState
+              title={t("reservation_not_found", {
+                defaultValue: "لم نجد حجزًا مرتبطًا بهذا الرقم",
+              })}
+              description={t("reservation_not_found_description", {
+                defaultValue:
+                  "تأكد أن الرقم هو نفسه الذي استُخدم أثناء الحجز ثم حاول مرة أخرى.",
+              })}
+            />
+          )}
+
+          {messageType === "error" && (
+            <EmptyState
+              title={t("check_error", {
+                defaultValue: "تعذّر التحقق حاليًا",
+              })}
+              description={t("try_again_later", {
+                defaultValue:
+                  "حدث خطأ أثناء جلب الحجوزات. حاول مرة أخرى بعد قليل.",
+              })}
+            />
+          )}
+        </div>
+
+        {results.length > 0 && (
+          <div className="mt-5 space-y-4">
+            <div className="flex items-center justify-between gap-3 px-1">
+              <h3 className="text-base font-extrabold text-slate-900">
+                {t("your_reservations", {
+                  defaultValue: "حجوزاتك",
+                })}
+              </h3>
+
+              <span className="rounded-full bg-[#eee3c5] px-3 py-1 text-xs font-extrabold text-[#74530e]">
+                {results.length}
+              </span>
+            </div>
+
+            {results.map((booking) => (
+              <article
+                key={booking.id}
+                className="overflow-hidden rounded-[24px] border border-[#e4dccd] bg-white shadow-[0_12px_32px_rgba(38,31,20,0.07)]"
+              >
+                <div className="flex items-center justify-between gap-3 border-b border-[#ece6db] bg-[#fbf8f1] px-4 py-4 sm:px-5">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#ead394] text-[#6f500d]">
+                      <ShieldCheck className="h-6 w-6" aria-hidden="true" />
+                    </div>
+
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-slate-500">
+                        {t("booking_code", {
+                          defaultValue: "كود الحجز",
+                        })}
+                      </p>
+
+                      <p className="truncate text-lg font-black tracking-wide text-slate-900">
+                        {booking.bookingCode}
+                      </p>
+                    </div>
+                  </div>
+
+                  <span className="shrink-0 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-extrabold text-emerald-700">
+                    {t("confirmed", {
+                      defaultValue: "مؤكد",
+                    })}
+                  </span>
+                </div>
+
+                <div className="grid gap-3 p-4 sm:grid-cols-2 sm:p-5">
+                  <InfoRow
+                    icon={UserRound}
+                    label={t("full_name", {
+                      defaultValue: "الاسم الكامل",
+                    })}
+                    value={booking.fullName}
+                  />
+
+                  <InfoRow
+                    icon={Phone}
+                    label={t("phone_number", {
+                      defaultValue: "رقم الهاتف",
+                    })}
+                    value={e164ToLocalPretty(booking.phoneNumber)}
+                  />
+
+                  <InfoRow
+                    icon={CalendarDays}
+                    label={t("date", {
+                      defaultValue: "التاريخ",
+                    })}
+                    value={booking.selectedDate}
+                    highlight
+                  />
+
+                  <InfoRow
+                    icon={Clock3}
+                    label={t("time", {
+                      defaultValue: "الساعة",
+                    })}
+                    value={booking.selectedTime}
+                    highlight
+                  />
+
+                  <div className="sm:col-span-2">
+                    <InfoRow
+                      icon={Scissors}
+                      label={t("service", {
+                        defaultValue: "الخدمة",
+                      })}
+                      value={getServiceLabel(booking.selectedService)}
+                    />
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+</file>
+
+<file path="src/components/layout/Footer.jsx">
+// src/components/layout/Footer.jsx
+
+import { useTranslation } from "react-i18next";
+import { FaFacebookF, FaInstagram, FaPhoneAlt, FaTiktok } from "react-icons/fa";
+import { SiWaze } from "react-icons/si";
+
+function SocialLink({ href, label, children }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label={label}
+      title={label}
+      className={[
+        "flex h-11 w-11 items-center justify-center rounded-full",
+        "border border-[#c7a34f] bg-white/[0.025] text-[#d2af58]",
+        "transition duration-150",
+        "hover:border-[#e0c273] hover:bg-[#c8a34e] hover:text-[#171717]",
+        "focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#d2af58]/25",
+      ].join(" ")}
+    >
+      {children}
+    </a>
+  );
+}
+
+function Footer() {
+  const { t } = useTranslation();
+
+  const currentYear = new Date().getFullYear();
+
+  return (
+    <footer
+      className="relative overflow-hidden bg-[#171717] px-4 pb-24 pt-12 text-[#f5f1e8] font-body sm:px-6 sm:pb-16 sm:pt-14"
+      dir="rtl"
+    >
+      <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+        <div className="absolute -right-28 -top-28 h-64 w-64 rounded-full bg-[#c7a34f]/[0.06] blur-3xl" />
+
+        <div className="absolute -bottom-32 -left-28 h-72 w-72 rounded-full bg-[#c7a34f]/[0.04] blur-3xl" />
+      </div>
+
+      <div className="relative mx-auto max-w-3xl">
+        <div className="text-center">
+          <p className="text-xs font-bold tracking-[0.14em] text-[#a89058]">
+            ARFAT BARBER
+          </p>
+
+          <h2 className="mt-2 font-notokufi text-2xl font-extrabold leading-snug text-[#d0ac55] sm:text-3xl">
+            {t("contact", {
+              defaultValue: "تواصل معنا",
+            })}
+          </h2>
+
+          <div
+            className="mx-auto mt-4 h-px w-14 bg-gradient-to-r from-transparent via-[#c7a34f] to-transparent"
+            aria-hidden="true"
+          />
+        </div>
+
+        <div className="mx-auto mt-7 grid max-w-xl gap-3 sm:grid-cols-2">
+          <a
+            href="https://waze.com/ul?ll=32.93047,35.27657&navigate=yes"
+            target="_blank"
+            rel="noopener noreferrer"
+            className={[
+              "group flex min-h-[62px] items-center gap-3 rounded-2xl",
+              "border border-white/[0.08] bg-white/[0.035] px-4 py-3 text-right",
+              "transition duration-150",
+              "hover:border-[#c7a34f]/60 hover:bg-white/[0.055]",
+              "focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#c7a34f]/20",
+            ].join(" ")}
+          >
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#c7a34f]/10 text-[#d4b35f]">
+              <SiWaze size={20} aria-hidden="true" />
+            </span>
+
+            <span className="min-w-0">
+              <span className="block text-xs font-semibold text-white/50">
+                {t("location", {
+                  defaultValue: "الموقع",
+                })}
+              </span>
+
+              <span className="mt-0.5 block truncate text-sm font-extrabold text-[#eee5cf] transition group-hover:text-white">
+                {t("address", {
+                  defaultValue: "البعنة - شارع غدارة",
+                })}
+              </span>
+            </span>
+          </a>
+
+          <a
+            href="tel:+972549896985"
+            className={[
+              "group flex min-h-[62px] items-center gap-3 rounded-2xl",
+              "border border-white/[0.08] bg-white/[0.035] px-4 py-3 text-right",
+              "transition duration-150",
+              "hover:border-[#c7a34f]/60 hover:bg-white/[0.055]",
+              "focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#c7a34f]/20",
+            ].join(" ")}
+          >
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#c7a34f]/10 text-[#d4b35f]">
+              <FaPhoneAlt size={17} aria-hidden="true" />
+            </span>
+
+            <span className="min-w-0">
+              <span className="block text-xs font-semibold text-white/50">
+                {t("phone_number", {
+                  defaultValue: "رقم الهاتف",
+                })}
+              </span>
+
+              <span
+                className="mt-0.5 block text-sm font-extrabold text-[#eee5cf] transition group-hover:text-white"
+                dir="ltr"
+              >
+                +972 54-989-6985
+              </span>
+            </span>
+          </a>
+        </div>
+
+        <div className="mt-7">
+          <p className="text-center text-xs font-semibold text-white/45">
+            {t("follow_us", {
+              defaultValue: "تابعنا على",
+            })}
+          </p>
+
+          <div className="mt-3 flex items-center justify-center gap-3">
+            <SocialLink
+              href="https://www.instagram.com/arafat_barber/"
+              label="Instagram"
+            >
+              <FaInstagram size={19} />
+            </SocialLink>
+
+            <SocialLink href="https://facebook.com" label="Facebook">
+              <FaFacebookF size={18} />
+            </SocialLink>
+
+            <SocialLink
+              href="https://www.tiktok.com/@arfatbarber"
+              label="TikTok"
+            >
+              <FaTiktok size={18} />
+            </SocialLink>
+          </div>
+        </div>
+
+        <div className="mt-8 border-t border-white/[0.08] pt-5">
+          <p className="text-center text-xs leading-6 text-white/55">
+            © {currentYear} Arfat Barber.{" "}
+            {t("all_rights", {
+              defaultValue: "جميع الحقوق محفوظة.",
+            })}
+          </p>
+        </div>
+      </div>
+
+      <a
+        href="/barber"
+        className={[
+          "absolute bottom-4 left-4 z-10",
+          "font-serif text-sm font-bold text-[#c9a54f]",
+          "transition hover:text-[#e4c875]",
+          "focus-visible:outline-none focus-visible:underline",
+          "sm:bottom-5 sm:left-6 sm:text-base",
+        ].join(" ")}
+        title={t("barber_login", {
+          defaultValue: "دخول لوحة تحكم الحلاق",
+        })}
+      >
+        Arfat Barber
+      </a>
+    </footer>
+  );
+}
+
+export default Footer;
+</file>
+
+<file path="src/components/home/InstagramSlider.jsx">
+import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay, Thumbs } from "swiper/modules";
 import SectionTitle from "../common/SectionTitle";
@@ -16461,6 +17868,8 @@ import "aos/dist/aos.css";
 import "swiper/css";
 import "swiper/css/thumbs";
 import "swiper/css/autoplay";
+
+const AUTOPLAY_DELAY = 5000;
 
 const images = [
   "/cuts/p1.jpg",
@@ -16475,71 +17884,290 @@ const images = [
   "/cuts/p11.jpg",
 ];
 
+function CloseIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-6 w-6"
+      aria-hidden="true"
+    >
+      <path d="M18 6 6 18" />
+      <path d="m6 6 12 12" />
+    </svg>
+  );
+}
+
 function InstagramSlider() {
-  const [thumbsSwiper, setThumbsSwiper] = useState(null);
   const { t } = useTranslation();
 
+  const [thumbsSwiper, setThumbsSwiper] = useState(null);
+  const [mainSwiper, setMainSwiper] = useState(null);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [progress, setProgress] = useState(0);
+  const [openedImage, setOpenedImage] = useState(null);
+
+  const progressAnimationFrameRef = useRef(null);
+
   useEffect(() => {
-    AOS.init({ duration: 900, once: true });
+    AOS.init({
+      duration: 900,
+      once: true,
+    });
   }, []);
 
+  useEffect(() => {
+    if (openedImage === null) {
+      document.body.style.overflow = "";
+      return undefined;
+    }
+
+    document.body.style.overflow = "hidden";
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setOpenedImage(null);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = "";
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [openedImage]);
+
+  useEffect(() => {
+    return () => {
+      if (progressAnimationFrameRef.current) {
+        cancelAnimationFrame(progressAnimationFrameRef.current);
+      }
+    };
+  }, []);
+
+  const handleAutoplayTimeLeft = (_swiper, _timeLeft, percentage) => {
+    if (progressAnimationFrameRef.current) {
+      cancelAnimationFrame(progressAnimationFrameRef.current);
+    }
+
+    progressAnimationFrameRef.current = requestAnimationFrame(() => {
+      setProgress(Math.max(0, Math.min(100, (1 - percentage) * 100)));
+    });
+  };
+
+  const handleMainSlideChange = (swiper) => {
+    setActiveIndex(swiper.realIndex);
+    setProgress(0);
+  };
+
+  const handleThumbnailClick = (index) => {
+    mainSwiper?.slideToLoop(index);
+  };
+
+  const closeFullscreen = () => {
+    setOpenedImage(null);
+  };
+
+  const validThumbsSwiper =
+    thumbsSwiper && !thumbsSwiper.destroyed ? thumbsSwiper : null;
+
   return (
-    <section className="relative bg-[#f8f6f1] py-20 px-4 md:px-16 text-center overflow-hidden">
-      {/* ديكور خفيف جداً (يعطي حياة بدون ما يزعج) */}
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-24 -left-24 w-72 h-72 rounded-full bg-gold/10 blur-3xl" />
-        <div className="absolute -bottom-24 -right-24 w-72 h-72 rounded-full bg-gold/10 blur-3xl" />
-      </div>
-
-      <div
-        className="relative max-w-5xl mx-auto bg-white/90 backdrop-blur rounded-3xl shadow-lg p-8 md:p-12 border border-gold/10 transition-transform duration-300 hover:-translate-y-1"
-        data-aos="fade-up"
-      >
-        <SectionTitle>{t("slider_title") || "قصّات من لمساتنا"}</SectionTitle>
-
-        <div className="rounded-2xl overflow-hidden shadow-md ring-1 ring-black/5">
-          <Swiper
-            modules={[Autoplay, Thumbs]}
-            thumbs={{ swiper: thumbsSwiper }}
-            autoplay={{ delay: 3000, disableOnInteraction: false }}
-            loop={true}
-            spaceBetween={10}
-            speed={1100}
-            grabCursor={true}
-          >
-            {images.map((src, i) => (
-              <SwiperSlide key={i}>
-                <img
-                  src={src}
-                  alt={`cut-${i}`}
-                  className="w-full h-[420px] md:h-[450px] object-cover transition-transform duration-700 ease-in-out hover:scale-105"
-                />
-              </SwiperSlide>
-            ))}
-          </Swiper>
+    <>
+      <section className="relative overflow-hidden bg-[#f8f6f1] px-3 py-14 text-center sm:px-5 md:px-10 md:py-20">
+        <div
+          className="pointer-events-none absolute inset-0"
+          aria-hidden="true"
+        >
+          <div className="absolute -left-28 -top-28 h-72 w-72 rounded-full bg-gold/10 blur-3xl" />
+          <div className="absolute -bottom-28 -right-28 h-72 w-72 rounded-full bg-gold/10 blur-3xl" />
         </div>
 
-        <div className="mt-6">
-          <Swiper
-            modules={[Thumbs]}
-            onSwiper={setThumbsSwiper}
-            slidesPerView={5}
-            spaceBetween={10}
-            watchSlidesProgress
-          >
-            {images.map((src, i) => (
-              <SwiperSlide key={i}>
-                <img
-                  src={src}
-                  alt={`thumb-${i}`}
-                  className="w-full h-20 object-cover rounded-xl border border-transparent hover:border-gold/70 transition-all duration-300 cursor-pointer ring-1 ring-black/5"
-                />
-              </SwiperSlide>
-            ))}
-          </Swiper>
+        <div
+          className="relative mx-auto max-w-5xl rounded-[26px] border border-black/[0.05] bg-white/95 px-3 py-6 shadow-[0_20px_60px_rgba(30,25,15,0.10)] backdrop-blur-sm sm:px-5 sm:py-8 md:rounded-[32px] md:px-7 md:py-10"
+          data-aos="fade-up"
+        >
+          <div className="mb-5 md:mb-7">
+            <SectionTitle>
+              {t("slider_title") || "قصّات من لمساتنا"}
+            </SectionTitle>
+          </div>
+
+          <div className="relative mx-auto max-w-4xl overflow-hidden">
+            <Swiper
+              modules={[Autoplay, Thumbs]}
+              onSwiper={setMainSwiper}
+              onSlideChange={handleMainSlideChange}
+              onAutoplayTimeLeft={handleAutoplayTimeLeft}
+              thumbs={{
+                swiper: validThumbsSwiper,
+              }}
+              autoplay={{
+                delay: AUTOPLAY_DELAY,
+                disableOnInteraction: false,
+                pauseOnMouseEnter: true,
+              }}
+              loop
+              speed={700}
+              grabCursor
+              resistanceRatio={0.7}
+              threshold={5}
+              touchRatio={1}
+              watchSlidesProgress
+              spaceBetween={10}
+              slidesPerView={1.08}
+              centeredSlides
+              breakpoints={{
+                640: {
+                  slidesPerView: 1,
+                  centeredSlides: false,
+                  spaceBetween: 0,
+                },
+              }}
+              className="overflow-visible"
+            >
+              {images.map((image, index) => (
+                <SwiperSlide key={image}>
+                  <button
+                    type="button"
+                    onClick={() => setOpenedImage(index)}
+                    className="group relative block w-full cursor-zoom-in overflow-hidden rounded-[22px] bg-[#eeeae1] text-left shadow-[0_12px_32px_rgba(18,15,10,0.15)] outline-none transition duration-300 focus-visible:ring-4 focus-visible:ring-gold/40 md:rounded-[28px]"
+                    aria-label={`${t("open_image") || "فتح الصورة"} ${
+                      index + 1
+                    }`}
+                  >
+                    <div className="aspect-[4/5] w-full sm:aspect-[16/11] md:aspect-[16/10]">
+                      <img
+                        src={image}
+                        alt={`${t("slider_title") || "نماذج من أعمالنا"} ${
+                          index + 1
+                        }`}
+                        className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.025]"
+                        loading={index === 0 ? "eager" : "lazy"}
+                        draggable="false"
+                      />
+                    </div>
+
+                    <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/20 to-transparent opacity-70" />
+                  </button>
+                </SwiperSlide>
+              ))}
+            </Swiper>
+
+            <div className="mt-4 h-1.5 w-full overflow-hidden rounded-full bg-black/[0.08]">
+              <div
+                className="h-full rounded-full bg-gold transition-[width] duration-100 ease-linear"
+                style={{
+                  width: `${progress}%`,
+                }}
+              />
+            </div>
+
+            <div className="mt-4 md:mt-5">
+              <Swiper
+                modules={[Thumbs]}
+                onSwiper={setThumbsSwiper}
+                watchSlidesProgress
+                freeMode
+                grabCursor
+                resistanceRatio={0.65}
+                spaceBetween={10}
+                slidesPerView={3.35}
+                breakpoints={{
+                  480: {
+                    slidesPerView: 4.2,
+                    spaceBetween: 10,
+                  },
+                  640: {
+                    slidesPerView: 5.2,
+                    spaceBetween: 12,
+                  },
+                  900: {
+                    slidesPerView: 6.4,
+                    spaceBetween: 12,
+                  },
+                }}
+                className="select-none"
+              >
+                {images.map((image, index) => {
+                  const isActive = activeIndex === index;
+
+                  return (
+                    <SwiperSlide key={`thumbnail-${image}`}>
+                      <button
+                        type="button"
+                        onClick={() => handleThumbnailClick(index)}
+                        className={`relative block aspect-square w-full overflow-hidden rounded-[15px] border-[3px] bg-[#eeeae1] outline-none transition-all duration-300 focus-visible:ring-4 focus-visible:ring-gold/30 ${
+                          isActive
+                            ? "scale-[0.98] border-gold opacity-100 shadow-[0_8px_22px_rgba(179,135,39,0.24)]"
+                            : "border-transparent opacity-45 hover:opacity-75"
+                        }`}
+                        aria-label={`${t("show_image") || "عرض الصورة"} ${
+                          index + 1
+                        }`}
+                        aria-current={isActive ? "true" : undefined}
+                      >
+                        <img
+                          src={image}
+                          alt=""
+                          className="h-full w-full object-cover"
+                          loading="lazy"
+                          draggable="false"
+                        />
+
+                        {isActive && (
+                          <span
+                            className="pointer-events-none absolute inset-0 rounded-[12px] ring-1 ring-inset ring-white/70"
+                            aria-hidden="true"
+                          />
+                        )}
+                      </button>
+                    </SwiperSlide>
+                  );
+                })}
+              </Swiper>
+            </div>
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
+
+      {openedImage !== null && (
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 p-3 backdrop-blur-sm sm:p-6"
+          role="dialog"
+          aria-modal="true"
+          aria-label={t("image_preview") || "عرض الصورة بالحجم الكامل"}
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              closeFullscreen();
+            }
+          }}
+        >
+          <button
+            type="button"
+            onClick={closeFullscreen}
+            className="absolute right-4 top-4 z-10 flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-black/50 text-white shadow-lg backdrop-blur transition hover:bg-white hover:text-black focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/40 sm:right-6 sm:top-6"
+            aria-label={t("close") || "إغلاق"}
+          >
+            <CloseIcon />
+          </button>
+
+          <div className="flex h-full w-full items-center justify-center">
+            <img
+              src={images[openedImage]}
+              alt={`${t("slider_title") || "نماذج من أعمالنا"} ${
+                openedImage + 1
+              }`}
+              className="max-h-[90vh] max-w-full rounded-2xl object-contain shadow-2xl"
+            />
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -17978,6 +19606,42 @@ import "aos/dist/aos.css";
 
 import "../../styles/heroEnhancements.css";
 
+function CalendarIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-5 w-5"
+      aria-hidden="true"
+    >
+      <rect x="3" y="5" width="18" height="16" rx="2" />
+      <path d="M16 3v4M8 3v4M3 10h18" />
+    </svg>
+  );
+}
+
+function SearchIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-5 w-5"
+      aria-hidden="true"
+    >
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20 20-3.5-3.5" />
+    </svg>
+  );
+}
+
 function HeroSection() {
   const { t } = useTranslation();
 
@@ -17985,7 +19649,11 @@ function HeroSection() {
   const [noteClosed, setNoteClosed] = useState(false);
 
   useEffect(() => {
-    AOS.init({ duration: 1000 });
+    AOS.init({
+      duration: 700,
+      once: true,
+      offset: 0,
+    });
   }, []);
 
   useEffect(() => {
@@ -18004,9 +19672,7 @@ function HeroSection() {
   const smoothScrollTo = (id) => {
     const element = document.getElementById(id);
 
-    if (!element) {
-      return;
-    }
+    if (!element) return;
 
     element.scrollIntoView({
       behavior: "smooth",
@@ -18024,11 +19690,9 @@ function HeroSection() {
 
     const element = document.getElementById("booking-form-start");
 
-    if (!element) {
-      return;
-    }
+    if (!element) return;
 
-    const y = element.getBoundingClientRect().top + window.pageYOffset - 100;
+    const y = element.getBoundingClientRect().top + window.pageYOffset - 90;
 
     window.scrollTo({
       top: y,
@@ -18041,8 +19705,8 @@ function HeroSection() {
       return {
         title: "تنبيه مهم",
         icon: "!",
-        iconClass: "border-rose-300/60 bg-rose-100/80 text-rose-700",
-        titleClass: "text-rose-700",
+        iconClass: "hero-note-icon hero-note-icon--important",
+        titleClass: "hero-note-title hero-note-title--important",
       };
     }
 
@@ -18050,106 +19714,100 @@ function HeroSection() {
       return {
         title: "عرض مميز",
         icon: "%",
-        iconClass: "border-emerald-300/60 bg-emerald-100/80 text-emerald-700",
-        titleClass: "text-emerald-700",
+        iconClass: "hero-note-icon hero-note-icon--offer",
+        titleClass: "hero-note-title hero-note-title--offer",
       };
     }
 
     return {
       title: "ملاحظة",
       icon: "i",
-      iconClass: "border-amber-300/60 bg-amber-100/80 text-amber-700",
-      titleClass: "text-amber-700",
+      iconClass: "hero-note-icon",
+      titleClass: "hero-note-title",
     };
   };
 
   const noteAppearance = getNoteAppearance();
 
   return (
-    <section className="hero-overlay relative flex h-screen min-h-[100svh] w-full items-center justify-center overflow-hidden">
+    <section className="hero-overlay">
       <img
         src="/barber-hero.jpg"
-        alt="Barber Hero"
-        className="hero-media absolute inset-0 z-0 h-full w-full object-cover object-center"
+        alt="حلاق أثناء قص الشعر"
+        className="hero-media"
         loading="eager"
+        fetchPriority="high"
       />
 
-      <div
-        className="hero-content max-w-2xl px-4 text-center"
-        data-aos="fade-up"
-      >
-        <h1
-          className="mb-4 font-notokufi text-4xl font-extrabold leading-tight tracking-tight text-gold sm:text-5xl md:text-6xl"
-          style={{
-            textShadow:
-              "0 2px 6px rgba(0,0,0,0.85), 0 6px 24px rgba(0,0,0,0.6)",
-          }}
-        >
-          {t("hero_title") || "أسلوب يليق بك، بكل بساطة"}
-        </h1>
+      <div className="hero-content-shell">
+        <div className="hero-content" data-aos="fade-up">
+          <div className="hero-copy">
+            <p className="hero-eyebrow">
+              {t("hero_eyebrow", {
+                defaultValue: "قصّة مرتبة. تفاصيل أدق.",
+              })}{" "}
+            </p>
 
-        <p className="mx-auto mb-6 max-w-xl font-tajawal text-base leading-relaxed text-beige sm:text-lg md:text-xl">
-          {t("hero_subtitle") || "لمحة مُظهرك، يناسبك ويعبر عنك"}
-        </p>
+            <h1 className="hero-title">
+              {t("hero_title") || "أسلوب يليق بك، بكل بساطة"}
+            </h1>
 
-        {heroNote?.enabled && heroNote?.text?.trim() && !noteClosed && (
-          <div className="relative mx-auto mb-6 max-w-lg rounded-xl border border-gold/35 bg-white/78 px-4 py-3 text-right shadow-[0_8px_30px_rgba(0,0,0,0.14)] backdrop-blur-md sm:px-5">
-            <button
-              type="button"
-              onClick={() => setNoteClosed(true)}
-              className="absolute left-2.5 top-2.5 flex h-7 w-7 items-center justify-center rounded-full border border-black/5 bg-white/50 text-lg leading-none text-gray-500 transition hover:bg-white/80 hover:text-gray-800"
-              aria-label="إغلاق الملاحظة"
-              title="إغلاق"
-            >
-              ×
-            </button>
+            <p className="hero-subtitle">
+              {t("hero_subtitle") || "نمنحك مظهرًا يناسبك ويعبّر عنك"}
+            </p>
+          </div>
 
-            <div className="flex items-start gap-3 pl-8">
-              <div
-                className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-sm font-black shadow-sm ${noteAppearance.iconClass}`}
-                aria-hidden="true"
+          {heroNote?.enabled && heroNote?.text?.trim() && !noteClosed && (
+            <div className="hero-note">
+              <button
+                type="button"
+                onClick={() => setNoteClosed(true)}
+                className="hero-note-close"
+                aria-label="إغلاق الملاحظة"
+                title="إغلاق"
               >
-                {noteAppearance.icon}
-              </div>
+                ×
+              </button>
 
-              <div className="min-w-0 flex-1">
-                <div
-                  className={`text-[11px] font-black tracking-wide ${noteAppearance.titleClass}`}
-                >
-                  {noteAppearance.title}
+              <div className="hero-note-inner">
+                <div className={noteAppearance.iconClass} aria-hidden="true">
+                  {noteAppearance.icon}
                 </div>
 
-                <div className="mt-1 text-sm font-extrabold leading-6 text-white drop-shadow-sm sm:text-[15px]">
-                  {" "}
-                  {heroNote.text}
+                <div className="hero-note-copy">
+                  <div className={noteAppearance.titleClass}>
+                    {noteAppearance.title}
+                  </div>
+
+                  <div className="hero-note-text">{heroNote.text}</div>
                 </div>
               </div>
             </div>
+          )}
+
+          <div className="hero-actions">
+            <a
+              href="#booking-form-start"
+              onClick={onBookClick}
+              className="hero-button hero-button--primary"
+            >
+              <CalendarIcon />
+              <span>{t("book_now") || "احجز الآن"}</span>
+            </a>
+
+            <a
+              href="#check-booking"
+              onClick={onCheckClick}
+              className="hero-button hero-button--secondary"
+            >
+              <SearchIcon />
+              <span>{t("check_booking") || "تحقق من الحجز"}</span>
+            </a>
           </div>
-        )}
-
-        <div>
-          <a
-            href="#booking-form-start"
-            onClick={onBookClick}
-            className="inline-flex min-h-11 items-center justify-center rounded-xl bg-gold px-7 py-3.5 font-semibold text-primary shadow-md transition hover:bg-yellow-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2"
-          >
-            {t("book_now") || "احجز الآن"}
-          </a>
-        </div>
-
-        <div className="mt-3">
-          <a
-            href="#check-booking"
-            onClick={onCheckClick}
-            className="inline-flex items-center gap-2 font-tajawal text-sm font-semibold text-beige/90 underline decoration-white/30 underline-offset-4 transition hover:text-gold hover:decoration-gold/60"
-          >
-            <span aria-hidden="true">↓</span>
-
-            <span>{t("check_booking") || "تحقق من الحجز"}</span>
-          </a>
         </div>
       </div>
+
+      <div className="hero-bottom-fade" aria-hidden="true" />
     </section>
   );
 }
@@ -18526,50 +20184,56 @@ export default function AppRoutes() {
 
 <file path="src/components/booking/BookingTracker.jsx">
 // src/components/booking/BookingTracker.jsx
+
 import { useState } from "react";
-import { db } from "../../firebase";
-import SectionTitle from "../common/SectionTitle";
-import { collection, query, where, getDocs } from "firebase/firestore";
+import { collection, getDocs, query, where } from "firebase/firestore";
 import { useTranslation } from "react-i18next";
 import {
   CalendarCheck,
-  Phone,
-  Clock3,
   CalendarDays,
+  CheckCircle2,
+  Clock3,
+  KeyRound,
+  LoaderCircle,
+  Phone,
   Scissors,
+  Search,
+  ShieldCheck,
+  Trash2,
+  UserRound,
 } from "lucide-react";
-import {
-  toILPhoneE164,
-  isILPhoneE164,
-  e164ToLocalPretty,
-  normalizeDigits,
-} from "../../utils/phone";
 
-// ✅ بدل deleteDoc: استخدم الإلغاء الصحيح اللي بنقص العداد الشهري
+import { db } from "../../firebase";
+import SectionTitle from "../common/SectionTitle";
+import {
+  e164ToLocalPretty,
+  isILPhoneE164,
+  normalizeDigits,
+  toILPhoneE164,
+} from "../../utils/phone";
 import { cancelBooking } from "../../services/bookingService";
 
 const CANCELLATION_WINDOW_MIN = 50;
 
-/* ============================
-   Helpers
-   ============================ */
-
 function diffMinutes(fromDate, toDate) {
-  const ms = toDate.getTime() - fromDate.getTime();
-  return Math.floor(ms / 60000);
+  const milliseconds = toDate.getTime() - fromDate.getTime();
+
+  return Math.floor(milliseconds / 60000);
 }
 
 function getStartAtDate(booking) {
   if (!booking) return null;
 
   if (booking?.startAt?.toDate) {
-    const d = booking.startAt.toDate();
-    return d instanceof Date && !isNaN(d) ? d : null;
+    const date = booking.startAt.toDate();
+
+    return date instanceof Date && !Number.isNaN(date.getTime()) ? date : null;
   }
 
   if (booking?.selectedDate && booking?.selectedTime) {
-    const d = new Date(`${booking.selectedDate}T${booking.selectedTime}:00`);
-    return d instanceof Date && !isNaN(d) ? d : null;
+    const date = new Date(`${booking.selectedDate}T${booking.selectedTime}:00`);
+
+    return date instanceof Date && !Number.isNaN(date.getTime()) ? date : null;
   }
 
   return null;
@@ -18577,23 +20241,32 @@ function getStartAtDate(booking) {
 
 function isBookingActiveNow(booking) {
   if (!booking || booking.cancelledAt) return false;
-  const d = getStartAtDate(booking);
-  if (!d) return false;
-  return d.getTime() > Date.now();
+
+  const startAtDate = getStartAtDate(booking);
+
+  if (!startAtDate) return false;
+
+  return startAtDate.getTime() > Date.now();
 }
 
 function canCancelFixed(startAtDate) {
-  if (!(startAtDate instanceof Date) || isNaN(startAtDate)) {
-    return { ok: false, reason: "بيانات الموعد غير صالحة." };
+  if (!(startAtDate instanceof Date) || Number.isNaN(startAtDate.getTime())) {
+    return {
+      ok: false,
+      reason: "بيانات الموعد غير صالحة.",
+    };
   }
 
-  const left = diffMinutes(new Date(), startAtDate);
+  const minutesLeft = diffMinutes(new Date(), startAtDate);
 
-  if (left < 0) {
-    return { ok: false, reason: "لا يمكن الإلغاء: موعد الحجز انتهى بالفعل." };
+  if (minutesLeft < 0) {
+    return {
+      ok: false,
+      reason: "لا يمكن الإلغاء: موعد الحجز انتهى بالفعل.",
+    };
   }
 
-  if (left < CANCELLATION_WINDOW_MIN) {
+  if (minutesLeft < CANCELLATION_WINDOW_MIN) {
     return {
       ok: false,
       reason: `لا يمكن الإلغاء: تبقّى أقل من ${CANCELLATION_WINDOW_MIN} دقيقة على موعدك.`,
@@ -18603,11 +20276,14 @@ function canCancelFixed(startAtDate) {
   return { ok: true };
 }
 
-// تنسيق التاريخ + اسم اليوم بالعربي
 function formatDayAndDate(dateYMD) {
   if (!dateYMD) return "";
-  const d = new Date(`${dateYMD}T00:00:00`);
-  if (!(d instanceof Date) || isNaN(d)) return dateYMD;
+
+  const date = new Date(`${dateYMD}T00:00:00`);
+
+  if (Number.isNaN(date.getTime())) {
+    return dateYMD;
+  }
 
   const weekdayNames = [
     "الأحد",
@@ -18618,20 +20294,56 @@ function formatDayAndDate(dateYMD) {
     "الجمعة",
     "السبت",
   ];
-  const dayName = weekdayNames[d.getDay()];
-  const dd = String(d.getDate()).padStart(2, "0");
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const yyyy = d.getFullYear();
 
-  return `${dayName} ${dd}-${mm}-${yyyy}`;
+  const dayName = weekdayNames[date.getDay()];
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const year = date.getFullYear();
+
+  return `${dayName}، ${day}-${month}-${year}`;
 }
 
-/* ============================
-   Component
-   ============================ */
+function DetailItem({ icon, label, value, featured = false, className = "" }) {
+  return (
+    <div
+      className={[
+        "min-w-0 rounded-2xl border p-3.5",
+        featured
+          ? "border-[#dec47f] bg-[#fff9e9]"
+          : "border-slate-200 bg-slate-50",
+        className,
+      ].join(" ")}
+    >
+      <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
+        <span
+          className={[
+            "flex h-7 w-7 shrink-0 items-center justify-center rounded-lg",
+            featured
+              ? "bg-[#f2dda5] text-[#76550f]"
+              : "bg-white text-slate-500 shadow-sm",
+          ].join(" ")}
+        >
+          {icon}
+        </span>
+
+        <span>{label}</span>
+      </div>
+
+      <p
+        className={[
+          "mt-2 break-words text-sm font-black",
+          featured ? "text-[#5e430d]" : "text-slate-900",
+        ].join(" ")}
+      >
+        {value || "—"}
+      </p>
+    </div>
+  );
+}
 
 function BookingTracker() {
   const { t } = useTranslation();
+
   const [phone, setPhone] = useState("");
   const [results, setResults] = useState([]);
   const [notFound, setNotFound] = useState(false);
@@ -18639,50 +20351,85 @@ function BookingTracker() {
   const [successMessage, setSuccessMessage] = useState("");
   const [codeInputs, setCodeInputs] = useState({});
   const [errorMessages, setErrorMessages] = useState({});
+  const [cancellingId, setCancellingId] = useState("");
 
-  const align = "text-right";
+  const handlePhoneChange = (event) => {
+    setPhone(event.target.value);
 
-  const handleCheck = async () => {
+    if (notFound) {
+      setNotFound(false);
+    }
+
+    if (successMessage) {
+      setSuccessMessage("");
+    }
+  };
+
+  const handleCheck = async (event) => {
+    event?.preventDefault();
+
     setResults([]);
     setNotFound(false);
     setSuccessMessage("");
     setErrorMessages({});
 
     const input = phone.trim();
+
     if (!input) return;
 
-    const localNumber = normalizeDigits(input); // 050...
-    const phoneE164 = toILPhoneE164(input); // +972...
+    const localNumber = normalizeDigits(input);
+    const phoneE164 = toILPhoneE164(input);
     const hasValidE164 = isILPhoneE164(phoneE164);
 
     setLoading(true);
+
     try {
-      const byId = {};
+      const bookingsById = {};
 
       if (hasValidE164) {
-        const q1 = query(
+        const e164Query = query(
           collection(db, "bookings"),
           where("phoneNumber", "==", phoneE164),
         );
-        const snap1 = await getDocs(q1);
-        snap1.forEach((d) => {
-          byId[d.id] = { docId: d.id, ...d.data() };
+
+        const e164Snapshot = await getDocs(e164Query);
+
+        e164Snapshot.forEach((document) => {
+          bookingsById[document.id] = {
+            docId: document.id,
+            ...document.data(),
+          };
         });
       }
 
       if (localNumber) {
-        const q2 = query(
+        const localQuery = query(
           collection(db, "bookings"),
           where("phoneNumber", "==", localNumber),
         );
-        const snap2 = await getDocs(q2);
-        snap2.forEach((d) => {
-          byId[d.id] = { docId: d.id, ...d.data() };
+
+        const localSnapshot = await getDocs(localQuery);
+
+        localSnapshot.forEach((document) => {
+          bookingsById[document.id] = {
+            docId: document.id,
+            ...document.data(),
+          };
         });
       }
 
-      const rawData = Object.values(byId);
-      const activeBookings = rawData.filter(isBookingActiveNow);
+      const activeBookings = Object.values(bookingsById)
+        .filter(isBookingActiveNow)
+        .sort((firstBooking, secondBooking) => {
+          const firstDate = getStartAtDate(firstBooking);
+          const secondDate = getStartAtDate(secondBooking);
+
+          if (!firstDate && !secondDate) return 0;
+          if (!firstDate) return 1;
+          if (!secondDate) return -1;
+
+          return firstDate.getTime() - secondDate.getTime();
+        });
 
       if (activeBookings.length === 0) {
         setNotFound(true);
@@ -18692,44 +20439,84 @@ function BookingTracker() {
     } catch (error) {
       console.error("Error fetching bookings:", error);
       setNotFound(true);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
+  };
+
+  const handleCodeChange = (bookingId, nextCode) => {
+    setCodeInputs((previous) => ({
+      ...previous,
+      [bookingId]: nextCode,
+    }));
+
+    if (errorMessages[bookingId]) {
+      setErrorMessages((previous) => ({
+        ...previous,
+        [bookingId]: "",
+      }));
+    }
   };
 
   const handleCancel = async (booking) => {
-    const code = codeInputs[booking.docId] || "";
+    const code = (codeInputs[booking.docId] || "").trim();
+
     if (!code || code !== booking.bookingCode) {
-      setErrorMessages((prev) => ({
-        ...prev,
-        [booking.docId]: "رمز التحقق غير صحيح",
+      setErrorMessages((previous) => ({
+        ...previous,
+        [booking.docId]: "رمز التحقق غير صحيح.",
       }));
       return;
     }
 
     if (!isBookingActiveNow(booking)) {
-      setErrorMessages((prev) => ({
-        ...prev,
-        [booking.docId]: "هذا الحجز لم يعد فعّالاً، لا يمكن إلغاؤه.",
+      setErrorMessages((previous) => ({
+        ...previous,
+        [booking.docId]: "هذا الحجز لم يعد فعّالًا، ولا يمكن إلغاؤه.",
       }));
       return;
     }
 
     const startAtDate = getStartAtDate(booking);
-    const check = canCancelFixed(startAtDate);
-    if (!check.ok) {
-      setErrorMessages((prev) => ({ ...prev, [booking.docId]: check.reason }));
+    const cancellationCheck = canCancelFixed(startAtDate);
+
+    if (!cancellationCheck.ok) {
+      setErrorMessages((previous) => ({
+        ...previous,
+        [booking.docId]: cancellationCheck.reason,
+      }));
       return;
     }
 
+    setCancellingId(booking.docId);
+
     try {
-      // ✅ الإلغاء الصحيح (بيحط cancelledAt وبيعمل decrement للعداد الشهري)
       await cancelBooking(booking.docId);
 
-      setResults((prev) => prev.filter((b) => b.docId !== booking.docId));
-      setSuccessMessage("✅ تم إلغاء الحجز بنجاح");
+      setResults((previous) =>
+        previous.filter(
+          (currentBooking) => currentBooking.docId !== booking.docId,
+        ),
+      );
+
+      setSuccessMessage("تم إلغاء الحجز بنجاح.");
+
+      setCodeInputs((previous) => {
+        const nextInputs = { ...previous };
+
+        delete nextInputs[booking.docId];
+
+        return nextInputs;
+      });
     } catch (error) {
       console.error("Error while cancelling:", error);
-      alert("حدث خطأ أثناء محاولة الإلغاء.");
+
+      setErrorMessages((previous) => ({
+        ...previous,
+        [booking.docId]: "حدث خطأ أثناء الإلغاء. حاول مرة أخرى.",
+      }));
+    } finally {
+      setCancellingId("");
     }
   };
 
@@ -18737,76 +20524,121 @@ function BookingTracker() {
     <section
       id="check-booking"
       dir="rtl"
-      className="relative bg-[#f8f6f1] py-20 px-4 text-primary font-body scroll-mt-28 md:scroll-mt-32 overflow-hidden"
-      style={{ scrollMarginTop: 120 }} // ✅ دقّة أعلى لو عندك هيدر sticky
+      className="relative scroll-mt-28 overflow-hidden bg-[#f8f6f1] px-4 py-16 font-body text-primary md:scroll-mt-32 md:py-20"
+      style={{ scrollMarginTop: 120 }}
     >
-      {/* ديكور خفيف جداً (شكل فقط) */}
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -bottom-24 left-10 w-72 h-72 rounded-full bg-gold/10 blur-3xl" />
+      <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+        <div className="absolute -bottom-24 left-10 h-72 w-72 rounded-full bg-gold/10 blur-3xl" />
       </div>
 
-      {/* العنوان */}
-      <SectionTitle
-        icon={
-          <div className="flex items-center justify-center w-10 h-10 rounded-full bg-gold/15 text-gold shadow-sm">
-            <CalendarCheck className="w-6 h-6" />
-          </div>
-        }
-      >
-        <span className="tracking-wide text-lg font-semibold">
-          {t("check_booking", { defaultValue: "تحقّق من الحجز" })}
-        </span>
-      </SectionTitle>
+      <div className="relative mx-auto max-w-2xl">
+        <SectionTitle
+          icon={
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gold/15 text-gold shadow-sm">
+              <CalendarCheck className="h-6 w-6" aria-hidden="true" />
+            </div>
+          }
+        >
+          <span className="text-lg font-semibold tracking-wide">
+            {t("check_booking", {
+              defaultValue: "تحقّق من الحجز",
+            })}
+          </span>
+        </SectionTitle>
 
-      {/* الصندوق الرئيسي */}
-      <div className="max-w-xl mx-auto bg-[#fcfaf7] border border-gold/20 rounded-3xl shadow-lg p-6 md:p-8 mt-6 backdrop-blur-sm ring-1 ring-black/5 transition-transform duration-300 hover:-translate-y-1">
-        {/* إدخال الرقم + زر التحقق */}
-        <div className="flex flex-row-reverse gap-3 items-center">
-          <input
-            type="tel"
-            placeholder={t("phone", { defaultValue: "رقم الهاتف" })}
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            className={`w-full border border-gray-300 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-gold shadow-sm bg-white ${align}`}
-          />
-          <button
-            onClick={handleCheck}
-            disabled={loading || !phone.trim()}
-            className={`rounded-2xl px-6 py-3 font-bold shadow-sm transition ${
-              loading || !phone.trim()
-                ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                : "bg-gold text-primary hover:bg-yellow-400"
-            }`}
+        <div className="mt-6 rounded-[26px] border border-[#e3dccf] bg-white p-4 shadow-[0_16px_40px_rgba(40,32,20,0.08)] sm:p-6">
+          <form
+            onSubmit={handleCheck}
+            className="flex flex-col gap-3 sm:flex-row"
           >
-            {loading ? (
-              <span className="inline-flex items-center gap-2">
-                <span className="h-4 w-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
-                {t("loading", { defaultValue: "جارٍ التحقق..." })}
-              </span>
-            ) : (
-              t("check", { defaultValue: "تحقّق" })
-            )}
-          </button>
+            <div className="relative min-w-0 flex-1">
+              <Phone
+                className="pointer-events-none absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"
+                aria-hidden="true"
+              />
+
+              <input
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                placeholder={t("phone", {
+                  defaultValue: "رقم الهاتف",
+                })}
+                value={phone}
+                onChange={handlePhoneChange}
+                disabled={loading}
+                className="h-[52px] w-full rounded-2xl border border-slate-300 bg-white py-3 pl-4 pr-12 text-right text-base font-semibold text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#b88a25] focus:ring-4 focus:ring-[#d7b55c]/20 disabled:bg-slate-50"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading || !phone.trim()}
+              className={[
+                "flex min-h-[52px] items-center justify-center gap-2 rounded-2xl px-6 text-sm font-extrabold transition sm:min-w-[145px]",
+                loading || !phone.trim()
+                  ? "cursor-not-allowed bg-slate-200 text-slate-500"
+                  : "bg-gradient-to-br from-[#d7b457] to-[#bd9135] text-[#172033] shadow-[0_8px_18px_rgba(157,112,21,0.20)] hover:brightness-105",
+              ].join(" ")}
+            >
+              {loading ? (
+                <>
+                  <LoaderCircle
+                    className="h-5 w-5 animate-spin"
+                    aria-hidden="true"
+                  />
+
+                  <span>
+                    {t("loading", {
+                      defaultValue: "جارٍ التحقق...",
+                    })}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <Search className="h-5 w-5" aria-hidden="true" />
+
+                  <span>
+                    {t("check", {
+                      defaultValue: "تحقّق",
+                    })}
+                  </span>
+                </>
+              )}
+            </button>
+          </form>
+
+          {successMessage && (
+            <div
+              className="mt-4 flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-800"
+              role="status"
+            >
+              <CheckCircle2 className="h-5 w-5 shrink-0" aria-hidden="true" />
+
+              <span>{successMessage}</span>
+            </div>
+          )}
+
+          {notFound && (
+            <div
+              className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-right"
+              role="status"
+            >
+              <p className="text-sm font-extrabold text-amber-900">
+                {t("no_booking_found", {
+                  defaultValue: "لا يوجد حجز فعّال مرتبط بهذا الرقم.",
+                })}
+              </p>
+
+              <p className="mt-1 text-xs leading-6 text-amber-800">
+                تأكد أن الرقم هو نفسه المستخدم عند الحجز.
+              </p>
+            </div>
+          )}
         </div>
 
-        {/* رسائل */}
-        {successMessage && (
-          <div className="mt-4 bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-xl text-right shadow-sm">
-            {successMessage}
-          </div>
-        )}
-
-        {notFound && (
-          <div className="mt-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-right shadow-sm">
-            {t("no_booking_found", {
-              defaultValue: "لا يوجد حجز فعّال مرتبط بهذا الرقم.",
-            })}
-          </div>
-        )}
-
-        {/* النتائج */}
         {results.length > 0 && (
-          <div className="mt-6 space-y-6">
+          <div className="mt-5 space-y-4">
             {results.map((booking) => {
               const prettyDate = formatDayAndDate(booking.selectedDate);
 
@@ -18814,118 +20646,207 @@ function BookingTracker() {
                 defaultValue: booking.selectedService || "—",
               });
 
+              const isCancelling = cancellingId === booking.docId;
+
+              const enteredCode = codeInputs[booking.docId] || "";
+
               return (
-                <div
+                <article
                   key={booking.docId}
-                  className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm hover:shadow-xl transition-all"
-                  dir="rtl"
+                  className="overflow-hidden rounded-[26px] border border-[#e2dbcf] bg-white shadow-[0_14px_36px_rgba(38,31,20,0.08)]"
                 >
-                  {/* الهيدر */}
-                  <div className="flex flex-row-reverse justify-between items-start mb-6">
-                    {/* يمين: الاسم + الهاتف فقط */}
-                    <div className="space-y-3 text-right w-full">
-                      <div className="text-xl font-extrabold text-gray-900 leading-tight">
-                        {booking.fullName || "بدون اسم"}
+                  <header className="border-b border-[#eee8dc] bg-[#fcfaf5] p-4 sm:p-5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#ead698] text-[#6d500e]">
+                          <UserRound className="h-6 w-6" aria-hidden="true" />
+                        </div>
+
+                        <div className="min-w-0">
+                          <h3 className="truncate text-lg font-black text-slate-900">
+                            {booking.fullName || "بدون اسم"}
+                          </h3>
+
+                          <div className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-slate-500">
+                            <Phone className="h-4 w-4" aria-hidden="true" />
+
+                            <span dir="ltr">
+                              {e164ToLocalPretty(booking.phoneNumber)}
+                            </span>
+                          </div>
+                        </div>
                       </div>
 
-                      <div className="flex flex-row-reverse items-center gap-2 text-sm text-gray-700">
-                        <Phone className="w-4 h-4 opacity-70" />
-                        <span>
-                          {t("phone", { defaultValue: "رقم الهاتف" })}:{" "}
-                          {e164ToLocalPretty(booking.phoneNumber)}
-                        </span>
-                      </div>
+                      <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-extrabold text-emerald-700">
+                        <ShieldCheck className="h-4 w-4" aria-hidden="true" />
+
+                        {t("active_booking", {
+                          defaultValue: "حجز نشط",
+                        })}
+                      </span>
+                    </div>
+                  </header>
+
+                  <div className="p-4 sm:p-5">
+                    <div className="grid grid-cols-2 gap-3">
+                      <DetailItem
+                        label={t("date", {
+                          defaultValue: "التاريخ",
+                        })}
+                        value={prettyDate}
+                        icon={
+                          <CalendarDays
+                            className="h-4 w-4"
+                            aria-hidden="true"
+                          />
+                        }
+                        featured
+                      />
+
+                      <DetailItem
+                        label={t("time", {
+                          defaultValue: "الساعة",
+                        })}
+                        value={booking.selectedTime}
+                        icon={<Clock3 className="h-4 w-4" aria-hidden="true" />}
+                        featured
+                      />
+
+                      <DetailItem
+                        label={t("service", {
+                          defaultValue: "الخدمة",
+                        })}
+                        value={serviceTitle}
+                        icon={
+                          <Scissors className="h-4 w-4" aria-hidden="true" />
+                        }
+                        className="col-span-2"
+                      />
                     </div>
 
-                    {/* يسار: بادج */}
-                    <span className="px-4 py-1 text-sm rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 shadow-sm whitespace-nowrap">
-                      {t("active_booking", { defaultValue: "حجز نشط" })}
-                    </span>
-                  </div>
+                    <div className="mt-5 rounded-2xl border border-red-100 bg-red-50/45 p-4">
+                      <div className="flex items-start gap-3">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-red-500 shadow-sm">
+                          <KeyRound className="h-5 w-5" aria-hidden="true" />
+                        </div>
 
-                  {/* Grid المعلومات */}
-                  <div className="grid grid-cols-1 gap-3 mb-6">
-                    <InfoRow
-                      label={t("service", { defaultValue: "الخدمة" })}
-                      value={serviceTitle}
-                      icon={<Scissors className="w-4 h-4 opacity-70" />}
-                    />
-                    <InfoRow
-                      label={t("time", { defaultValue: "الساعة" })}
-                      value={booking.selectedTime}
-                      icon={<Clock3 className="w-4 h-4 opacity-70" />}
-                    />
-                    <InfoRow
-                      label={t("date", { defaultValue: "التاريخ" })}
-                      value={prettyDate}
-                      icon={<CalendarDays className="w-4 h-4 opacity-70" />}
-                    />
-                  </div>
+                        <div>
+                          <h4 className="text-sm font-extrabold text-slate-900">
+                            {t("cancel_booking", {
+                              defaultValue: "إلغاء الحجز",
+                            })}
+                          </h4>
 
-                  {/* إدخال الكود */}
-                  <div className="space-y-2 text-right">
-                    <label className="block text-sm font-semibold">
-                      {t("enter_code", {
-                        defaultValue: "أدخل رمز التحقق لإلغاء الحجز",
-                      })}
-                    </label>
-                    <input
-                      type="text"
-                      inputMode="text"
-                      autoComplete="one-time-code"
-                      value={codeInputs[booking.docId] || ""}
-                      onChange={(e) =>
-                        setCodeInputs((prev) => ({
-                          ...prev,
-                          [booking.docId]: e.target.value,
-                        }))
-                      }
-                      className="w-full border border-gray-300 rounded-xl px-4 py-3 text-right shadow-sm focus:ring-2 focus:ring-gold bg-white"
-                      placeholder={t("enter_code", {
-                        defaultValue: "أدخل الكود",
-                      })}
-                    />
+                          <p className="mt-1 text-xs leading-5 text-slate-600">
+                            أدخل كود الحجز الذي حصلت عليه عند التأكيد.
+                          </p>
+                        </div>
+                      </div>
 
-                    {errorMessages[booking.docId] && (
-                      <p className="text-red-600 text-sm mt-1">
-                        {errorMessages[booking.docId]}
-                      </p>
-                    )}
-                  </div>
+                      <div className="mt-4">
+                        <label
+                          htmlFor={`cancel-code-${booking.docId}`}
+                          className="mb-2 block text-sm font-extrabold text-slate-800"
+                        >
+                          {t("booking_code", {
+                            defaultValue: "كود الحجز",
+                          })}
+                        </label>
 
-                  {/* زر الإلغاء */}
-                  <div className="flex justify-start mt-5">
-                    <button
-                      onClick={() => handleCancel(booking)}
-                      className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-xl font-bold shadow-sm"
-                    >
-                      {t("cancel_booking", { defaultValue: "إلغاء الحجز" })}
-                    </button>
+                        <div className="flex flex-col gap-3 sm:flex-row">
+                          <div className="relative min-w-0 flex-1">
+                            <KeyRound
+                              className="pointer-events-none absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"
+                              aria-hidden="true"
+                            />
+
+                            <input
+                              id={`cancel-code-${booking.docId}`}
+                              type="text"
+                              inputMode="text"
+                              autoComplete="one-time-code"
+                              value={enteredCode}
+                              onChange={(event) =>
+                                handleCodeChange(
+                                  booking.docId,
+                                  event.target.value,
+                                )
+                              }
+                              placeholder={t("enter_code", {
+                                defaultValue: "أدخل كود الحجز",
+                              })}
+                              disabled={isCancelling}
+                              className={[
+                                "h-[54px] w-full rounded-2xl border bg-white py-3 pl-4 pr-12",
+                                "text-right text-base font-extrabold tracking-wide text-slate-900",
+                                "outline-none transition",
+                                "placeholder:font-normal placeholder:tracking-normal placeholder:text-slate-400",
+                                "focus:border-[#b98a21] focus:ring-4 focus:ring-[#d7b55c]/20",
+                                "disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-70",
+                                errorMessages[booking.docId]
+                                  ? "border-red-300"
+                                  : "border-slate-300",
+                              ].join(" ")}
+                            />
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => handleCancel(booking)}
+                            disabled={isCancelling || !enteredCode.trim()}
+                            className={[
+                              "flex min-h-[54px] items-center justify-center gap-2 rounded-2xl px-5",
+                              "text-sm font-extrabold transition",
+                              "sm:min-w-[150px]",
+                              isCancelling || !enteredCode.trim()
+                                ? "cursor-not-allowed bg-slate-200 text-slate-500"
+                                : "bg-red-600 text-white shadow-[0_8px_18px_rgba(220,38,38,0.18)] hover:bg-red-700",
+                            ].join(" ")}
+                          >
+                            {isCancelling ? (
+                              <>
+                                <LoaderCircle
+                                  className="h-5 w-5 animate-spin"
+                                  aria-hidden="true"
+                                />
+
+                                <span>جارٍ الإلغاء</span>
+                              </>
+                            ) : (
+                              <>
+                                <Trash2
+                                  className="h-5 w-5"
+                                  aria-hidden="true"
+                                />
+
+                                <span>
+                                  {t("cancel_booking", {
+                                    defaultValue: "إلغاء الحجز",
+                                  })}
+                                </span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+
+                        {errorMessages[booking.docId] && (
+                          <p
+                            className="mt-2 text-sm font-bold text-red-600"
+                            role="alert"
+                          >
+                            {errorMessages[booking.docId]}
+                          </p>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                </div>
+                </article>
               );
             })}
           </div>
         )}
       </div>
     </section>
-  );
-}
-
-function InfoRow({ label, value, icon }) {
-  return (
-    <div
-      className="bg-gray-50 border border-gray-200 rounded-2xl p-4 flex flex-col gap-1 text-right shadow-sm"
-      dir="rtl"
-    >
-      <div className="text-xs text-gray-500 flex flex-row-reverse items-center gap-1">
-        {icon}
-        <span>{label}</span>
-      </div>
-      <div className="text-base font-semibold text-gray-900">
-        {value || "—"}
-      </div>
-    </div>
   );
 }
 

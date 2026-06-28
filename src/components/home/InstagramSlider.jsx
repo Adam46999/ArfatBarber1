@@ -24,6 +24,11 @@ const images = [
   "/cuts/p9.jpg",
   "/cuts/p10.jpg",
   "/cuts/p11.jpg",
+  "/cuts/p12.jpg",
+  "/cuts/p13.jpg",
+  "/cuts/p14.jpg",
+  "/cuts/p15.jpg",
+  "/cuts/p16.jpg",
 ];
 
 function CloseIcon() {
@@ -182,19 +187,17 @@ function InstagramSlider() {
                       index + 1
                     }`}
                   >
-                    <div className="aspect-[4/5] w-full sm:aspect-[16/11] md:aspect-[16/10]">
+                    <div className="flex aspect-[4/5] w-full items-center justify-center bg-[#eeeae1] sm:aspect-[16/11] md:aspect-[16/10]">
                       <img
                         src={image}
                         alt={`${t("slider_title") || "نماذج من أعمالنا"} ${
                           index + 1
                         }`}
-                        className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.025]"
+                        className="h-full w-full object-contain"
                         loading={index === 0 ? "eager" : "lazy"}
                         draggable="false"
                       />
                     </div>
-
-                    <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/20 to-transparent opacity-70" />
                   </button>
                 </SwiperSlide>
               ))}
@@ -246,7 +249,7 @@ function InstagramSlider() {
                         className={`relative block aspect-square w-full overflow-hidden rounded-[15px] border-[3px] bg-[#eeeae1] outline-none transition-all duration-300 focus-visible:ring-4 focus-visible:ring-gold/30 ${
                           isActive
                             ? "scale-[0.98] border-gold opacity-100 shadow-[0_8px_22px_rgba(179,135,39,0.24)]"
-                            : "border-transparent opacity-45 hover:opacity-75"
+                            : "border-transparent opacity-55 hover:opacity-85"
                         }`}
                         aria-label={`${t("show_image") || "عرض الصورة"} ${
                           index + 1
@@ -256,7 +259,7 @@ function InstagramSlider() {
                         <img
                           src={image}
                           alt=""
-                          className="h-full w-full object-cover"
+                          className="h-full w-full object-contain"
                           loading="lazy"
                           draggable="false"
                         />
