@@ -5,72 +5,141 @@
   "language": "שפה",
   "book_now": "הזמן עכשיו",
   "start_booking": "התחל הזמנה",
-  "welcome": "ברוך הבא אל Arfat Barber",
-"hero_subtitle": "אנחנו מעניקים לך מראה שמתאים ומשקף אותך בפשטות ובאלגנטיות."
-,  "name": "שם מלא",
+  "welcome": "ברוכים הבאים ל-Arfat Barber",
+  "hero_subtitle": "אנחנו מעניקים לך מראה שמתאים לך ומשקף את הסגנון שלך.",
+  "hero_title": "סגנון שמתאים לך, בפשטות",
+
+  "name": "שם מלא",
   "phone": "מספר טלפון",
   "select_date": "בחר תאריך",
+  "choose_date": "בחר תאריך להזמנה",
   "choose_time": "בחר שעה",
   "choose_service": "בחר שירות",
+
   "service_haircut": "תספורת",
-  "service_beard": "קיצוץ זקן",
+  "service_beard": "עיצוב זקן",
   "service_combo": "תספורת + זקן",
+
   "confirm_booking": "אישור הזמנה",
-  "thank_you": "תודה! ההזמנה התקבלה. שמור את הקוד לבדיקה או ביטול.",
-  "no_hours": "אין שעות פנויות ליום זה (סגור).",
-  "fill_required_fields": "אנא מלא את כל השדות הנדרשים",
+  "checking_booking": "בודקים את פרטי ההזמנה...",
+  "saving_booking": "מקבעים את ההזמנה...",
+  "verifying_booking": "בודקים את תוצאת ההזמנה...",
+  "booking_success": "ההזמנה שלך אושרה בהצלחה.",
+
+  "thank_you": "תודה! ההזמנה התקבלה בהצלחה. שמור את הקוד לבדיקה או לביטול.",
+  "fill_required_fields": "נא למלא את כל שדות החובה.",
+  "time_already_booked": "השעה הזו נתפסה לפני רגע. נא לבחור שעה אחרת.",
+  "phone_already_booked_today": "כבר קיימת הזמנה ליום זה עם מספר הטלפון הזה. אם ברצונך לשנות אותה, צור קשר עם הספר.",
+  "selected_time_no_longer_available": "השעה שבחרת אינה זמינה עוד. בחר שעה אחרת. שאר הפרטים שלך עדיין שמורים.",
+
+  "loading_times": "טוענים שעות פנויות...",
+  "loading_working_hours": "טוענים שעות פעילות...",
+  "pick_date_first": "בחר תחילה תאריך כדי לראות את השעות הפנויות.",
+  "day_blocked": "יום זה סגור להזמנות.",
+  "choose_another_day": "בחר יום אחר כדי לראות את השעות הפנויות.",
+  "no_hours": "אין תורים פנויים ביום זה. נא לבחור יום אחר.",
+
+  "no_internet": "אין חיבור לאינטרנט",
+  "no_internet_saved": "הפרטים שלך לא יימחקו. ניתן להמשיך בהזמנה מיד לאחר שהחיבור יחזור.",
+  "slow_connection": "החיבור מעט איטי. נא לא לסגור את הדף בזמן שאנחנו בודקים את ההזמנה.",
+  "checking_booking_result": "החיבור איטי. אנחנו בודקים אם ההזמנה נוצרה כדי למנוע הזמנה כפולה.",
+
+  "working_hours_load_failed": "לא ניתן לטעון את שעות הפעילות",
+  "working_hours_load_failed_details": "לא הצגנו תורים שאינם מאומתים. בדוק את החיבור לאינטרנט ונסה שוב.",
+  "times_load_failed": "לא ניתן לטעון את השעות הפנויות",
+  "times_load_failed_details": "לא הצגנו שעות שאינן מאומתות. הפרטים שלך עדיין שמורים.",
+  "retry": "נסה שוב",
+  "update_working_hours": "רענן שעות פעילות",
+
+  "stale_working_hours": "מוצגות שעות הפעילות האחרונות שנטענו בהצלחה. ניתן לרענן כדי לוודא שהן מעודכנות.",
+  "invalid_working_hours": "בחלק מהימים הגדרות שעות הפעילות אינן מלאות, ולכן לא יוצגו בהם תורים שאינם מאומתים.",
+  "working_hours_update_error": "אירעה בעיה קלה בעת רענון שעות הפעילות.",
+
+  "booking_result_unknown": "עדיין לא הצלחנו לאשר את התוצאה. הפרטים שלך שמורים. ניתן לנסות שוב בבטחה ולא תיווצר הזמנה כפולה.",
+  "booking_failed_retry": "לא ניתן להשלים את ההזמנה כרגע. הפרטים שלך עדיין שמורים. נא לנסות שוב.",
+  "booking_offline_retry": "החיבור לאינטרנט נותק במהלך ההזמנה. הפרטים שלך שמורים. נסה שוב לאחר שהחיבור יחזור.",
+  "phone_blocked": "מספר הטלפון הזה חסום מביצוע הזמנות. נא ליצור קשר עם הספר.",
+  "existing_booking_confirm": "כבר קיימת לך הזמנה עם מספר הטלפון הזה. האם להוסיף הזמנה נוספת?",
+  "request_id_conflict": "לא ניתן היה להמשיך בבטחה את ניסיון ההזמנה הקודם. בחר שוב את המועד ונסה פעם נוספת.",
+  "close_message": "סגור הודעה",
+  "missing_fields_hint": "לחץ על אישור הזמנה ונראה לך איזה מידע חסר.",
+
+  "invalid_name": "נא להזין שם תקין הכולל לפחות שתי אותיות.",
+  "invalid_phone": "נא להזין מספר טלפון נייד תקין.",
+  "invalid_date": "נא לבחור תאריך תקין.",
+  "invalid_time": "נא לבחור שעה תקינה.",
+  "invalid_service": "נא לבחור שירות.",
+
   "all_rights": "כל הזכויות שמורות.",
-  "not_found_message": "אופס! הדף שחיפשת לא קיים.",
+  "not_found_message": "מצטערים, הדף שחיפשת אינו קיים.",
   "go_home": "חזור לעמוד הבית",
-  "slider_title": "תספורות מעבודתנו",
+  "slider_title": "תספורות מהעבודות שלנו",
+
   "call": "התקשר",
-  "email": "אימייל",
+  "email": "דוא״ל",
   "address": "📍 בענה - רחוב גדרה",
+
   "working_hours": "שעות פעילות",
-  "open_now": "אנחנו פתוחים עכשיו",
-  "closed_today": "אנחנו סגורים עכשיו",
-  "sunday": "ראשון",
-  "monday": "שני",
-  "tuesday": "שלישי",
-  "wednesday": "רביעי",
-  "thursday": "חמישי",
-  "friday": "שישי",
-  "saturday": "שבת",
+  "opening_hours": "שעות פתיחה",
+  "today_status": "מצב היום",
+  "open_now": "פתוחים עכשיו",
+  "closed_today": "סגורים עכשיו",
+  "shop_open_now": "המספרה פתוחה עכשיו",
+  "shop_closed_now": "המספרה סגורה עכשיו",
+  "open_until": "פתוח עד",
+  "opens_at": "נפתח בשעה",
+  "closed_now": "סגור עכשיו",
   "closed": "סגור",
-  "barber_panel": "לוח שליטה לספר",
-  "enter_password": "הכנס סיסמה",
+  "closed_all_day": "סגור כל היום",
+
+  "sunday": "יום ראשון",
+  "monday": "יום שני",
+  "tuesday": "יום שלישי",
+  "wednesday": "יום רביעי",
+  "thursday": "יום חמישי",
+  "friday": "יום שישי",
+  "saturday": "יום שבת",
+
+  "weekdays": [
+    "יום ראשון",
+    "יום שני",
+    "יום שלישי",
+    "יום רביעי",
+    "יום חמישי",
+    "יום שישי",
+    "יום שבת"
+  ],
+
+  "barber_panel": "לוח ניהול הספר",
+  "enter_password": "הזן סיסמה",
   "login": "כניסה",
-  "manage_times": "ניהול שעות חסומות",
-  "remove_selected_times": "מחק את השעות שנבחרו",
-  "closed_day": "היום סגור",
+  "logout": "יציאה",
   "wrong_password": "הסיסמה שגויה",
-  "logout": "התנתק",
-  "times_removed_success": "✅ השעות שנבחרו הוסרו בהצלחה",
-  "time_restored_success": "✅ השעה שוחזרה בהצלחה",
-  "admin_bookings": "צפייה בהזמנות",
-  "no_bookings": "אין הזמנות עדיין",
-  "date_added": "נוסף בתאריך",
+
+  "manage_times": "ניהול שעות",
+  "remove_selected_times": "הסר את השעות שנבחרו",
+  "closed_day": "יום זה סגור",
+  "blocked_time": "חסום",
+  "times_removed_success": "השעות שנבחרו הוסרו בהצלחה.",
+  "time_restored_success": "השעה הוחזרה בהצלחה.",
+
+  "admin_bookings": "ניהול הזמנות",
+  "no_bookings": "אין הזמנות כרגע.",
+  "date_added": "תאריך יצירה",
   "clear_filter": "נקה סינון",
-  "check_booking": "בדוק את ההזמנה ",
+
+  "check_booking": "בדיקת הזמנה",
   "check": "בדוק",
   "loading": "בודק...",
-  "cancel_booking": "ביטול הזמנה",
+  "cancel_booking": "בטל הזמנה",
   "booking_canceled": "ההזמנה בוטלה בהצלחה.",
-  "no_booking_found": "לא נמצאה הזמנה למספר הזה.",
-  "enter_code": "הכנס קוד",
-  "hero_title": "סגנון שמתאים לך, בפשטות"
-,
-  "code_required": "יש להזין את הקוד כדי לבטל",
-  "time_already_booked": "⚠️ השעה הזאת כבר תפוסה. אנא בחר שעה אחרת.",
-"blocked_time": "נחסם על ידי הספר",
-"your_code": "הקוד שלך",
+  "no_booking_found": "לא נמצאה הזמנה המקושרת למספר הטלפון הזה.",
+  "enter_code": "הזן קוד",
+  "code_required": "נא להזין את קוד ההזמנה כדי לבטל אותה.",
+  "wrong_code": "קוד ההזמנה שגוי.",
 
-  "choose_date":"בחירת תאריך",
-  "wrong_code": "⚠️ הקוד שגוי",
-  "shop_open_now": "החנות פתוחה כעת",
-  "shop_closed_now": "החנות סגורה כעת",
-  "open_until": "פתוח עד",
-  "opens_at": "נפתח",
+  "your_code": "קוד ההזמנה שלך",
+  "step": "שלב",
 
   "short_name": "שם",
   "short_phone": "טלפון",
@@ -79,66 +148,39 @@
   "short_service": "שירות",
   "short_confirm": "אישור",
 
-  
-  
-  "closed_now": "סגור עכשיו",
-  "main_navigation": "ניווט ראשי",
-  "close_menu": "סגור תפריט",
-  "open_menu": "פתח תפריט",
-
-  "invalid_name": "נא להזין שם תקין (לפחות שני תווים).",
-  "invalid_phone": "נא להזין מספר תקין: מתחיל ב-05 ובעל 10 ספרות.",
-  "invalid_date": "נא לבחור תאריך תקין.",
-  "invalid_time": "נא לבחור שעה תקינה.",
-  "invalid_service": "נא לבחור שירות.",
-  
-  "confirm": "אשר",
+  "confirm": "אישור",
   "upcoming_bookings": "ההזמנות הקרובות שלך",
   "looks_good": "נראה טוב",
-  "fix_errors_first": "אנא ודא שכל השדות מולאו בצורה נכונה",
-  
-  "weekdays": ["ראשון","שני","שלישי","רביעי","חמישי","שישי","שבת"],
-  
-  "closed_all_day": "סגור כל היום"
-  ,
-   "services": {
+  "fix_errors_first": "נא לוודא שכל השדות מולאו כראוי.",
+
+  "services": {
     "haircut": "תספורת",
     "beard": "עיצוב זקן"
   },
-  
-  
-  "booking_confirmed": "הזמנתך אושרה בהצלחה",
+
+  "booking_confirmed": "ההזמנה אושרה בהצלחה",
   "copy_code": "העתק קוד",
   "copy_all": "העתק את כל הפרטים",
   "copy_and_close": "העתק פרטים",
-  "share": "שתף",
-  "keep_code_hint": "שמור קוד זה לשינוי או ביטול ההזמנה מאוחר יותר.",
+  "share": "שיתוף",
+  "keep_code_hint": "שמור את הקוד הזה כדי לשנות או לבטל את ההזמנה מאוחר יותר.",
   "got_it": "הבנתי",
   "close": "סגור",
 
   "service": "שירות",
-  "appointment_time": "זמן הפגישה",
+  "appointment_time": "מועד התור",
   "duration": "משך",
   "price": "מחיר",
   "barber": "ספר",
   "location": "מיקום",
   "notes": "הערות",
 
-  "opening_hours": "שעות פתיחה",
-  "today_status": "סטטוס היום",
-"add_to_calendar": "הוסף ליומן",
+  "add_to_calendar": "הוסף ליומן",
   "copied_code": "הקוד הועתק",
   "copied_details": "הפרטים הועתקו",
   "customer_name": "שם",
 
-"phone_already_booked_today":"יש כבר תור על מספר זה !"
+  "main_navigation": "ניווט ראשי",
+  "close_menu": "סגור תפריט",
+  "open_menu": "פתח תפריט"
 }
-
-
-
-
-
-
-
-
-

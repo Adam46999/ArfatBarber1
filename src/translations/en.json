@@ -6,29 +6,92 @@
   "book_now": "Book Now",
   "start_booking": "Start Booking",
   "welcome": "Welcome to Arfat Barber",
-"hero_subtitle": "We offer you a look that suits and reflects you effortlessly and elegantly."
-,  "name": "Full Name",
+  "hero_subtitle": "We offer you a look that suits you and reflects your style.",
+  "hero_title": "A style that suits you, effortlessly",
+
+  "name": "Full Name",
   "phone": "Phone Number",
-  "select_date": "Select a date",
-  "choose_time": "Choose Time",
+  "select_date": "Select a Date",
+  "choose_date": "Choose a Booking Date",
+  "choose_time": "Choose a Time",
   "choose_service": "Choose a Service",
+
   "service_haircut": "Haircut",
   "service_beard": "Beard Trim",
   "service_combo": "Haircut + Beard",
+
   "confirm_booking": "Confirm Booking",
-  "thank_you": "Thank you! Your booking was received. Keep the code to verify or cancel.",
-  "no_hours": "No available hours for this day (Closed).",
-  "fill_required_fields": "Please fill all required fields.",
+  "checking_booking": "Checking your booking...",
+  "saving_booking": "Confirming your booking...",
+  "verifying_booking": "Checking the booking result...",
+  "booking_success": "Your booking has been confirmed successfully.",
+
+  "thank_you": "Thank you! Your booking was received successfully. Keep the code to verify or cancel your booking.",
+  "fill_required_fields": "Please fill in all required fields.",
+  "time_already_booked": "This time slot has just been booked. Please choose another time.",
+  "phone_already_booked_today": "You already have a booking for this day using this phone number. Please contact the barber if you need to make changes.",
+  "selected_time_no_longer_available": "The time you selected is no longer available. Please choose another time. The rest of your information is still saved.",
+
+  "loading_times": "Loading available times...",
+  "loading_working_hours": "Loading working hours...",
+  "pick_date_first": "Choose a date first to view the available times.",
+  "day_blocked": "This day is closed for bookings.",
+  "choose_another_day": "Choose another day to view the available times.",
+  "no_hours": "There are no available appointments on this day. Please choose another day.",
+
+  "no_internet": "No Internet Connection",
+  "no_internet_saved": "Your information will not be erased. You can continue booking as soon as the connection returns.",
+  "slow_connection": "The connection is a little slow. Please do not close the page while we check your booking.",
+  "checking_booking_result": "The connection is slow. We are checking whether the booking was created to prevent a duplicate booking.",
+
+  "working_hours_load_failed": "Unable to Load Working Hours",
+  "working_hours_load_failed_details": "We did not display any unconfirmed appointments. Check your internet connection and try again.",
+  "times_load_failed": "Unable to Load Available Times",
+  "times_load_failed_details": "We did not display any unconfirmed times. Your information is still saved.",
+  "retry": "Try Again",
+  "update_working_hours": "Refresh Working Hours",
+
+  "stale_working_hours": "We are displaying the last working hours that loaded successfully. You can refresh them to confirm.",
+  "invalid_working_hours": "Some working days have incomplete settings, so unconfirmed appointments will not be displayed on those days.",
+  "working_hours_update_error": "A minor problem occurred while refreshing the working hours.",
+
+  "booking_result_unknown": "We could not confirm the result yet. Your information is saved. Try again safely; a duplicate booking will not be created.",
+  "booking_failed_retry": "We could not complete the booking right now. Your information is still saved. Please try again.",
+  "booking_offline_retry": "The internet connection was lost during the booking. Your information is saved. Try again when the connection returns.",
+  "phone_blocked": "This phone number is blocked from making bookings. Please contact the barber.",
+  "existing_booking_confirm": "You already have a booking using this phone number. Do you want to add another booking?",
+  "request_id_conflict": "The previous booking attempt could not be continued safely. Select the appointment again and try once more.",
+  "close_message": "Close Message",
+  "missing_fields_hint": "Press Confirm Booking and we will show you which information is missing.",
+
+  "invalid_name": "Please enter a valid name containing at least two letters.",
+  "invalid_phone": "Please enter a valid mobile phone number.",
+  "invalid_date": "Please select a valid date.",
+  "invalid_time": "Please select a valid time.",
+  "invalid_service": "Please choose a service.",
+
   "all_rights": "All rights reserved.",
-  "not_found_message": "Oops! The page you're looking for doesn't exist.",
+  "not_found_message": "Sorry, the page you are looking for does not exist.",
   "go_home": "Go Back Home",
-  "slider_title": "Cuts from our hands",
+  "slider_title": "Cuts by Arfat Barber",
+
   "call": "Call",
   "email": "Email",
   "address": "📍 Ba'aneh - Ghaddara Street",
+
   "working_hours": "Working Hours",
-  "open_now": "We are open now",
-  "closed_today": "We are closed now",
+  "opening_hours": "Opening Hours",
+  "today_status": "Today's Status",
+  "open_now": "We Are Open Now",
+  "closed_today": "We Are Closed Now",
+  "shop_open_now": "The Shop Is Open Now",
+  "shop_closed_now": "The Shop Is Closed Now",
+  "open_until": "Open Until",
+  "opens_at": "Opens At",
+  "closed_now": "Closed Now",
+  "closed": "Closed",
+  "closed_all_day": "Closed All Day",
+
   "sunday": "Sunday",
   "monday": "Monday",
   "tuesday": "Tuesday",
@@ -36,42 +99,47 @@
   "thursday": "Thursday",
   "friday": "Friday",
   "saturday": "Saturday",
-  "closed": "Closed",
+
+  "weekdays": [
+    "Sunday",
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday"
+  ],
+
   "barber_panel": "Barber Panel",
   "enter_password": "Enter Password",
   "login": "Login",
-  "manage_times": "Manage Blocked Times",
+  "logout": "Log Out",
+  "wrong_password": "Incorrect Password",
+
+  "manage_times": "Manage Times",
   "remove_selected_times": "Remove Selected Times",
-  "closed_day": "This day is closed",
-  "wrong_password": "Incorrect password",
-  "logout": "Logout",
-  "times_removed_success": "✅ Selected times for this day have been successfully removed",
-  "time_restored_success": "✅ Time slot restored successfully",
+  "closed_day": "This Day Is Closed",
+  "blocked_time": "Blocked",
+  "times_removed_success": "The selected times were removed successfully.",
+  "time_restored_success": "The time slot was restored successfully.",
+
   "admin_bookings": "Admin Bookings",
-  "no_bookings": "No bookings found yet",
+  "no_bookings": "No bookings found yet.",
   "date_added": "Created At",
   "clear_filter": "Clear Filter",
-  "check_booking": "Check Booking ",
+
+  "check_booking": "Check Booking",
   "check": "Check",
   "loading": "Checking...",
   "cancel_booking": "Cancel Booking",
-  "booking_canceled": "Booking canceled successfully.",
-  "no_booking_found": "No booking found for this number.",
-  "enter_code": "Enter code",
-  "hero_title": "A style that suits you, effortlessly"
-,
-  "code_required": "Please enter the code to cancel the booking",
-  "choose_date": "Please Enter The Date",
-  "time_already_booked": "⚠️ This time slot is already booked. Please choose another.",
-"blocked_time": "Blocked by the barber",
-"your_code": "Your Code",
-"wrong_code": "⚠️ The code is incorrect",
-  "pick_date_first": "Pick a date first to show available times.",
+  "booking_canceled": "The booking was canceled successfully.",
+  "no_booking_found": "No booking was found for this phone number.",
+  "enter_code": "Enter Code",
+  "code_required": "Please enter the booking code to cancel the booking.",
+  "wrong_code": "The booking code is incorrect.",
 
-  "shop_open_now": "Shop is open now",
-  "shop_closed_now": "Shop is closed now",
-  "open_until": "Open until",
-  "opens_at": "Opens",
+  "your_code": "Your Booking Code",
+  "step": "Step",
 
   "short_name": "Name",
   "short_phone": "Phone",
@@ -79,38 +147,24 @@
   "short_time": "Time",
   "short_service": "Service",
   "short_confirm": "Confirm",
-  
-  
-  "closed_now": "Closed Now",
-  "main_navigation": "Main Navigation",
-  "close_menu": "Close menu",
-  "open_menu": "Open menu",
-  
-  "invalid_name": "Please enter a valid name (at least 2 letters).",
-  "invalid_phone": "Please enter a valid phone: starts with 05 and has 10 digits.",
-  "invalid_date": "Please select a valid date.",
-  "invalid_time": "Please select a valid time.",
-  "invalid_service": "Please choose a service.",
-  
+
   "confirm": "Confirm",
-  "upcoming_bookings": "Your Upcoming Bookings","looks_good": "Looks good",
-  "fix_errors_first": "Please make sure all fields are filled in correctly",
-  
-  "weekdays": ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"],
-  
-  "closed_all_day": "Closed all day",
+  "upcoming_bookings": "Your Upcoming Bookings",
+  "looks_good": "Looks Good",
+  "fix_errors_first": "Please make sure all fields are filled in correctly.",
+
   "services": {
     "haircut": "Haircut",
-    "beard": "Beard trim"},
-    
+    "beard": "Beard Trim"
+  },
 
-  "booking_confirmed": "Your booking has been confirmed",
+  "booking_confirmed": "Your Booking Has Been Confirmed Successfully",
   "copy_code": "Copy Code",
   "copy_all": "Copy All Details",
   "copy_and_close": "Copy Details",
   "share": "Share",
   "keep_code_hint": "Keep this code to modify or cancel your booking later.",
-  "got_it": "Got it",
+  "got_it": "Got It",
   "close": "Close",
 
   "service": "Service",
@@ -121,28 +175,12 @@
   "location": "Location",
   "notes": "Notes",
 
-  "opening_hours": "Opening Hours",
-  "today_status": "Today's Status",
-
-
-
-
   "add_to_calendar": "Add to Calendar",
-  "copied_code": "Code copied",
-  "copied_details": "Details copied",
-  "customer_name": "Name"
+  "copied_code": "Code Copied",
+  "copied_details": "Details Copied",
+  "customer_name": "Name",
 
-
-
-
-
-
+  "main_navigation": "Main Navigation",
+  "close_menu": "Close Menu",
+  "open_menu": "Open Menu"
 }
-
-
-
-
-
-
-
-

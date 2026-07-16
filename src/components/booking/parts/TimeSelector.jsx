@@ -35,6 +35,26 @@ function ClockIcon() {
   );
 }
 
+/**
+ * يضمن أن اسم مفتاح الترجمة
+ * لن يظهر للمستخدم إذا كان المفتاح ناقصًا.
+ */
+function translate(t, key, fallback) {
+  if (typeof t !== "function") {
+    return fallback;
+  }
+
+  const translated = t(key, {
+    defaultValue: fallback,
+  });
+
+  if (!translated || translated === key) {
+    return fallback;
+  }
+
+  return translated;
+}
+
 export default function TimeSelector({
   selectedDate,
   selectedTime,
@@ -43,7 +63,9 @@ export default function TimeSelector({
   workingHours,
   t,
 }) {
-  if (!selectedDate) return null;
+  if (!selectedDate) {
+    return null;
+  }
 
   const [year, month, day] = selectedDate.split("-");
 
@@ -55,29 +77,17 @@ export default function TimeSelector({
 
   const hours = workingHours?.[weekday];
 
-  if (!hours) {
-    return (
-      <div
-        className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-4 text-right"
-        role="status"
-      >
-        <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-red-500 shadow-sm">
-          <ClockIcon />
-        </div>
-
-        <div>
-          <p className="text-sm font-bold text-red-700">{t("closed_day")}</p>
-
-          <p className="mt-1 text-xs leading-5 text-red-600">
-            {t("choose_another_day") ||
-              "اختر يومًا آخر لمشاهدة الساعات المتاحة."}
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  if (availableTimes.length === 0) {
+  /**
+   * لا نفرّق أمام المستخدم بين:
+   *
+   * - يوم مغلق حسب ساعات العمل.
+   * - يوم أُغلق يدويًا.
+   * - يوم انتهت كل مواعيده.
+   *
+   * الرسالة الأوضح دائمًا:
+   * لا توجد مواعيد، اختر يومًا آخر.
+   */
+  if (!hours || availableTimes.length === 0) {
     return (
       <div
         className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-right"
@@ -89,11 +99,15 @@ export default function TimeSelector({
 
         <div>
           <p className="text-sm font-bold text-amber-900">
-            {t("no_available_times") || "لا توجد ساعات متاحة في هذا اليوم"}
+            {translate(t, "no_hours", "لا توجد مواعيد متاحة في هذا اليوم.")}
           </p>
 
           <p className="mt-1 text-xs leading-5 text-amber-800">
-            {t("choose_another_day") || "اختر يومًا آخر لمشاهدة مواعيد إضافية."}
+            {translate(
+              t,
+              "choose_another_day",
+              "اختر يومًا آخر لمشاهدة المواعيد المتاحة.",
+            )}
           </p>
         </div>
       </div>
@@ -104,7 +118,7 @@ export default function TimeSelector({
     <div
       className="grid grid-cols-3 gap-2.5 sm:grid-cols-4"
       role="radiogroup"
-      aria-label={t("choose_time") || "اختر الساعة"}
+      aria-label={translate(t, "choose_time", "اختر الساعة")}
     >
       {availableTimes.map((time) => {
         const isSelected = selectedTime === time;
@@ -123,6 +137,7 @@ export default function TimeSelector({
               "outline-none",
               "transition-colors duration-150",
               "focus-visible:ring-4 focus-visible:ring-gold/25",
+
               isSelected
                 ? "border-[#b98a21] bg-gradient-to-br from-[#e6bd57] to-[#f3d77f] text-[#172033] shadow-[0_6px_14px_rgba(185,138,33,0.22)]"
                 : "border-slate-300 bg-white text-slate-800 hover:border-[#c9a64d] hover:bg-[#fffaf0]",
