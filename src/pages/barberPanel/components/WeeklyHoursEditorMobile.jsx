@@ -349,7 +349,7 @@ export default function WeeklyHoursEditorMobile({
       </div>
 
       {/* أيام الأسبوع */}
-      <div className="space-y-2 pb-60">
+      <div className="space-y-2 pb-2">
         {DAYS.map((day) => (
           <WeeklyDayCard
             key={day.key}

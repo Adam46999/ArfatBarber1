@@ -1,65 +1,164 @@
 // src/pages/barberPanel/components/RecentBookingsCard.jsx
+
 import { e164ToLocalPretty } from "../../../utils/phone";
 
-export default function RecentBookingsCard({ recentBookings }) {
-  if (!recentBookings?.length) return null;
+function formatDateLabel(dateYMD) {
+  if (!dateYMD) {
+    return "—";
+  }
+
+  const date = new Date(`${dateYMD}T00:00:00`);
+
+  if (Number.isNaN(date.getTime())) {
+    return dateYMD;
+  }
+
+  return new Intl.DateTimeFormat("ar", {
+    weekday: "short",
+    day: "numeric",
+    month: "numeric",
+  }).format(date);
+}
+
+function getCreatedAtLabel(booking) {
+  let createdDate = null;
+
+  const createdAtMs = Number(booking?.createdAtMs);
+
+  if (Number.isFinite(createdAtMs) && createdAtMs > 0) {
+    createdDate = new Date(createdAtMs);
+  } else if (
+    booking?.createdAt &&
+    typeof booking.createdAt.toDate === "function"
+  ) {
+    createdDate = booking.createdAt.toDate();
+  } else if (booking?.createdAt instanceof Date) {
+    createdDate = booking.createdAt;
+  }
+
+  if (!createdDate || Number.isNaN(createdDate.getTime())) {
+    return null;
+  }
+
+  return new Intl.DateTimeFormat("ar", {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(createdDate);
+}
+
+export default function RecentBookingsCard({ recentBookings = [] }) {
+  if (!recentBookings.length) {
+    return null;
+  }
 
   return (
-    <div className="max-w-3xl mx-auto mt-6 text-xs sm:text-sm">
-      <div className="bg-white rounded-2xl shadow-md border border-slate-200 p-4 sm:p-5 text-slate-900">
-        <div className="flex items-center justify-between gap-2 mb-3">
-          <div className="flex items-center gap-2">
-            <span className="text-lg">📅</span>
-            <div className="flex flex-col">
-              <h2 className="font-semibold text-slate-900">
-                أحدث الحجوزات (رقم موحّد)
+    <section className="mx-auto mt-4 max-w-3xl text-xs sm:mt-5 sm:text-sm">
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        {/* Header */}
+        <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-3.5 sm:px-5">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-lg">
+              📅
+            </div>
+
+            <div className="min-w-0">
+              <h2 className="text-sm font-black text-slate-900 sm:text-base">
+                أحدث الحجوزات
               </h2>
-              <span className="text-[11px] text-slate-500">
-                آخر {recentBookings.length} حجوزات فعّالة
-              </span>
+
+              <p className="mt-0.5 text-[10px] font-semibold text-slate-500 sm:text-[11px]">
+                آخر {recentBookings.length} زبائن قاموا بالحجز
+              </p>
             </div>
           </div>
+
+          <span className="shrink-0 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[10px] font-black text-slate-600">
+            آخر {recentBookings.length}
+          </span>
         </div>
 
-        <div className="mt-2 border-t border-slate-100 divide-y divide-slate-100">
-          {recentBookings.map((b, idx) => (
-            <div
-              key={b.id}
-              className="py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 hover:bg-slate-50 rounded-xl px-2"
-            >
-              <div className="flex items-start gap-3">
-                <div className="mt-1">
-                  <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-slate-100 text-[11px] text-slate-500">
-                    {idx + 1}
-                  </span>
-                </div>
+        {/* Bookings */}
+        <div className="divide-y divide-slate-100">
+          {recentBookings.map((booking, index) => {
+            const isLatest = index === 0;
 
-                <div className="flex flex-col">
-                  <span className="font-semibold text-slate-900 text-sm sm:text-base">
-                    {b.fullName || "بدون اسم"}
-                  </span>
+            const createdAtLabel = getCreatedAtLabel(booking);
 
-                  <div className="mt-1 inline-flex flex-wrap items-center gap-2 text-[11px]">
-                    <span className="inline-flex items-center rounded-full bg-amber-50 px-3 py-0.5 border border-amber-200 text-amber-800">
-                      {b.selectedDate || "—"}
-                    </span>
-                    <span className="inline-flex items-center rounded-full bg-sky-50 px-3 py-0.5 border border-sky-200 text-sky-700">
-                      {b.selectedTime || "—"}
-                    </span>
+            return (
+              <div
+                key={booking.id}
+                className={[
+                  "relative px-4 py-3 transition sm:px-5",
+                  isLatest
+                    ? "bg-emerald-50/35"
+                    : "bg-white hover:bg-slate-50/70",
+                ].join(" ")}
+              >
+                {/* علامة أحدث حجز */}
+                {isLatest && (
+                  <div className="absolute bottom-0 right-0 top-0 w-1 bg-emerald-500" />
+                )}
+
+                <div className="flex items-start justify-between gap-3">
+                  {/* معلومات الزبون */}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="truncate text-sm font-black text-slate-900 sm:text-base">
+                        {booking.fullName || "بدون اسم"}
+                      </span>
+
+                      {isLatest && (
+                        <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[9px] font-black text-emerald-700 sm:text-[10px]">
+                          آخر حجز
+                        </span>
+                      )}
+                    </div>
+
+                    {/* موعد الزبون */}
+                    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                      <span className="inline-flex items-center rounded-lg border border-sky-200 bg-sky-50 px-2.5 py-1 font-black text-sky-700">
+                        🕒 {booking.selectedTime || "—"}
+                      </span>
+
+                      <span className="inline-flex items-center rounded-lg border border-slate-200 bg-white px-2.5 py-1 font-bold text-slate-600">
+                        {formatDateLabel(booking.selectedDate)}
+                      </span>
+                    </div>
+
+                    {/* الخدمة */}
+                    {booking.selectedService && (
+                      <div className="mt-2 text-[11px] font-semibold text-slate-500">
+                        {booking.selectedService}
+                      </div>
+                    )}
+
+                    {/* متى قام الزبون بالحجز */}
+                    {createdAtLabel && (
+                      <div className="mt-1.5 text-[10px] font-semibold text-slate-400">
+                        تم الحجز الساعة {createdAtLabel}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* رقم الزبون */}
+                  <div className="shrink-0 text-left">
+                    <div className="text-[9px] font-bold text-slate-400 sm:text-[10px]">
+                      رقم الزبون
+                    </div>
+
+                    <div
+                      dir="ltr"
+                      className="mt-1 font-mono text-xs font-black text-slate-800 sm:text-sm"
+                    >
+                      {e164ToLocalPretty(booking.phoneNumber) || "—"}
+                    </div>
                   </div>
                 </div>
               </div>
-
-              <div className="flex items-center gap-2 sm:justify-end sm:min-w-[150px] text-[11px] sm:text-xs">
-                <span className="text-slate-500">الرقم الموحّد:</span>
-                <span className="font-mono text-sm text-slate-900">
-                  {e164ToLocalPretty(b.phoneNumber)}
-                </span>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
-    </div>
+    </section>
   );
 }
