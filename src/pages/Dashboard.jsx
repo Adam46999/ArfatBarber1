@@ -1,23 +1,60 @@
-import { useEffect, useMemo, useState } from "react";
+// src/pages/Dashboard.jsx
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  arrayRemove,
   collection,
   deleteDoc,
   doc,
   onSnapshot,
-  updateDoc,
+  setDoc,
+  writeBatch,
 } from "firebase/firestore";
+import {
+  FaChevronDown,
+  FaChevronUp,
+  FaClock,
+  FaHistory,
+  FaPhone,
+  FaRedoAlt,
+  FaTimes,
+  FaUndo,
+} from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
-import { db } from "../firebase";
 
-const AR_DAYS = [
-  "الأحد",
-  "الاثنين",
-  "الثلاثاء",
-  "الأربعاء",
-  "الخميس",
-  "الجمعة",
-  "السبت",
+import { db } from "../firebase";
+import barberDefaultWeeklyHours from "../constants/barberDefaultWeeklyHours";
+
+import {
+  AUTO_ARCHIVE_AFTER_MS,
+  COMPLETED_STATS_COLLECTION,
+  archiveExpiredBooking,
+  getBookingStartDate,
+  isBookingCancelled,
+  syncPassedBookingsForCompletedStats,
+} from "../services/completedStats";
+
+const WEEKDAY_KEYS = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+];
+
+const MONTH_NAMES = [
+  "كانون الثاني",
+  "شباط",
+  "آذار",
+  "نيسان",
+  "أيار",
+  "حزيران",
+  "تموز",
+  "آب",
+  "أيلول",
+  "تشرين الأول",
+  "تشرين الثاني",
+  "كانون الأول",
 ];
 
 function pad(value) {
@@ -25,120 +62,27 @@ function pad(value) {
 }
 
 function ymd(date) {
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
-    date.getDate(),
-  )}`;
+  return `${date.getFullYear()}-${pad(
+    date.getMonth() + 1,
+  )}-${pad(date.getDate())}`;
+}
+
+function monthKey(date) {
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}`;
 }
 
 function parseYmd(value) {
-  if (!value || typeof value !== "string") return null;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value || ""))) {
+    return null;
+  }
 
   const [year, month, day] = value.split("-").map(Number);
 
-  if (!year || !month || !day) return null;
-
   const date = new Date(year, month - 1, day);
+
   date.setHours(0, 0, 0, 0);
 
-  return date;
-}
-
-function bookingDateTime(booking) {
-  const date = parseYmd(booking?.selectedDate);
-
-  if (!date) return null;
-
-  const [hours, minutes] = String(booking?.selectedTime || "00:00")
-    .split(":")
-    .map(Number);
-
-  date.setHours(hours || 0, minutes || 0, 0, 0);
-
-  return date;
-}
-
-function startOfDay(date) {
-  const result = new Date(date);
-  result.setHours(0, 0, 0, 0);
-  return result;
-}
-
-function endOfDay(date) {
-  const result = new Date(date);
-  result.setHours(23, 59, 59, 999);
-  return result;
-}
-
-function startOfWeek(date) {
-  const result = startOfDay(date);
-  result.setDate(result.getDate() - result.getDay());
-  return result;
-}
-
-function endOfWeek(date) {
-  const result = startOfWeek(date);
-  result.setDate(result.getDate() + 6);
-  result.setHours(23, 59, 59, 999);
-  return result;
-}
-
-function startOfMonth(date) {
-  return new Date(date.getFullYear(), date.getMonth(), 1, 0, 0, 0, 0);
-}
-
-function endOfMonth(date) {
-  return new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59, 999);
-}
-
-function addMonths(date, amount) {
-  return new Date(date.getFullYear(), date.getMonth() + amount, 1, 0, 0, 0, 0);
-}
-
-function previousMonthSameMoment(now) {
-  const previousMonth = new Date(
-    now.getFullYear(),
-    now.getMonth() - 1,
-    1,
-    now.getHours(),
-    now.getMinutes(),
-    now.getSeconds(),
-    now.getMilliseconds(),
-  );
-
-  const lastDay = new Date(
-    previousMonth.getFullYear(),
-    previousMonth.getMonth() + 1,
-    0,
-  ).getDate();
-
-  previousMonth.setDate(Math.min(now.getDate(), lastDay));
-
-  return previousMonth;
-}
-
-function inRange(date, from, to) {
-  return Boolean(date && date >= from && date <= to);
-}
-
-function isCancelled(booking) {
-  return Boolean(
-    booking?.cancelledAt ||
-    booking?.canceledAt ||
-    booking?.cancelled === true ||
-    booking?.isCancelled === true ||
-    booking?.status === "cancelled" ||
-    booking?.status === "canceled",
-  );
-}
-
-function getCustomerName(booking) {
-  return (
-    booking?.customerName ||
-    booking?.userName ||
-    booking?.name ||
-    booking?.fullName ||
-    "زبون"
-  );
+  return Number.isNaN(date.getTime()) ? null : date;
 }
 
 function formatDate(value, options = {}) {
@@ -150,23 +94,12 @@ function formatDate(value, options = {}) {
     weekday: "long",
     day: "numeric",
     month: "long",
+    year: "numeric",
     ...options,
   });
 }
 
-function formatShortDate(value) {
-  const date = parseYmd(value);
-
-  if (!date) return value || "";
-
-  return date.toLocaleDateString("ar-EG", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
-}
-
-function formatMonth(date) {
+function formatMonthTitle(date) {
   return date.toLocaleDateString("ar-EG", {
     month: "long",
     year: "numeric",
@@ -174,19 +107,38 @@ function formatMonth(date) {
 }
 
 function relativeDateLabel(value, todayValue) {
+  if (value === todayValue) {
+    return "اليوم";
+  }
+
   const date = parseYmd(value);
   const today = parseYmd(todayValue);
 
-  if (!date || !today) return formatDate(value);
-
-  if (ymd(date) === ymd(today)) return "اليوم";
+  if (!date || !today) {
+    return formatDate(value);
+  }
 
   const tomorrow = new Date(today);
+
   tomorrow.setDate(tomorrow.getDate() + 1);
 
-  if (ymd(date) === ymd(tomorrow)) return "غدًا";
+  if (ymd(tomorrow) === value) {
+    return "بكرا";
+  }
 
-  return formatDate(value);
+  return formatDate(value, {
+    year: undefined,
+  });
+}
+
+function getCustomerName(booking) {
+  return (
+    booking?.fullName ||
+    booking?.customerName ||
+    booking?.userName ||
+    booking?.name ||
+    "زبون"
+  );
 }
 
 function remainingTime(milliseconds) {
@@ -196,104 +148,71 @@ function remainingTime(milliseconds) {
 
   const totalMinutes = Math.ceil(milliseconds / 60000);
 
-  if (totalMinutes < 60) {
-    return `بعد ${totalMinutes} دقيقة`;
-  }
+  const days = Math.floor(totalMinutes / 1440);
 
-  const hours = Math.floor(totalMinutes / 60);
+  const hours = Math.floor((totalMinutes % 1440) / 60);
+
   const minutes = totalMinutes % 60;
 
-  if (minutes === 0) {
-    return `بعد ${hours} ساعة`;
+  if (days > 0) {
+    const dayText = days === 1 ? "يوم" : days === 2 ? "يومين" : `${days} أيام`;
+
+    if (hours === 0) {
+      return `بعد ${dayText}`;
+    }
+
+    const hourText =
+      hours === 1 ? "ساعة" : hours === 2 ? "ساعتين" : `${hours} ساعات`;
+
+    return `بعد ${dayText} و${hourText}`;
   }
 
-  return `بعد ${hours} ساعة و${minutes} دقيقة`;
-}
+  if (hours > 0) {
+    const hourText =
+      hours === 1 ? "ساعة" : hours === 2 ? "ساعتين" : `${hours} ساعات`;
 
-function comparison(current, previous) {
-  const difference = current - previous;
+    if (minutes === 0) {
+      return `بعد ${hourText}`;
+    }
 
-  if (previous === 0) {
-    return {
-      difference,
-      percentage: current === 0 ? 0 : 100,
-    };
+    return `بعد ${hourText} و${minutes} دقيقة`;
   }
 
-  return {
-    difference,
-    percentage: Math.round((difference / previous) * 100),
-  };
+  return `بعد ${minutes} دقيقة`;
 }
 
-function sortBookings(items) {
-  return [...items].sort((first, second) => {
-    const firstDate = bookingDateTime(first);
-    const secondDate = bookingDateTime(second);
+function getOriginalHours(weeklyHours, dateValue) {
+  const date = parseYmd(dateValue);
 
-    return (firstDate?.getTime() || 0) - (secondDate?.getTime() || 0);
-  });
-}
-
-function buildPeriodStats(bookings, from, to, now) {
-  const periodBookings = bookings.filter((booking) => {
-    return inRange(bookingDateTime(booking), from, to);
-  });
-
-  const passed = periodBookings.filter((booking) => {
-    const date = bookingDateTime(booking);
-    return date && date <= now;
-  });
-
-  const upcoming = periodBookings.filter((booking) => {
-    const date = bookingDateTime(booking);
-    return date && date > now;
-  });
-
-  return {
-    total: periodBookings.length,
-    passed: passed.length,
-    upcoming: upcoming.length,
-    bookings: periodBookings,
-  };
-}
-
-function getBusiestDays(bookings) {
-  const counts = bookings.reduce((result, booking) => {
-    if (!booking.selectedDate) return result;
-
-    result[booking.selectedDate] = (result[booking.selectedDate] || 0) + 1;
-
-    return result;
-  }, {});
-
-  const entries = Object.entries(counts);
-
-  if (entries.length === 0) {
-    return {
-      count: 0,
-      days: [],
-    };
+  if (!date) {
+    return "غير معروف";
   }
 
-  const highestCount = Math.max(...entries.map(([, count]) => count));
+  const weekdayKey = WEEKDAY_KEYS[date.getDay()];
 
-  return {
-    count: highestCount,
-    days: entries
-      .filter(([, count]) => count === highestCount)
-      .map(([date]) => ({
-        date,
-        label: AR_DAYS[parseYmd(date)?.getDay() || 0],
-      })),
-  };
+  const hours = weeklyHours?.[weekdayKey] ?? null;
+
+  if (!hours?.from || !hours?.to) {
+    return "مغلق بالجدول الأسبوعي";
+  }
+
+  return `${hours.from} – ${hours.to}`;
+}
+
+function timeDate(dateValue, time) {
+  const parsed = new Date(`${dateValue}T${time}:00`);
+
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
 function normalizeBlockedDays(snapshot) {
-  return snapshot.docs.map((snapshotDocument) => ({
-    id: snapshotDocument.id,
-    ...snapshotDocument.data(),
-  }));
+  const result = {};
+
+  snapshot.docs.forEach((snapshotDocument) => {
+    result[snapshotDocument.id] = snapshotDocument.data() || {};
+  });
+
+  return result;
 }
 
 function normalizeBlockedTimes(snapshot) {
@@ -302,1063 +221,1553 @@ function normalizeBlockedTimes(snapshot) {
   snapshot.docs.forEach((snapshotDocument) => {
     const data = snapshotDocument.data() || {};
 
-    result[snapshotDocument.id] = Array.isArray(data.times) ? data.times : [];
+    result[snapshotDocument.id] = Array.isArray(data.times)
+      ? [...new Set(data.times)].sort()
+      : [];
   });
 
   return result;
 }
 
-function mergeConsecutiveTimes(times) {
-  const sortedTimes = [...new Set(times)].sort();
+function buildClosures({ blockedDays, blockedTimes, currentTime }) {
+  const todayValue = ymd(currentTime);
 
-  if (sortedTimes.length === 0) return [];
+  const currentMonthStart = `${monthKey(currentTime)}-01`;
 
-  const toMinutes = (time) => {
-    const [hours, minutes] = String(time).split(":").map(Number);
-    return (hours || 0) * 60 + (minutes || 0);
+  const dates = new Set([
+    ...Object.keys(blockedDays),
+    ...Object.keys(blockedTimes),
+  ]);
+
+  const upcoming = [];
+  const past = [];
+
+  [...dates]
+    .filter((date) => /^\d{4}-\d{2}-\d{2}$/.test(date))
+    .sort()
+    .forEach((date) => {
+      /*
+       * لا نعرض ولا نحتفظ بصريًا
+       * بإغلاقات أقدم من الشهر الحالي.
+       */
+      if (date < currentMonthStart) {
+        return;
+      }
+
+      const fullDay = Boolean(blockedDays[date]);
+
+      const allTimes = blockedTimes[date] || [];
+
+      const futureTimes = [];
+      const pastTimes = [];
+
+      allTimes.forEach((time) => {
+        const parsed = timeDate(date, time);
+
+        if (!parsed) return;
+
+        if (parsed.getTime() >= currentTime.getTime()) {
+          futureTimes.push(time);
+        } else {
+          pastTimes.push(time);
+        }
+      });
+
+      /*
+       * تاريخ مستقبلي:
+       * كل الإغلاق يعتبر قادمًا.
+       */
+      if (date > todayValue) {
+        upcoming.push({
+          date,
+          fullDay,
+          times: allTimes,
+        });
+
+        return;
+      }
+
+      /*
+       * تاريخ سابق من الشهر الحالي:
+       * يظهر داخل الإغلاقات السابقة.
+       */
+      if (date < todayValue) {
+        past.push({
+          date,
+          fullDay,
+          times: allTimes,
+        });
+
+        return;
+      }
+
+      /*
+       * اليوم:
+       *
+       * - اليوم الكامل يعتبر إغلاقًا حاليًا.
+       * - الساعات القادمة تظهر بالحالي.
+       * - الساعات التي مرّت تظهر بالسابق.
+       */
+      if (fullDay || futureTimes.length > 0) {
+        upcoming.push({
+          date,
+          fullDay,
+          times: futureTimes,
+        });
+      }
+
+      if (pastTimes.length > 0) {
+        past.push({
+          date,
+          fullDay: false,
+          times: pastTimes,
+        });
+      }
+    });
+
+  return {
+    upcoming,
+    past,
   };
+}
 
-  const groups = [];
-  let currentGroup = [sortedTimes[0]];
+function MonthComparison({ currentMonth, previousMonth, current, previous }) {
+  const difference = current - previous;
 
-  for (let index = 1; index < sortedTimes.length; index += 1) {
-    const previous = sortedTimes[index - 1];
-    const current = sortedTimes[index];
+  let differenceText = "نفس العدد";
 
-    if (toMinutes(current) - toMinutes(previous) === 30) {
-      currentGroup.push(current);
-    } else {
-      groups.push(currentGroup);
-      currentGroup = [current];
-    }
+  let differenceClass = "bg-slate-100 text-slate-700";
+
+  if (difference > 0) {
+    differenceText = `أكثر بـ ${difference}`;
+
+    differenceClass = "bg-emerald-100 text-emerald-800";
+  } else if (difference < 0) {
+    differenceText = `أقل بـ ${Math.abs(difference)}`;
+
+    differenceClass = "bg-red-100 text-red-800";
   }
 
-  groups.push(currentGroup);
-
-  return groups.map((group) => ({
-    start: group[0],
-    end: group[group.length - 1],
-    times: group,
-    label:
-      group.length === 1
-        ? group[0]
-        : `${group[0]} – ${group[group.length - 1]}`,
-  }));
-}
-
-function SectionTitle({ eyebrow, title, description }) {
   return (
-    <div className="mb-4">
-      <p className="text-xs font-black text-amber-600">{eyebrow}</p>
-
-      <h2 className="mt-1 text-xl font-black text-slate-950 sm:text-2xl">
-        {title}
-      </h2>
-
-      {description ? (
-        <p className="mt-1 text-sm leading-6 text-slate-500">{description}</p>
-      ) : null}
-    </div>
-  );
-}
-
-function PassedAndRemaining({ passed, remaining }) {
-  return (
-    <div className="grid grid-cols-2 gap-2">
-      <div className="rounded-xl bg-slate-50 px-2 py-2 text-center">
-        <p className="text-[10px] font-bold text-slate-400">مرّ</p>
-        <p className="mt-0.5 text-sm font-black text-slate-800">{passed}</p>
-      </div>
-
-      <div className="rounded-xl bg-slate-50 px-2 py-2 text-center">
-        <p className="text-[10px] font-bold text-slate-400">باقي</p>
-        <p className="mt-0.5 text-sm font-black text-slate-800">{remaining}</p>
-      </div>
-    </div>
-  );
-}
-
-function StatCard({ title, value, suffix, badge, accent = "blue", children }) {
-  const accents = {
-    emerald: {
-      border: "border-emerald-100",
-      badge: "bg-emerald-50 text-emerald-700",
-      value: "text-emerald-700",
-    },
-    blue: {
-      border: "border-blue-100",
-      badge: "bg-blue-50 text-blue-700",
-      value: "text-blue-700",
-    },
-    amber: {
-      border: "border-amber-100",
-      badge: "bg-amber-50 text-amber-700",
-      value: "text-amber-700",
-    },
-    violet: {
-      border: "border-violet-100",
-      badge: "bg-violet-50 text-violet-700",
-      value: "text-violet-700",
-    },
-  };
-
-  const currentAccent = accents[accent] || accents.blue;
-
-  return (
-    <article
-      className={`min-w-0 rounded-3xl border bg-white p-4 shadow-sm sm:p-5 ${currentAccent.border}`}
+    <section
+      className="
+        rounded-3xl
+        border border-slate-200
+        bg-white
+        p-5 shadow-sm
+        sm:p-6
+      "
     >
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="truncate text-xs font-black text-slate-500 sm:text-sm">
-            {title}
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-xs font-black text-amber-600">مقارنة الأشهر</p>
+
+          <h2 className="mt-1 text-xl font-black text-slate-950">
+            الشهر الحالي والشهر الماضي
+          </h2>
+
+          <p
+            className="
+              mt-1
+              text-xs font-bold
+              leading-5 text-slate-400
+            "
+          >
+            العدد يشمل فقط الأدوار التي بدأ وقتها ولم تُلغَ.
           </p>
-
-          <div className="mt-2 flex items-end gap-1.5">
-            <span
-              className={`text-3xl font-black leading-none sm:text-4xl ${currentAccent.value}`}
-            >
-              {value}
-            </span>
-
-            <span className="pb-0.5 text-xs font-bold text-slate-400">
-              {suffix}
-            </span>
-          </div>
         </div>
 
         <span
-          className={`shrink-0 rounded-xl px-2 py-1 text-[10px] font-black ${currentAccent.badge}`}
+          className={`
+            shrink-0
+            rounded-full
+            px-3 py-1.5
+            text-xs font-black
+            ${differenceClass}
+          `}
         >
-          {badge}
+          {differenceText}
         </span>
-      </div>
-
-      <div className="mt-4">{children}</div>
-    </article>
-  );
-}
-
-function SmallInfoRow({ label, value }) {
-  return (
-    <div className="flex items-start justify-between gap-2 text-xs">
-      <span className="shrink-0 font-bold text-slate-400">{label}</span>
-      <span className="text-left font-black text-slate-700">{value}</span>
-    </div>
-  );
-}
-
-function ComparisonText({ current, previous, result }) {
-  const positive = result.difference > 0;
-  const negative = result.difference < 0;
-
-  let text = "نفس العدد";
-  let color = "text-slate-600";
-
-  if (positive) {
-    text = `أعلى بـ ${result.difference} (${result.percentage}%)`;
-    color = "text-emerald-700";
-  }
-
-  if (negative) {
-    text = `أقل بـ ${Math.abs(result.difference)} (${Math.abs(
-      result.percentage,
-    )}%)`;
-
-    color = "text-red-700";
-  }
-
-  return (
-    <div>
-      <p className={`text-xs font-black leading-5 ${color}`}>{text}</p>
-
-      <p className="mt-0.5 text-[10px] font-bold text-slate-400">
-        الحالي: {current} • السابق: {previous}
-      </p>
-    </div>
-  );
-}
-
-function PerformanceCard({
-  title,
-  subtitle,
-  total,
-  passed,
-  remaining,
-  children,
-}) {
-  return (
-    <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h3 className="text-lg font-black text-slate-950">{title}</h3>
-
-          <p className="mt-1 text-xs font-bold text-slate-400">{subtitle}</p>
-        </div>
-
-        <div className="shrink-0 rounded-2xl bg-slate-950 px-4 py-3 text-center text-white">
-          <p className="text-[10px] font-bold text-slate-400">المجموع</p>
-
-          <p className="mt-0.5 text-2xl font-black">{total}</p>
-        </div>
       </div>
 
       <div className="mt-5 grid grid-cols-2 gap-3">
-        <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
-          <p className="text-xs font-bold text-emerald-600">مرّ</p>
+        <div
+          className="
+            rounded-2xl
+            border border-amber-200
+            bg-amber-50
+            p-4
+          "
+        >
+          <p className="text-xs font-black text-amber-700">{currentMonth}</p>
 
-          <p className="mt-1 text-2xl font-black text-emerald-800">{passed}</p>
+          <p className="mt-2 text-4xl font-black text-slate-950">{current}</p>
+
+          <p className="mt-1 text-[11px] font-black text-amber-700">
+            لحد اليوم
+          </p>
         </div>
 
-        <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4">
-          <p className="text-xs font-bold text-blue-600">باقي</p>
+        <div
+          className="
+            rounded-2xl
+            border border-slate-200
+            bg-slate-50
+            p-4
+          "
+        >
+          <p className="text-xs font-black text-slate-500">{previousMonth}</p>
 
-          <p className="mt-1 text-2xl font-black text-blue-800">{remaining}</p>
+          <p className="mt-2 text-4xl font-black text-slate-800">{previous}</p>
+
+          <p className="mt-1 text-[11px] font-bold text-slate-400">
+            الشهر كامل
+          </p>
         </div>
       </div>
+    </section>
+  );
+}
 
-      {children}
+function NextBookingCard({ booking, currentTime }) {
+  const bookingTime = booking ? getBookingStartDate(booking) : null;
+
+  return (
+    <section
+      className="
+        overflow-hidden
+        rounded-3xl
+        bg-slate-950
+        text-white
+        shadow-xl
+      "
+    >
+      <div className="relative p-5 sm:p-7">
+        <div
+          className="
+            pointer-events-none
+            absolute
+            -left-16 -top-20
+            h-52 w-52
+            rounded-full
+            bg-amber-400/10
+            blur-3xl
+          "
+          aria-hidden="true"
+        />
+
+        <div className="relative">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-black text-amber-400">الدور الجاي</p>
+
+              <h2 className="mt-1 text-2xl font-black sm:text-3xl">
+                {booking ? getCustomerName(booking) : "ما في أدوار جاية"}
+              </h2>
+            </div>
+
+            {booking ? (
+              <a
+                href={`tel:${booking.phoneNumber || ""}`}
+                className="
+                  inline-flex
+                  h-12 w-12
+                  shrink-0
+                  items-center justify-center
+                  rounded-2xl
+                  bg-emerald-500
+                  text-lg text-white
+                  shadow-lg
+                  active:scale-95
+                "
+                aria-label={`اتصال بـ ${getCustomerName(booking)}`}
+                title="اتصال"
+              >
+                <FaPhone />
+              </a>
+            ) : null}
+          </div>
+
+          {booking ? (
+            <>
+              <div className="mt-6 grid grid-cols-2 gap-3">
+                <div className="rounded-2xl bg-white/10 p-4">
+                  <p className="text-[11px] font-bold text-slate-300">الموعد</p>
+
+                  <p className="mt-1 text-xl font-black">
+                    {booking.selectedTime}
+                  </p>
+                </div>
+
+                <div className="rounded-2xl bg-white/10 p-4">
+                  <p className="text-[11px] font-bold text-slate-300">
+                    التاريخ
+                  </p>
+
+                  <p className="mt-1 truncate text-sm font-black">
+                    {relativeDateLabel(booking.selectedDate, ymd(currentTime))}
+                  </p>
+                </div>
+              </div>
+
+              <div
+                className="
+                  mt-3
+                  flex items-center gap-3
+                  rounded-2xl
+                  border border-amber-400/20
+                  bg-amber-400/10
+                  px-4 py-3
+                "
+              >
+                <FaClock className="shrink-0 text-amber-400" />
+
+                <p className="text-sm font-black text-amber-100">
+                  {remainingTime(
+                    (bookingTime?.getTime() || 0) - currentTime.getTime(),
+                  )}
+                </p>
+              </div>
+            </>
+          ) : (
+            <p
+              className="
+                mt-5
+                rounded-2xl
+                bg-white/10
+                px-4 py-4
+                text-sm font-bold
+                text-slate-300
+              "
+            >
+              أول حجز جديد رح يظهر هون مباشرة.
+            </p>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ClosureCard({
+  closure,
+  todayValue,
+  weeklyHours,
+  actionLoading,
+  onRestoreDay,
+  onRestoreTime,
+  onRestoreAllTimes,
+  readOnly = false,
+}) {
+  const dayLoading = actionLoading === `day-${closure.date}`;
+
+  const allTimesLoading = actionLoading === `all-times-${closure.date}`;
+
+  return (
+    <article
+      className="
+        rounded-2xl
+        border border-slate-200
+        bg-white
+        p-4 shadow-sm
+        sm:p-5
+      "
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-start gap-3">
+          <div
+            className="
+              flex h-11 w-11
+              shrink-0
+              items-center justify-center
+              rounded-2xl
+              bg-red-50
+              text-lg font-black
+              text-red-700
+            "
+          >
+            {parseYmd(closure.date)?.getDate() || "–"}
+          </div>
+
+          <div className="min-w-0">
+            <p className="font-black text-slate-950">
+              {relativeDateLabel(closure.date, todayValue)}
+            </p>
+
+            <p className="mt-0.5 text-xs font-bold text-slate-400">
+              {formatDate(closure.date)}
+            </p>
+          </div>
+        </div>
+
+        {readOnly ? (
+          <span
+            className="
+              shrink-0
+              rounded-full
+              bg-slate-100
+              px-3 py-1
+              text-[10px] font-black
+              text-slate-500
+            "
+          >
+            انتهى
+          </span>
+        ) : null}
+      </div>
+
+      {closure.fullDay ? (
+        <div
+          className="
+            mt-4
+            rounded-2xl
+            border border-red-200
+            bg-red-50
+            p-4
+          "
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="font-black text-red-800">اليوم مسكّر بالكامل</p>
+
+              <p className="mt-1 text-xs font-bold text-red-600">
+                ساعات الدوام الأصلية:{" "}
+                {getOriginalHours(weeklyHours, closure.date)}
+              </p>
+            </div>
+
+            {!readOnly ? (
+              <button
+                type="button"
+                disabled={dayLoading}
+                onClick={() => onRestoreDay(closure.date)}
+                className="
+                  shrink-0
+                  rounded-xl
+                  bg-red-600
+                  px-3 py-2
+                  text-xs font-black
+                  text-white
+                  active:scale-95
+                  disabled:opacity-60
+                "
+              >
+                {dayLoading ? "جاري..." : "استعادة اليوم"}
+              </button>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+
+      {!closure.fullDay && closure.times.length > 0 ? (
+        <div className="mt-4">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-xs font-black text-slate-500">
+              الساعات المسكّرة
+            </p>
+
+            {!readOnly && closure.times.length > 1 ? (
+              <button
+                type="button"
+                disabled={allTimesLoading}
+                onClick={() => onRestoreAllTimes(closure.date, closure.times)}
+                className="
+                  rounded-xl
+                  border border-emerald-200
+                  bg-emerald-50
+                  px-3 py-1.5
+                  text-[11px] font-black
+                  text-emerald-800
+                  active:scale-95
+                  disabled:opacity-60
+                "
+              >
+                {allTimesLoading ? "جاري..." : "استعادة كل الساعات"}
+              </button>
+            ) : null}
+          </div>
+
+          <div className="mt-3 flex flex-wrap gap-2">
+            {closure.times.map((time) => {
+              const loading = actionLoading === `time-${closure.date}-${time}`;
+
+              return (
+                <div
+                  key={`${closure.date}-${time}`}
+                  className="
+                      inline-flex
+                      items-center
+                      overflow-hidden
+                      rounded-xl
+                      border border-red-200
+                      bg-red-50
+                    "
+                >
+                  <span className="px-3 py-2 text-xs font-black text-red-800">
+                    {time}
+                  </span>
+
+                  {!readOnly ? (
+                    <button
+                      type="button"
+                      disabled={loading}
+                      onClick={() => onRestoreTime(closure.date, time)}
+                      className="
+                          border-r
+                          border-red-200
+                          bg-white
+                          px-2.5 py-2
+                          text-[10px] font-black
+                          text-emerald-700
+                          active:scale-95
+                          disabled:opacity-60
+                        "
+                    >
+                      {loading ? "..." : "استعادة"}
+                    </button>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
     </article>
   );
 }
 
-function ComparisonBox({
-  title,
-  currentLabel,
-  previousLabel,
-  current,
-  previous,
-  result,
+function ClosuresSection({
+  closures,
+  pastClosures,
+  todayValue,
+  weeklyHours,
+  actionLoading,
+  onRestoreDay,
+  onRestoreTime,
+  onRestoreAllTimes,
 }) {
-  const positive = result.difference > 0;
-  const negative = result.difference < 0;
+  const [showAll, setShowAll] = useState(false);
 
-  let badge = "بدون تغيير";
-  let badgeClass = "bg-slate-100 text-slate-600";
+  const [showPast, setShowPast] = useState(false);
 
-  if (positive) {
-    badge = `+${result.difference} • +${result.percentage}%`;
-    badgeClass = "bg-emerald-100 text-emerald-700";
-  }
-
-  if (negative) {
-    badge = `${result.difference} • ${result.percentage}%`;
-    badgeClass = "bg-red-100 text-red-700";
-  }
+  const visibleClosures = showAll ? closures : closures.slice(0, 10);
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-      <div className="flex items-start justify-between gap-3">
-        <p className="text-sm font-black text-slate-900">{title}</p>
+    <section
+      className="
+        rounded-3xl
+        border border-slate-200
+        bg-slate-100/70
+        p-4
+        sm:p-5
+      "
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-xs font-black text-red-600">إدارة سريعة</p>
+
+          <h2 className="mt-1 text-xl font-black text-slate-950">
+            الأيام والساعات المسكّرة
+          </h2>
+
+          <p className="mt-1 text-xs font-bold leading-5 text-slate-500">
+            الأقرب أولًا، والاستعادة من نفس المكان بدون الرجوع لإدارة الساعات.
+          </p>
+        </div>
 
         <span
-          className={`rounded-full px-2.5 py-1 text-[10px] font-black ${badgeClass}`}
+          className="
+            shrink-0
+            rounded-full
+            bg-white
+            px-3 py-1.5
+            text-xs font-black
+            text-red-700
+            shadow-sm
+          "
         >
-          {badge}
+          {closures.length}
         </span>
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-3">
-        <div>
-          <p className="text-[10px] font-bold text-slate-400">{currentLabel}</p>
-
-          <p className="mt-1 text-xl font-black text-slate-950">{current}</p>
+      {closures.length === 0 ? (
+        <div
+          className="
+            mt-4
+            rounded-2xl
+            border border-emerald-200
+            bg-white
+            p-5 text-center
+          "
+        >
+          <p className="font-black text-emerald-800">ما في إغلاقات حاليًا</p>
         </div>
+      ) : (
+        <div className="mt-4 space-y-3">
+          {visibleClosures.map((closure) => (
+            <ClosureCard
+              key={`${closure.date}-upcoming`}
+              closure={closure}
+              todayValue={todayValue}
+              weeklyHours={weeklyHours}
+              actionLoading={actionLoading}
+              onRestoreDay={onRestoreDay}
+              onRestoreTime={onRestoreTime}
+              onRestoreAllTimes={onRestoreAllTimes}
+            />
+          ))}
 
-        <div>
-          <p className="text-[10px] font-bold text-slate-400">
-            {previousLabel}
-          </p>
+          {closures.length > 10 ? (
+            <button
+              type="button"
+              onClick={() => setShowAll((current) => !current)}
+              className="
+                inline-flex w-full
+                items-center justify-center
+                gap-2
+                rounded-2xl
+                border border-slate-200
+                bg-white
+                px-4 py-3
+                text-sm font-black
+                text-slate-700
+                active:scale-[0.99]
+              "
+            >
+              {showAll ? <FaChevronUp /> : <FaChevronDown />}
 
-          <p className="mt-1 text-xl font-black text-slate-600">{previous}</p>
+              {showAll ? "عرض أقل" : `عرض الكل (${closures.length})`}
+            </button>
+          ) : null}
         </div>
-      </div>
-    </div>
+      )}
+
+      {pastClosures.length > 0 ? (
+        <div className="mt-4 border-t border-slate-200 pt-4">
+          <button
+            type="button"
+            onClick={() => setShowPast((current) => !current)}
+            className="
+              inline-flex w-full
+              items-center justify-between
+              gap-3
+              rounded-2xl
+              bg-white
+              px-4 py-3
+              text-sm font-black
+              text-slate-700
+              shadow-sm
+            "
+          >
+            <span className="inline-flex items-center gap-2">
+              <FaHistory className="text-slate-400" />
+              إغلاقات سابقة من هذا الشهر
+            </span>
+
+            <span className="inline-flex items-center gap-2 text-xs text-slate-400">
+              {pastClosures.length}
+
+              {showPast ? <FaChevronUp /> : <FaChevronDown />}
+            </span>
+          </button>
+
+          {showPast ? (
+            <div className="mt-3 space-y-3">
+              {pastClosures.map((closure) => (
+                <ClosureCard
+                  key={`${closure.date}-past-${closure.times.join("-")}`}
+                  closure={closure}
+                  todayValue={todayValue}
+                  weeklyHours={weeklyHours}
+                  actionLoading=""
+                  readOnly
+                />
+              ))}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function MonthlyHistory({
+  monthlyStats,
+  selectedYear,
+  setSelectedYear,
+  years,
+}) {
+  const [open, setOpen] = useState(false);
+
+  const now = new Date();
+
+  const currentMonthKey = monthKey(now);
+
+  return (
+    <section
+      className="
+        overflow-hidden
+        rounded-3xl
+        border border-slate-200
+        bg-white
+        shadow-sm
+      "
+    >
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        className="
+          flex w-full
+          items-center justify-between
+          gap-4
+          px-5 py-4
+          text-right
+          sm:px-6
+        "
+      >
+        <span>
+          <span className="block text-xs font-black text-violet-600">
+            المدى الطويل
+          </span>
+
+          <span className="mt-1 block text-lg font-black text-slate-950">
+            سجل الأشهر
+          </span>
+
+          <span className="mt-1 block text-xs font-bold text-slate-400">
+            افتحه فقط لما تحتاج تقارن بين أشهر وسنوات قديمة.
+          </span>
+        </span>
+
+        <span
+          className="
+            flex h-10 w-10
+            shrink-0
+            items-center justify-center
+            rounded-2xl
+            bg-slate-100
+            text-slate-600
+          "
+        >
+          {open ? <FaChevronUp /> : <FaChevronDown />}
+        </span>
+      </button>
+
+      {open ? (
+        <div
+          className="
+            border-t border-slate-100
+            px-5 pb-5 pt-4
+            sm:px-6 sm:pb-6
+          "
+        >
+          <div className="flex items-center justify-between gap-3">
+            <label
+              htmlFor="stats-year"
+              className="text-sm font-black text-slate-700"
+            >
+              السنة
+            </label>
+
+            <select
+              id="stats-year"
+              value={selectedYear}
+              onChange={(event) => setSelectedYear(Number(event.target.value))}
+              className="
+                rounded-xl
+                border border-slate-200
+                bg-slate-50
+                px-3 py-2
+                text-sm font-black
+                text-slate-800
+                outline-none
+                focus:border-amber-400
+              "
+            >
+              {years.map((year) => (
+                <option key={year} value={year}>
+                  {year}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div
+            className="
+              mt-4
+              grid grid-cols-2
+              gap-3
+              sm:grid-cols-3
+              lg:grid-cols-4
+            "
+          >
+            {MONTH_NAMES.map((name, index) => {
+              const key = `${selectedYear}-${pad(index + 1)}`;
+
+              const total = monthlyStats[key] || 0;
+
+              const isCurrent = key === currentMonthKey;
+
+              return (
+                <article
+                  key={key}
+                  className={`
+                      rounded-2xl
+                      border
+                      p-4
+                      ${
+                        isCurrent
+                          ? "border-amber-300 bg-amber-50"
+                          : total === 0
+                            ? "border-slate-100 bg-slate-50/70"
+                            : "border-slate-200 bg-white"
+                      }
+                    `}
+                >
+                  <p
+                    className={`
+                        text-xs font-black
+                        ${
+                          total === 0 && !isCurrent
+                            ? "text-slate-400"
+                            : "text-slate-700"
+                        }
+                      `}
+                  >
+                    {name}
+                  </p>
+
+                  <p
+                    className={`
+                        mt-2
+                        text-3xl font-black
+                        ${
+                          total === 0 && !isCurrent
+                            ? "text-slate-300"
+                            : "text-slate-950"
+                        }
+                      `}
+                  >
+                    {total}
+                  </p>
+
+                  <p className="mt-1 text-[10px] font-bold text-slate-400">
+                    {isCurrent ? "لحد اليوم" : "دور"}
+                  </p>
+                </article>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+    </section>
   );
 }
 
 export default function Dashboard() {
   const navigate = useNavigate();
 
-  const [bookings, setBookings] = useState([]);
-  const [blockedDays, setBlockedDays] = useState([]);
-  const [blockedTimes, setBlockedTimes] = useState({});
-  const [loading, setLoading] = useState(true);
-  const [currentTime, setCurrentTime] = useState(new Date());
-  const [actionLoading, setActionLoading] = useState("");
-  const [message, setMessage] = useState("");
+  const undoTimerRef = useRef(null);
 
+  const cleanupStartedRef = useRef(false);
+
+  const [bookings, setBookings] = useState([]);
+
+  const [monthlyStats, setMonthlyStats] = useState({});
+
+  const [blockedDays, setBlockedDays] = useState({});
+
+  const [blockedTimes, setBlockedTimes] = useState({});
+
+  const [weeklyHours, setWeeklyHours] = useState(barberDefaultWeeklyHours);
+
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  const [bookingsLoading, setBookingsLoading] = useState(true);
+
+  const [statsLoading, setStatsLoading] = useState(true);
+
+  const [actionLoading, setActionLoading] = useState("");
+
+  const [toast, setToast] = useState(null);
+
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+
+  /*
+   * تحديث الوقت كل دقيقة.
+   *
+   * هذا يحدّث:
+   * - الوقت المتبقي للدور الجاي.
+   * - انتقال الساعات من الحالية للسابقة.
+   * - احتساب الأدوار التي بدأ وقتها.
+   */
   useEffect(() => {
-    const timer = window.setInterval(() => {
-      setCurrentTime(new Date());
-    }, 60000);
+    const timer = window.setInterval(
+      () => setCurrentTime(new Date()),
+      60 * 1000,
+    );
 
     return () => window.clearInterval(timer);
   }, []);
 
+  /*
+   * الاستماع للحجوزات مباشرة.
+   */
   useEffect(() => {
-    const unsubscribe = onSnapshot(
+    return onSnapshot(
       collection(db, "bookings"),
+
       (snapshot) => {
         setBookings(
           snapshot.docs.map((snapshotDocument) => ({
             id: snapshotDocument.id,
+
             ...snapshotDocument.data(),
           })),
         );
 
-        setLoading(false);
+        setBookingsLoading(false);
       },
+
       (error) => {
         console.error("Failed to read bookings:", error);
-        setLoading(false);
+
+        setBookingsLoading(false);
       },
     );
-
-    return unsubscribe;
   }, []);
 
+  /*
+   * قراءة أعداد الأدوار الشهرية.
+   */
   useEffect(() => {
-    const unsubscribe = onSnapshot(
+    return onSnapshot(
+      collection(db, COMPLETED_STATS_COLLECTION),
+
+      (snapshot) => {
+        const result = {};
+
+        snapshot.docs.forEach((snapshotDocument) => {
+          result[snapshotDocument.id] = Math.max(
+            0,
+
+            Number(snapshotDocument.data()?.completedTotal) || 0,
+          );
+        });
+
+        setMonthlyStats(result);
+
+        setStatsLoading(false);
+      },
+
+      (error) => {
+        console.error("Failed to read completed monthly stats:", error);
+
+        setStatsLoading(false);
+      },
+    );
+  }, []);
+
+  /*
+   * قراءة الأيام المسكّرة.
+   */
+  useEffect(() => {
+    return onSnapshot(
       collection(db, "blockedDays"),
-      (snapshot) => {
-        setBlockedDays(normalizeBlockedDays(snapshot));
-      },
-      (error) => {
-        console.error("Failed to read blocked days:", error);
-      },
-    );
 
-    return unsubscribe;
+      (snapshot) => setBlockedDays(normalizeBlockedDays(snapshot)),
+
+      (error) => console.error("Failed to read blocked days:", error),
+    );
   }, []);
 
+  /*
+   * قراءة الساعات المسكّرة.
+   */
   useEffect(() => {
-    const unsubscribe = onSnapshot(
+    return onSnapshot(
       collection(db, "blockedTimes"),
-      (snapshot) => {
-        setBlockedTimes(normalizeBlockedTimes(snapshot));
-      },
-      (error) => {
-        console.error("Failed to read blocked times:", error);
-      },
-    );
 
-    return unsubscribe;
+      (snapshot) => setBlockedTimes(normalizeBlockedTimes(snapshot)),
+
+      (error) => console.error("Failed to read blocked times:", error),
+    );
   }, []);
 
+  /*
+   * قراءة ساعات الدوام الأسبوعية،
+   * حتى نعرضها عند اليوم المسكّر بالكامل.
+   */
   useEffect(() => {
-    if (!message) return undefined;
+    return onSnapshot(
+      doc(db, "barberSettings", "hours"),
 
-    const timer = window.setTimeout(() => {
-      setMessage("");
-    }, 3000);
+      (snapshot) => {
+        const savedWeekly = snapshot.data()?.weekly;
 
-    return () => window.clearTimeout(timer);
-  }, [message]);
+        setWeeklyHours(savedWeekly || barberDefaultWeeklyHours);
+      },
 
-  const statistics = useMemo(() => {
-    const now = currentTime;
-    const todayValue = ymd(now);
+      (error) => {
+        console.error("Failed to read weekly hours:", error);
 
-    const activeBookings = sortBookings(
-      bookings.filter((booking) => !isCancelled(booking)),
+        setWeeklyHours(barberDefaultWeeklyHours);
+      },
     );
+  }, []);
 
-    const todayStart = startOfDay(now);
-    const todayEnd = endOfDay(now);
+  /*
+   * فحص الأدوار:
+   *
+   * - أول ما يبدأ وقت الدور ينحسب.
+   * - إذا مرّ ساعتان تنحذف تفاصيله.
+   * - يبقى العدد الشهري فقط.
+   */
+  useEffect(() => {
+    if (bookingsLoading || bookings.length === 0) {
+      return;
+    }
 
-    const weekStart = startOfWeek(now);
-    const weekEnd = endOfWeek(now);
+    const nowMs = currentTime.getTime();
 
-    const monthStart = startOfMonth(now);
-    const monthEnd = endOfMonth(now);
+    const expired = bookings.filter((booking) => {
+      const start = getBookingStartDate(booking);
 
-    const previousMonthDate = addMonths(monthStart, -1);
-    const previousMonthStart = startOfMonth(previousMonthDate);
-    const previousMonthEnd = endOfMonth(previousMonthDate);
-
-    const previousSameMoment = previousMonthSameMoment(now);
-
-    const today = buildPeriodStats(activeBookings, todayStart, todayEnd, now);
-
-    const week = buildPeriodStats(activeBookings, weekStart, weekEnd, now);
-
-    const month = buildPeriodStats(activeBookings, monthStart, monthEnd, now);
-
-    const previousMonth = buildPeriodStats(
-      activeBookings,
-      previousMonthStart,
-      previousMonthEnd,
-      previousSameMoment,
-    );
-
-    const monthUntilNow = activeBookings.filter((booking) => {
-      const date = bookingDateTime(booking);
-
-      return date && date >= monthStart && date <= now;
+      return start && nowMs - start.getTime() > AUTO_ARCHIVE_AFTER_MS;
     });
 
-    const previousMonthUntilSameMoment = activeBookings.filter((booking) => {
-      const date = bookingDateTime(booking);
-
-      return date && date >= previousMonthStart && date <= previousSameMoment;
+    syncPassedBookingsForCompletedStats(bookings, nowMs).catch((error) => {
+      console.error("Failed to sync completed stats:", error);
     });
 
-    const futureBookings = activeBookings.filter((booking) => {
-      const date = bookingDateTime(booking);
-      return date && date > now;
-    });
+    if (expired.length > 0) {
+      Promise.allSettled(
+        expired.map((booking) => archiveExpiredBooking(booking.id, nowMs)),
+      ).catch((error) => {
+        console.error("Failed to archive expired bookings:", error);
+      });
+    }
+  }, [bookings, bookingsLoading, currentTime]);
 
-    const todayUpcoming = today.bookings.filter((booking) => {
-      const date = bookingDateTime(booking);
-      return date && date > now;
-    });
+  /*
+   * حذف سجلات الإغلاقات الأقدم
+   * من بداية الشهر الحالي.
+   *
+   * إغلاقات الشهر الحالي السابقة
+   * تبقى ظاهرة داخل القسم السابق.
+   */
+  useEffect(() => {
+    if (cleanupStartedRef.current) {
+      return;
+    }
 
-    const nextWeekStart = new Date(weekStart);
-    nextWeekStart.setDate(nextWeekStart.getDate() + 7);
+    const keys = new Set([
+      ...Object.keys(blockedDays),
 
-    const nextWeekEnd = new Date(nextWeekStart);
-    nextWeekEnd.setDate(nextWeekEnd.getDate() + 6);
-    nextWeekEnd.setHours(23, 59, 59, 999);
-
-    const nextWeekCount = activeBookings.filter((booking) => {
-      return inRange(bookingDateTime(booking), nextWeekStart, nextWeekEnd);
-    }).length;
-
-    return {
-      now,
-      todayValue,
-      today: {
-        ...today,
-        nextBooking: todayUpcoming[0] || null,
-      },
-      week: {
-        ...week,
-        from: ymd(weekStart),
-        to: ymd(weekEnd),
-        busiest: getBusiestDays(week.bookings),
-      },
-      month: {
-        ...month,
-        title: formatMonth(now),
-      },
-      previousMonth: {
-        ...previousMonth,
-        title: formatMonth(previousMonthDate),
-      },
-      monthComparison: {
-        full: comparison(month.total, previousMonth.total),
-        toDate: comparison(
-          monthUntilNow.length,
-          previousMonthUntilSameMoment.length,
-        ),
-        currentToDate: monthUntilNow.length,
-        previousToDate: previousMonthUntilSameMoment.length,
-      },
-      future: {
-        total: futureBookings.length,
-        closest: futureBookings[0] || null,
-        last:
-          futureBookings.length > 0
-            ? futureBookings[futureBookings.length - 1]
-            : null,
-        nextWeekCount,
-      },
-    };
-  }, [bookings, currentTime]);
-
-  const futureClosures = useMemo(() => {
-    const todayValue = ymd(currentTime);
-
-    const closedDayIds = new Set(
-      blockedDays
-        .map((blockedDay) => blockedDay.id)
-        .filter((date) => date >= todayValue),
-    );
-
-    const dates = new Set([
-      ...closedDayIds,
-      ...Object.keys(blockedTimes).filter((date) => date >= todayValue),
+      ...Object.keys(blockedTimes),
     ]);
 
-    return [...dates]
-      .sort()
-      .map((date) => {
-        const fullDay = closedDayIds.has(date);
+    if (keys.size === 0) {
+      return;
+    }
 
-        const times = (blockedTimes[date] || [])
-          .filter((time) => {
-            if (date > todayValue) return true;
+    cleanupStartedRef.current = true;
 
-            const timeDate = bookingDateTime({
-              selectedDate: date,
-              selectedTime: time,
-            });
+    const currentMonthStart = `${monthKey(new Date())}-01`;
 
-            return timeDate && timeDate > currentTime;
-          })
-          .sort();
+    const oldDates = [...keys].filter(
+      (date) => /^\d{4}-\d{2}-\d{2}$/.test(date) && date < currentMonthStart,
+    );
 
-        return {
-          date,
-          fullDay,
-          times,
-          groups: mergeConsecutiveTimes(times),
-        };
-      })
-      .filter((closure) => closure.fullDay || closure.times.length > 0);
-  }, [blockedDays, blockedTimes, currentTime]);
+    if (oldDates.length === 0) {
+      return;
+    }
 
+    const batch = writeBatch(db);
+
+    oldDates.forEach((date) => {
+      batch.delete(doc(db, "blockedDays", date));
+
+      batch.delete(doc(db, "blockedTimes", date));
+    });
+
+    batch.commit().catch((error) => {
+      console.error("Failed to clean old closures:", error);
+    });
+  }, [blockedDays, blockedTimes]);
+
+  /*
+   * تنظيف مؤقت التراجع
+   * عند الخروج من الصفحة.
+   */
+  useEffect(() => {
+    return () => {
+      if (undoTimerRef.current) {
+        window.clearTimeout(undoTimerRef.current);
+      }
+    };
+  }, []);
+
+  /*
+   * أقرب دور قادم،
+   * حتى لو كان غدًا أو بعد عدة أيام.
+   */
+  const nextBooking = useMemo(() => {
+    return bookings
+      .filter((booking) => !isBookingCancelled(booking))
+      .map((booking) => ({
+        booking,
+
+        start: getBookingStartDate(booking),
+      }))
+      .filter(
+        (item) => item.start && item.start.getTime() > currentTime.getTime(),
+      )
+      .sort((first, second) => first.start - second.start)[0]?.booking;
+  }, [bookings, currentTime]);
+
+  /*
+   * تجهيز الإغلاقات الحالية والسابقة.
+   */
+  const closures = useMemo(
+    () =>
+      buildClosures({
+        blockedDays,
+        blockedTimes,
+        currentTime,
+      }),
+
+    [blockedDays, blockedTimes, currentTime],
+  );
+
+  const currentMonthDate = new Date(
+    currentTime.getFullYear(),
+    currentTime.getMonth(),
+    1,
+  );
+
+  const previousMonthDate = new Date(
+    currentTime.getFullYear(),
+    currentTime.getMonth() - 1,
+    1,
+  );
+
+  const currentMonthKey = monthKey(currentMonthDate);
+
+  const previousMonthKey = monthKey(previousMonthDate);
+
+  const currentMonthTotal = monthlyStats[currentMonthKey] || 0;
+
+  const previousMonthTotal = monthlyStats[previousMonthKey] || 0;
+
+  /*
+   * السنوات المتوفرة في الإحصائيات.
+   */
+  const availableYears = useMemo(() => {
+    const years = Object.keys(monthlyStats)
+      .filter((key) => /^\d{4}-\d{2}$/.test(key))
+      .map((key) => Number(key.slice(0, 4)))
+      .filter(Number.isFinite);
+
+    years.push(currentTime.getFullYear());
+
+    return [...new Set(years)].sort((first, second) => second - first);
+  }, [monthlyStats, currentTime]);
+
+  useEffect(() => {
+    if (!availableYears.includes(selectedYear)) {
+      setSelectedYear(availableYears[0] || currentTime.getFullYear());
+    }
+  }, [availableYears, currentTime, selectedYear]);
+
+  function showUndoToast(message, undo) {
+    if (undoTimerRef.current) {
+      window.clearTimeout(undoTimerRef.current);
+    }
+
+    setToast({
+      message,
+      undo,
+    });
+
+    undoTimerRef.current = window.setTimeout(() => {
+      setToast(null);
+
+      undoTimerRef.current = null;
+    }, 8000);
+  }
+
+  async function handleUndo() {
+    if (!toast?.undo) return;
+
+    try {
+      setActionLoading("undo");
+
+      await toast.undo();
+
+      setToast({
+        message: "تم التراجع بنجاح",
+
+        undo: null,
+      });
+
+      if (undoTimerRef.current) {
+        window.clearTimeout(undoTimerRef.current);
+      }
+
+      undoTimerRef.current = window.setTimeout(() => setToast(null), 2500);
+    } catch (error) {
+      console.error("Undo closure restore failed:", error);
+
+      setToast({
+        message: "تعذر التراجع، حاول مرة أخرى",
+
+        undo: null,
+      });
+    } finally {
+      setActionLoading("");
+    }
+  }
+
+  /*
+   * استعادة يوم كامل.
+   */
   async function restoreDay(date) {
     const accepted = window.confirm(
-      `هل تريد إعادة فتح يوم ${formatDate(date)} بالكامل؟`,
+      `متأكد بدك تفتح يوم ${formatDate(
+        date,
+      )} بالكامل؟\nسيتم أيضًا فتح الساعات المسكّرة داخل نفس اليوم.`,
     );
 
     if (!accepted) return;
+
+    const oldDayData = blockedDays[date] || {};
+
+    const oldTimes = blockedTimes[date] || [];
 
     try {
       setActionLoading(`day-${date}`);
 
-      await deleteDoc(doc(db, "blockedDays", date));
+      const batch = writeBatch(db);
 
-      setMessage("تمت إعادة فتح اليوم بنجاح");
+      batch.delete(doc(db, "blockedDays", date));
+
+      batch.delete(doc(db, "blockedTimes", date));
+
+      await batch.commit();
+
+      showUndoToast(
+        "تمت استعادة اليوم بالكامل",
+
+        async () => {
+          const undoBatch = writeBatch(db);
+
+          undoBatch.set(
+            doc(db, "blockedDays", date),
+
+            oldDayData,
+          );
+
+          if (oldTimes.length > 0) {
+            undoBatch.set(
+              doc(db, "blockedTimes", date),
+
+              {
+                times: oldTimes,
+              },
+            );
+          }
+
+          await undoBatch.commit();
+        },
+      );
     } catch (error) {
       console.error("Failed to restore day:", error);
-      setMessage("حدث خطأ أثناء إعادة فتح اليوم");
+
+      setToast({
+        message: "حدث خطأ أثناء استعادة اليوم",
+
+        undo: null,
+      });
     } finally {
       setActionLoading("");
     }
   }
 
+  /*
+   * استعادة ساعة واحدة.
+   */
   async function restoreTime(date, time) {
     const accepted = window.confirm(
-      `هل تريد إعادة فتح الساعة ${time} يوم ${formatDate(date)}؟`,
+      `متأكد بدك تفتح الساعة ${time} يوم ${formatDate(date)}؟`,
+    );
+
+    if (!accepted) return;
+
+    const oldTimes = blockedTimes[date] || [];
+
+    const nextTimes = oldTimes.filter((current) => current !== time);
+
+    try {
+      setActionLoading(`time-${date}-${time}`);
+
+      if (nextTimes.length === 0) {
+        await deleteDoc(doc(db, "blockedTimes", date));
+      } else {
+        await setDoc(
+          doc(db, "blockedTimes", date),
+
+          {
+            times: nextTimes,
+          },
+        );
+      }
+
+      showUndoToast(
+        `تمت استعادة الساعة ${time}`,
+
+        async () => {
+          await setDoc(
+            doc(db, "blockedTimes", date),
+
+            {
+              times: oldTimes,
+            },
+          );
+        },
+      );
+    } catch (error) {
+      console.error("Failed to restore time:", error);
+
+      setToast({
+        message: "حدث خطأ أثناء استعادة الساعة",
+
+        undo: null,
+      });
+    } finally {
+      setActionLoading("");
+    }
+  }
+
+  /*
+   * استعادة كل الساعات الظاهرة
+   * في كرت اليوم.
+   */
+  async function restoreAllTimes(date, timesToRestore) {
+    const oldTimes = blockedTimes[date] || [];
+
+    const restoreSet = new Set(timesToRestore || oldTimes);
+
+    const nextTimes = oldTimes.filter((time) => !restoreSet.has(time));
+
+    if (restoreSet.size === 0) {
+      return;
+    }
+
+    const accepted = window.confirm(
+      `متأكد بدك تفتح كل الساعات المسكّرة يوم ${formatDate(date)}؟`,
     );
 
     if (!accepted) return;
 
     try {
-      setActionLoading(`time-${date}-${time}`);
+      setActionLoading(`all-times-${date}`);
 
-      const currentTimes = blockedTimes[date] || [];
-
-      if (currentTimes.length <= 1) {
+      if (nextTimes.length === 0) {
         await deleteDoc(doc(db, "blockedTimes", date));
       } else {
-        await updateDoc(doc(db, "blockedTimes", date), {
-          times: arrayRemove(time),
-        });
+        await setDoc(
+          doc(db, "blockedTimes", date),
+
+          {
+            times: nextTimes,
+          },
+        );
       }
 
-      setMessage("تمت إعادة فتح الساعة بنجاح");
+      showUndoToast(
+        "تمت استعادة الساعات المحددة",
+
+        async () => {
+          await setDoc(
+            doc(db, "blockedTimes", date),
+
+            {
+              times: oldTimes,
+            },
+          );
+        },
+      );
     } catch (error) {
-      console.error("Failed to restore time:", error);
-      setMessage("حدث خطأ أثناء إعادة فتح الساعة");
+      console.error("Failed to restore all times:", error);
+
+      setToast({
+        message: "حدث خطأ أثناء استعادة الساعات",
+
+        undo: null,
+      });
     } finally {
       setActionLoading("");
     }
   }
 
-  if (loading) {
+  if (bookingsLoading || statsLoading) {
     return (
-      <main dir="rtl" className="min-h-screen bg-slate-50 px-4 pb-20 pt-28">
-        <div className="mx-auto max-w-6xl animate-pulse">
-          <div className="h-9 w-40 rounded-xl bg-slate-200" />
+      <main
+        dir="rtl"
+        className="
+          min-h-screen
+          bg-slate-50
+          px-4 pb-24 pt-28
+        "
+      >
+        <div className="mx-auto max-w-4xl animate-pulse space-y-4">
+          <div className="h-8 w-36 rounded-xl bg-slate-200" />
 
-          <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-            {[1, 2, 3, 4].map((item) => (
-              <div key={item} className="h-52 rounded-3xl bg-white" />
-            ))}
-          </div>
+          <div className="h-64 rounded-3xl bg-slate-900" />
+
+          <div className="h-72 rounded-3xl bg-slate-200" />
+
+          <div className="h-52 rounded-3xl bg-white" />
         </div>
       </main>
     );
   }
 
-  const nextBookingTime = statistics.today.nextBooking
-    ? bookingDateTime(statistics.today.nextBooking)
-    : null;
-
   return (
     <main
       dir="rtl"
-      className="min-h-screen bg-slate-50 px-3 pb-24 pt-28 sm:px-5 sm:pt-32"
+      className="
+        min-h-screen
+        bg-slate-50
+        px-3 pb-28 pt-24
+        sm:px-5 sm:pt-28
+      "
     >
-      <div className="mx-auto max-w-6xl">
-        <header className="mb-7 flex items-start justify-between gap-4">
+      <div className="mx-auto max-w-4xl">
+        <header className="mb-5 flex items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-black text-amber-600">لوحة الإدارة</p>
+            <p className="text-xs font-black text-amber-600">لوحة الحلاق</p>
 
             <h1 className="mt-1 text-3xl font-black text-slate-950">
               الإحصائيات
             </h1>
 
-            <p className="mt-2 text-sm leading-6 text-slate-500">
-              متابعة واضحة لليوم، الأسبوع، الشهر والحجوزات القادمة.
+            <p className="mt-1 text-sm font-bold text-slate-500">
+              أهم شيء للشغل، بدون أرقام مكررة أو تشتيت.
             </p>
           </div>
 
           <button
             type="button"
             onClick={() => navigate(-1)}
-            className="shrink-0 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-black text-slate-700 shadow-sm active:scale-95"
+            className="
+              shrink-0
+              rounded-2xl
+              border border-slate-200
+              bg-white
+              px-4 py-2.5
+              text-sm font-black
+              text-slate-700
+              shadow-sm
+              active:scale-95
+            "
           >
             رجوع
           </button>
         </header>
 
-        <section className="mb-9">
-          <SectionTitle
-            eyebrow="نظرة سريعة"
-            title="أهم الأرقام"
-            description="الحجوزات الملغية من الحلاق أو الزبون لا تدخل بالحساب."
+        <div className="space-y-5">
+          <NextBookingCard booking={nextBooking} currentTime={currentTime} />
+
+          <ClosuresSection
+            closures={closures.upcoming}
+            pastClosures={closures.past}
+            todayValue={ymd(currentTime)}
+            weeklyHours={weeklyHours}
+            actionLoading={actionLoading}
+            onRestoreDay={restoreDay}
+            onRestoreTime={restoreTime}
+            onRestoreAllTimes={restoreAllTimes}
           />
 
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <StatCard
-              accent="emerald"
-              badge="اليوم"
-              title="أدوار اليوم"
-              value={statistics.today.total}
-              suffix="دور"
-            >
-              <PassedAndRemaining
-                passed={statistics.today.passed}
-                remaining={statistics.today.upcoming}
-              />
-
-              <div className="mt-4 border-t border-slate-100 pt-3">
-                {statistics.today.nextBooking ? (
-                  <>
-                    <p className="text-[10px] font-bold text-slate-400">
-                      الدور القادم
-                    </p>
-
-                    <p className="mt-1 truncate text-sm font-black text-slate-900">
-                      {getCustomerName(statistics.today.nextBooking)}
-                    </p>
-
-                    <p className="mt-1 text-xs font-black text-emerald-700">
-                      {statistics.today.nextBooking.selectedTime}
-                    </p>
-                  </>
-                ) : statistics.today.total > 0 ? (
-                  <p className="text-xs font-black leading-5 text-emerald-700">
-                    خلص اليوم — تم إنجاز {statistics.today.passed} أدوار
-                  </p>
-                ) : (
-                  <p className="text-xs font-bold text-slate-400">
-                    لا توجد أدوار اليوم
-                  </p>
-                )}
-              </div>
-            </StatCard>
-
-            <StatCard
-              accent="blue"
-              badge="الأسبوع"
-              title="هذا الأسبوع"
-              value={statistics.week.total}
-              suffix="دور"
-            >
-              <PassedAndRemaining
-                passed={statistics.week.passed}
-                remaining={statistics.week.upcoming}
-              />
-
-              <div className="mt-4 border-t border-slate-100 pt-3">
-                <p className="text-[10px] font-bold text-slate-400">
-                  أكثر يوم مزدحم
-                </p>
-
-                {statistics.week.busiest.days.length > 0 ? (
-                  <>
-                    <p className="mt-1 line-clamp-2 text-xs font-black leading-5 text-slate-800">
-                      {statistics.week.busiest.days
-                        .map((day) => day.label)
-                        .join("، ")}
-                    </p>
-
-                    <p className="mt-1 text-xs font-black text-blue-700">
-                      {statistics.week.busiest.count} أدوار
-                    </p>
-                  </>
-                ) : (
-                  <p className="mt-1 text-xs font-bold text-slate-400">
-                    لا توجد حجوزات
-                  </p>
-                )}
-              </div>
-            </StatCard>
-
-            <StatCard
-              accent="amber"
-              badge="الشهر"
-              title="هذا الشهر"
-              value={statistics.month.total}
-              suffix="دور"
-            >
-              <PassedAndRemaining
-                passed={statistics.month.passed}
-                remaining={statistics.month.upcoming}
-              />
-
-              <div className="mt-4 border-t border-slate-100 pt-3">
-                <p className="mb-1 text-[10px] font-bold text-slate-400">
-                  مقارنة بالشهر الماضي
-                </p>
-
-                <ComparisonText
-                  current={statistics.month.total}
-                  previous={statistics.previousMonth.total}
-                  result={statistics.monthComparison.full}
-                />
-              </div>
-            </StatCard>
-
-            <StatCard
-              accent="violet"
-              badge="قادم"
-              title="الحجوزات القادمة"
-              value={statistics.future.total}
-              suffix="حجز"
-            >
-              <div className="space-y-3">
-                <SmallInfoRow
-                  label="الأقرب"
-                  value={
-                    statistics.future.closest
-                      ? `${formatShortDate(
-                          statistics.future.closest.selectedDate,
-                        )} • ${statistics.future.closest.selectedTime}`
-                      : "لا يوجد"
-                  }
-                />
-
-                <SmallInfoRow
-                  label="الأسبوع القادم"
-                  value={`${statistics.future.nextWeekCount} حجوزات`}
-                />
-
-                <SmallInfoRow
-                  label="آخر موعد"
-                  value={
-                    statistics.future.last
-                      ? `${formatShortDate(
-                          statistics.future.last.selectedDate,
-                        )} • ${statistics.future.last.selectedTime}`
-                      : "لا يوجد"
-                  }
-                />
-              </div>
-            </StatCard>
-          </div>
-        </section>
-
-        <section className="mb-9">
-          <SectionTitle
-            eyebrow="العمل الآن"
-            title="وضع اليوم"
-            description="كم دور مرّ، كم بقي، ومن هو الزبون القادم."
+          <MonthComparison
+            currentMonth={formatMonthTitle(currentMonthDate)}
+            previousMonth={formatMonthTitle(previousMonthDate)}
+            current={currentMonthTotal}
+            previous={previousMonthTotal}
           />
 
-          <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-            <div className="bg-slate-950 px-5 py-6 text-white sm:px-7">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-xs font-black text-amber-400">
-                    {formatDate(statistics.todayValue)}
-                  </p>
-
-                  <h2 className="mt-1 text-2xl font-black">
-                    {statistics.today.total > 0
-                      ? `${statistics.today.total} أدوار اليوم`
-                      : "لا توجد أدوار اليوم"}
-                  </h2>
-                </div>
-
-                <div className="rounded-2xl bg-white/10 px-3 py-2 text-center">
-                  <p className="text-[10px] font-bold text-slate-300">
-                    الوقت الآن
-                  </p>
-
-                  <p className="mt-0.5 text-sm font-black">
-                    {statistics.now.toLocaleTimeString("ar-EG", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </p>
-                </div>
-              </div>
-
-              <div className="mt-6 grid grid-cols-2 gap-3">
-                <div className="rounded-2xl bg-white/10 p-4">
-                  <p className="text-xs font-bold text-slate-300">مرّ</p>
-
-                  <p className="mt-1 text-3xl font-black">
-                    {statistics.today.passed}
-                  </p>
-                </div>
-
-                <div className="rounded-2xl bg-white/10 p-4">
-                  <p className="text-xs font-bold text-slate-300">باقي</p>
-
-                  <p className="mt-1 text-3xl font-black">
-                    {statistics.today.upcoming}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-5 sm:p-7">
-              {statistics.today.nextBooking ? (
-                <>
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="min-w-0">
-                      <p className="text-xs font-bold text-slate-400">
-                        الدور القادم
-                      </p>
-
-                      <p className="mt-1 truncate text-xl font-black text-slate-950">
-                        {getCustomerName(statistics.today.nextBooking)}
-                      </p>
-                    </div>
-
-                    <div className="shrink-0 rounded-2xl bg-emerald-50 px-4 py-3 text-center">
-                      <p className="text-xl font-black text-emerald-700">
-                        {statistics.today.nextBooking.selectedTime}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3">
-                    <p className="text-sm font-black text-emerald-800">
-                      {remainingTime(
-                        nextBookingTime?.getTime() - statistics.now.getTime(),
-                      )}
-                    </p>
-                  </div>
-                </>
-              ) : statistics.today.total > 0 ? (
-                <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-5 text-center">
-                  <p className="text-lg font-black text-emerald-800">
-                    خلص اليوم — تم إنجاز {statistics.today.passed} أدوار
-                  </p>
-                </div>
-              ) : (
-                <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center">
-                  <p className="font-black text-slate-700">
-                    لا توجد حجوزات فعالة اليوم
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-        </section>
-
-        <section className="mb-9">
-          <SectionTitle
-            eyebrow="أداء الحجوزات"
-            title="الأسبوع والشهر"
-            description="الحجز يعتبر مرّ أول ما يمر وقت بدايته."
+          <MonthlyHistory
+            monthlyStats={monthlyStats}
+            selectedYear={selectedYear}
+            setSelectedYear={setSelectedYear}
+            years={availableYears}
           />
-
-          <div className="space-y-4">
-            <PerformanceCard
-              title="هذا الأسبوع"
-              subtitle={`${formatShortDate(
-                statistics.week.from,
-              )} – ${formatShortDate(statistics.week.to)}`}
-              total={statistics.week.total}
-              passed={statistics.week.passed}
-              remaining={statistics.week.upcoming}
-            >
-              <div className="mt-4 rounded-2xl bg-blue-50 px-4 py-3">
-                <p className="text-xs font-bold text-blue-500">
-                  أكثر يوم مزدحم
-                </p>
-
-                {statistics.week.busiest.days.length > 0 ? (
-                  <div className="mt-1 flex flex-wrap items-center gap-2">
-                    <p className="text-sm font-black text-blue-950">
-                      {statistics.week.busiest.days
-                        .map((day) => day.label)
-                        .join("، ")}
-                    </p>
-
-                    <span className="rounded-full bg-white px-2.5 py-1 text-xs font-black text-blue-700">
-                      {statistics.week.busiest.count} أدوار
-                    </span>
-                  </div>
-                ) : (
-                  <p className="mt-1 text-sm font-bold text-blue-700">
-                    لا توجد حجوزات هذا الأسبوع
-                  </p>
-                )}
-              </div>
-            </PerformanceCard>
-
-            <PerformanceCard
-              title={`التقرير الشهري — ${statistics.month.title}`}
-              subtitle="مقارنة كاملة ومقارنة لنفس المدة"
-              total={statistics.month.total}
-              passed={statistics.month.passed}
-              remaining={statistics.month.upcoming}
-            >
-              <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                <ComparisonBox
-                  title="الشهر كامل"
-                  currentLabel={statistics.month.title}
-                  previousLabel={statistics.previousMonth.title}
-                  current={statistics.month.total}
-                  previous={statistics.previousMonth.total}
-                  result={statistics.monthComparison.full}
-                />
-
-                <ComparisonBox
-                  title="من بداية الشهر حتى الآن"
-                  currentLabel="هذا الشهر حتى الآن"
-                  previousLabel="نفس المدة الشهر الماضي"
-                  current={statistics.monthComparison.currentToDate}
-                  previous={statistics.monthComparison.previousToDate}
-                  result={statistics.monthComparison.toDate}
-                />
-              </div>
-            </PerformanceCard>
-          </div>
-        </section>
-
-        <section className="mb-9">
-          <SectionTitle
-            eyebrow="إدارة سريعة"
-            title="الأيام والساعات المسكّرة"
-            description="اضغط على اليوم أو الساعة لإعادتها بعد التأكيد."
-          />
-
-          <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-            <div className="flex items-center justify-between gap-4 border-b border-slate-100 px-5 py-4 sm:px-6">
-              <div>
-                <p className="text-sm font-black text-slate-900">
-                  كل الإغلاقات القادمة
-                </p>
-
-                <p className="mt-1 text-xs text-slate-400">
-                  مرتبة من الأقرب إلى الأبعد
-                </p>
-              </div>
-
-              <span className="rounded-full bg-red-50 px-3 py-1.5 text-xs font-black text-red-700">
-                {futureClosures.length} أيام
-              </span>
-            </div>
-
-            {futureClosures.length === 0 ? (
-              <div className="px-5 py-12 text-center">
-                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 text-2xl font-black text-emerald-700">
-                  ✓
-                </div>
-
-                <p className="mt-4 font-black text-slate-800">
-                  لا توجد أيام أو ساعات مسكّرة قادمة
-                </p>
-              </div>
-            ) : (
-              <div className="divide-y divide-slate-100">
-                {futureClosures.map((closure) => {
-                  const dayLoading = actionLoading === `day-${closure.date}`;
-
-                  return (
-                    <div key={closure.date} className="px-4 py-5 sm:px-6">
-                      <div className="flex items-start gap-3">
-                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-red-50 text-lg font-black text-red-700">
-                          {parseYmd(closure.date)?.getDate()}
-                        </div>
-
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-start justify-between gap-3">
-                            <div>
-                              <p className="text-sm font-black text-slate-950">
-                                {relativeDateLabel(
-                                  closure.date,
-                                  statistics.todayValue,
-                                )}
-                              </p>
-
-                              <p className="mt-0.5 text-xs font-bold text-slate-400">
-                                {formatShortDate(closure.date)}
-                              </p>
-                            </div>
-
-                            {closure.fullDay ? (
-                              <button
-                                type="button"
-                                disabled={dayLoading}
-                                onClick={() => restoreDay(closure.date)}
-                                className="rounded-xl bg-red-600 px-3 py-2 text-xs font-black text-white shadow-sm active:scale-95 disabled:opacity-60"
-                              >
-                                {dayLoading
-                                  ? "جاري الفتح..."
-                                  : "مغلق طوال اليوم"}
-                              </button>
-                            ) : null}
-                          </div>
-
-                          {closure.times.length > 0 ? (
-                            <div className="mt-4">
-                              <p className="mb-2 text-[11px] font-bold text-slate-400">
-                                اضغط على الساعة لإعادة فتحها
-                              </p>
-
-                              <div className="flex flex-wrap gap-2">
-                                {closure.times.map((time) => {
-                                  const timeLoading =
-                                    actionLoading ===
-                                    `time-${closure.date}-${time}`;
-
-                                  return (
-                                    <button
-                                      key={`${closure.date}-${time}`}
-                                      type="button"
-                                      disabled={timeLoading}
-                                      onClick={() =>
-                                        restoreTime(closure.date, time)
-                                      }
-                                      className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-black text-red-700 active:scale-95 disabled:opacity-50"
-                                    >
-                                      {timeLoading ? "..." : time}
-                                    </button>
-                                  );
-                                })}
-                              </div>
-
-                              {closure.groups.length > 0 ? (
-                                <div className="mt-3 flex flex-wrap gap-2">
-                                  {closure.groups.map((group) => (
-                                    <span
-                                      key={`${closure.date}-${group.label}`}
-                                      className="rounded-full bg-slate-100 px-3 py-1 text-[10px] font-bold text-slate-500"
-                                    >
-                                      فترة: {group.label}
-                                    </span>
-                                  ))}
-                                </div>
-                              ) : null}
-                            </div>
-                          ) : null}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </section>
+        </div>
       </div>
 
-      {message ? (
-        <div className="fixed bottom-5 left-1/2 z-50 w-[calc(100%-32px)] max-w-sm -translate-x-1/2 rounded-2xl bg-slate-950 px-4 py-3 text-center text-sm font-black text-white shadow-2xl">
-          {message}
+      {toast ? (
+        <div
+          className="
+            fixed bottom-5
+            left-1/2
+            z-[90]
+            flex
+            w-[calc(100%-24px)]
+            max-w-md
+            -translate-x-1/2
+            items-center
+            justify-between
+            gap-3
+            rounded-2xl
+            bg-slate-950
+            px-4 py-3
+            text-white
+            shadow-2xl
+          "
+        >
+          <p className="text-sm font-black">{toast.message}</p>
+
+          <div className="flex shrink-0 items-center gap-2">
+            {toast.undo ? (
+              <button
+                type="button"
+                disabled={actionLoading === "undo"}
+                onClick={handleUndo}
+                className="
+                  inline-flex
+                  items-center
+                  gap-2
+                  rounded-xl
+                  bg-amber-400
+                  px-3 py-2
+                  text-xs font-black
+                  text-slate-950
+                  disabled:opacity-60
+                "
+              >
+                {actionLoading === "undo" ? <FaRedoAlt /> : <FaUndo />}
+                تراجع
+              </button>
+            ) : null}
+
+            <button
+              type="button"
+              onClick={() => setToast(null)}
+              className="
+                flex h-8 w-8
+                items-center
+                justify-center
+                rounded-xl
+                bg-white/10
+                text-xs
+              "
+              aria-label="إغلاق الرسالة"
+            >
+              <FaTimes />
+            </button>
+          </div>
         </div>
       ) : null}
     </main>

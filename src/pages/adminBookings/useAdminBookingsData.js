@@ -1,20 +1,57 @@
 // src/pages/adminBookings/useAdminBookingsData.js
+
 import { useEffect, useMemo, useState } from "react";
-import { db } from "../../firebase";
+
 import {
   collection,
-  query,
-  where,
-  getDocs,
-  doc,
-  updateDoc,
-  deleteDoc,
   deleteField,
+  doc,
+  getDocs,
+  query,
+  serverTimestamp,
+  setDoc,
+  updateDoc,
+  where,
 } from "firebase/firestore";
+
+import { db } from "../../firebase";
+
+import {
+  archiveExpiredBooking,
+  cancelBookingWithStats,
+  deletePastBookingWithStats,
+  syncPassedBookingsForCompletedStats,
+} from "../../services/completedStats";
+
+/**
+ * إنشاء معرّف ثابت للموعد داخل bookedSlots.
+ *
+ * مثال:
+ * 2026-07-25 + 14:30
+ * يصبح:
+ * 2026-07-25_14-30
+ */
+function makeSlotId(dateYMD, hhmm) {
+  return `${dateYMD}_${String(hhmm || "").replace(":", "-")}`;
+}
+
+/**
+ * تحويل تاريخ ووقت الحجز إلى Date.
+ */
+function bookingDateTime(booking) {
+  const selectedDate = String(booking?.selectedDate || "");
+
+  const selectedTime = String(booking?.selectedTime || "00:00");
+
+  const date = new Date(`${selectedDate}T${selectedTime}:00`);
+
+  return Number.isNaN(date.getTime()) ? null : date;
+}
 
 export function useAdminBookingsData() {
   const [upcoming, setUpcoming] = useState([]);
   const [recentPast, setRecentPast] = useState([]);
+
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
 
@@ -24,117 +61,319 @@ export function useAdminBookingsData() {
     async function fetchAndClassify() {
       try {
         const now = new Date();
-        const snap = await getDocs(query(collection(db, "bookings")));
+        const nowMs = now.getTime();
 
-        const up = [];
-        const past = [];
+        const snapshot = await getDocs(query(collection(db, "bookings")));
 
-        for (const d of snap.docs) {
-          const data = d.data();
-          const when = new Date(`${data.selectedDate}T${data.selectedTime}:00`);
-          const diffH = (now - when) / (1000 * 60 * 60);
+        const allBookings = snapshot.docs.map((bookingDocument) => ({
+          id: bookingDocument.id,
+          ...bookingDocument.data(),
+        }));
 
-          // نفس منطقك: بعد 2 ساعات من الموعد => حذف نهائي
-          if (diffH > 2) {
-            await deleteDoc(doc(db, "bookings", d.id));
+        /*
+         * أول ما يبدأ وقت الدور:
+         *
+         * - ينحسب بالإحصائيات.
+         * - بشرط ألا يكون ملغيًا.
+         * - ولا ينحسب مرتين.
+         */
+        await syncPassedBookingsForCompletedStats(allBookings, nowMs);
+
+        const upcomingBookings = [];
+        const pastBookings = [];
+
+        for (const booking of allBookings) {
+          const bookingTime = bookingDateTime(booking);
+
+          if (!bookingTime) continue;
+
+          const differenceHours =
+            (nowMs - bookingTime.getTime()) / (1000 * 60 * 60);
+
+          /*
+           * بعد مرور ساعتين على وقت الدور:
+           *
+           * - نحذف تفاصيل الحجز القديمة.
+           * - يبقى العدد الشهري محفوظًا.
+           */
+          if (differenceHours > 2) {
+            await archiveExpiredBooking(booking.id, nowMs);
+
             continue;
           }
 
-          if (data.cancelledAt || diffH >= 0) {
-            past.push({ id: d.id, ...data });
+          /*
+           * الحجز يذهب إلى السجل المؤقت إذا:
+           *
+           * - كان ملغيًا.
+           * - أو بدأ وقته.
+           *
+           * ويظل ظاهرًا لمدة ساعتين فقط.
+           */
+          if (booking.cancelledAt || differenceHours >= 0) {
+            pastBookings.push(booking);
           } else {
-            up.push({ id: d.id, ...data });
+            upcomingBookings.push(booking);
           }
         }
 
-        up.sort((a, b) => {
-          const da = new Date(`${a.selectedDate}T${a.selectedTime}:00`);
-          const dbb = new Date(`${b.selectedDate}T${b.selectedTime}:00`);
-          return da - dbb;
+        /*
+         * الحجوزات القادمة:
+         * الأقرب أولًا.
+         */
+        upcomingBookings.sort((firstBooking, secondBooking) => {
+          const firstTime = bookingDateTime(firstBooking)?.getTime() || 0;
+
+          const secondTime = bookingDateTime(secondBooking)?.getTime() || 0;
+
+          return firstTime - secondTime;
+        });
+
+        /*
+         * السجل المؤقت:
+         * الأحدث أولًا.
+         */
+        pastBookings.sort((firstBooking, secondBooking) => {
+          const firstTime = bookingDateTime(firstBooking)?.getTime() || 0;
+
+          const secondTime = bookingDateTime(secondBooking)?.getTime() || 0;
+
+          return secondTime - firstTime;
         });
 
         if (!alive) return;
-        setUpcoming(up);
-        setRecentPast(past);
+
+        setUpcoming(upcomingBookings);
+        setRecentPast(pastBookings);
+
         setLoading(false);
         setLastUpdated(new Date());
-      } catch (e) {
-        console.error("fetchAndClassify error:", e);
+      } catch (error) {
+        console.error("fetchAndClassify error:", error);
+
         if (!alive) return;
+
         setLoading(false);
       }
     }
 
+    /*
+     * تحميل مباشر عند فتح الصفحة.
+     */
     fetchAndClassify();
-    const interval = setInterval(() => fetchAndClassify(), 60000);
+
+    /*
+     * إعادة الفحص كل دقيقة حتى:
+     *
+     * - ينتقل الدور من القادم إلى السجل.
+     * - ينحسب الدور عند بداية وقته.
+     * - ينحذف بعد ساعتين.
+     */
+    const interval = window.setInterval(fetchAndClassify, 60 * 1000);
 
     return () => {
       alive = false;
-      clearInterval(interval);
+
+      window.clearInterval(interval);
     };
   }, []);
 
   const actions = useMemo(() => {
     return {
-      async cancelBooking(b) {
+      /**
+       * إلغاء حجز قادم.
+       *
+       * إذا كان الحجز انحسب سابقًا لأي سبب،
+       * ينقص من الإحصائيات تلقائيًا.
+       */
+      async cancelBooking(booking) {
+        await cancelBookingWithStats(booking.id);
+
         const cancelledAt = new Date().toISOString();
-        await updateDoc(doc(db, "bookings", b.id), { cancelledAt });
-        setUpcoming((u) => u.filter((x) => x.id !== b.id));
-        setRecentPast((p) => [{ ...b, cancelledAt }, ...p]);
+
+        /*
+         * إزالة الحجز من القائمة القادمة.
+         */
+        setUpcoming((currentBookings) =>
+          currentBookings.filter(
+            (currentBooking) => currentBooking.id !== booking.id,
+          ),
+        );
+
+        /*
+         * إضافته إلى السجل المؤقت كحجز ملغي.
+         */
+        setRecentPast((currentBookings) => [
+          {
+            ...booking,
+
+            cancelledAt,
+
+            completedStatsCounted: false,
+            completedStatsCountedAt: null,
+          },
+
+          ...currentBookings,
+        ]);
       },
 
-      async restoreBooking(b, upcomingList) {
-        // 1) لا تسترجع إذا في upcoming بنفس الموعد
-        if (
-          upcomingList.some(
-            (x) =>
-              x.selectedDate === b.selectedDate &&
-              x.selectedTime === b.selectedTime
-          )
-        ) {
-          alert("لا يمكن استرجاع هذا الحجز؛ الموعد محجوز حالياً.");
+      /**
+       * استرجاع حجز ملغي.
+       */
+      async restoreBooking(booking, upcomingList) {
+        /*
+         * فحص سريع من القائمة الموجودة بالواجهة.
+         */
+        const localConflict = upcomingList.some(
+          (currentBooking) =>
+            currentBooking.selectedDate === booking.selectedDate &&
+            currentBooking.selectedTime === booking.selectedTime,
+        );
+
+        if (localConflict) {
+          window.alert("لا يمكن استرجاع هذا الحجز؛ الموعد محجوز حاليًا.");
+
           return;
         }
 
-        // 2) تحقق من فايرستور: أي حجز غير ملغي على نفس الموعد؟
-        const conflictQ = query(
+        /*
+         * فحص نهائي من Firestore حتى لا يحصل
+         * تعارض لو تغيرت البيانات من جهاز آخر.
+         */
+        const conflictQuery = query(
           collection(db, "bookings"),
-          where("selectedDate", "==", b.selectedDate),
-          where("selectedTime", "==", b.selectedTime)
+
+          where("selectedDate", "==", booking.selectedDate),
+
+          where("selectedTime", "==", booking.selectedTime),
         );
-        const conflictSnap = await getDocs(conflictQ);
-        const activeConflicts = conflictSnap.docs
-          .map((d) => d.data())
-          .filter((data) => !data.cancelledAt);
+
+        const conflictSnapshot = await getDocs(conflictQuery);
+
+        const activeConflicts = conflictSnapshot.docs
+          .filter((bookingDocument) => bookingDocument.id !== booking.id)
+          .map((bookingDocument) => bookingDocument.data())
+          .filter((bookingData) => !bookingData.cancelledAt);
 
         if (activeConflicts.length > 0) {
-          alert("لا يمكن استرجاع هذا الحجز؛ تم حجز هذا الموعد من قبل.");
+          window.alert("لا يمكن استرجاع هذا الحجز؛ تم حجز الموعد من قبل.");
+
           return;
         }
 
-        // UI optimistic
-        setRecentPast((p) => p.filter((x) => x.id !== b.id));
-        setUpcoming((u) =>
-          [...u, b].sort((a, c) => {
-            const da = new Date(`${a.selectedDate}T${a.selectedTime}:00`);
-            const dc = new Date(`${c.selectedDate}T${c.selectedTime}:00`);
-            return da - dc;
-          })
-        );
-
-        await updateDoc(doc(db, "bookings", b.id), {
+        /*
+         * إزالة حالة الإلغاء.
+         *
+         * نعيد completedStatsCounted إلى false
+         * حتى يعاد تقييم الدور بشكل صحيح.
+         */
+        await updateDoc(doc(db, "bookings", booking.id), {
           cancelledAt: deleteField(),
+
+          completedStatsCounted: false,
+          completedStatsCountedAt: null,
         });
 
-        // مثل كودك السابق (حتى لو مو ضروري): نخليه عشان ما نغيّر سلوك
-        window.location.reload();
+        /*
+         * إعادة تفعيل الموعد داخل bookedSlots.
+         */
+        await setDoc(
+          doc(
+            db,
+            "bookedSlots",
+            makeSlotId(booking.selectedDate, booking.selectedTime),
+          ),
+
+          {
+            bookingId: booking.id,
+
+            selectedDate: booking.selectedDate,
+            selectedTime: booking.selectedTime,
+
+            active: true,
+
+            updatedAt: serverTimestamp(),
+          },
+
+          {
+            merge: true,
+          },
+        );
+
+        /*
+         * إزالة الحجز من السجل المؤقت.
+         */
+        setRecentPast((currentBookings) =>
+          currentBookings.filter(
+            (currentBooking) => currentBooking.id !== booking.id,
+          ),
+        );
+
+        const restoredBooking = {
+          ...booking,
+
+          cancelledAt: null,
+
+          completedStatsCounted: false,
+          completedStatsCountedAt: null,
+        };
+
+        const restoredBookingTime = bookingDateTime(restoredBooking);
+
+        /*
+         * إذا موعده ما زال بالمستقبل:
+         * نعيده إلى الحجوزات القادمة.
+         */
+        if (restoredBookingTime && restoredBookingTime.getTime() > Date.now()) {
+          setUpcoming((currentBookings) =>
+            [...currentBookings, restoredBooking].sort(
+              (firstBooking, secondBooking) => {
+                const firstTime = bookingDateTime(firstBooking)?.getTime() || 0;
+
+                const secondTime =
+                  bookingDateTime(secondBooking)?.getTime() || 0;
+
+                return firstTime - secondTime;
+              },
+            ),
+          );
+
+          return;
+        }
+
+        /*
+         * إذا كان وقت الدور مرّ:
+         *
+         * - يبقى في السجل المؤقت.
+         * - يعاد احتسابه لأنه أصبح غير ملغي.
+         */
+        setRecentPast((currentBookings) => [
+          restoredBooking,
+          ...currentBookings,
+        ]);
+
+        await syncPassedBookingsForCompletedStats([restoredBooking]);
       },
 
-      async deleteBookingForever(b) {
-        const ok = window.confirm("متأكد بدك حذف نهائي؟ (ما بنقدر نرجّعه)");
-        if (!ok) return;
-        await deleteDoc(doc(db, "bookings", b.id));
-        setRecentPast((p) => p.filter((x) => x.id !== b.id));
+      /**
+       * حذف دور من السجل.
+       *
+       * mode:
+       *
+       * NO_SHOW:
+       * الزبون لم يأتِ، لذلك ينقص من الإحصائيات.
+       *
+       * DELETE_ONLY:
+       * الدور صار فعليًا، لذلك يبقى محسوبًا.
+       */
+      async deleteBookingForever(booking, mode = "DELETE_ONLY") {
+        await deletePastBookingWithStats(booking.id, mode);
+
+        setRecentPast((currentBookings) =>
+          currentBookings.filter(
+            (currentBooking) => currentBooking.id !== booking.id,
+          ),
+        );
       },
     };
   }, []);
@@ -142,8 +381,10 @@ export function useAdminBookingsData() {
   return {
     upcoming,
     recentPast,
+
     loading,
     lastUpdated,
+
     actions,
   };
 }

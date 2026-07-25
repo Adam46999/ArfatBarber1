@@ -2,6 +2,7 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaSyncAlt } from "react-icons/fa";
+
 import { e164ToLocalPretty } from "../../utils/phone";
 
 import Toolbar from "./Toolbar";
@@ -16,157 +17,276 @@ export default function AdminBookingsPage() {
   const { upcoming, recentPast, loading, lastUpdated, actions } =
     useAdminBookingsData();
 
-  // UI state
+  /*
+   * حالات البحث والفلترة.
+   */
   const [searchTerm, setSearchTerm] = useState("");
+
   const [serviceFilter, setServiceFilter] = useState("all");
+
   const [sortMode, setSortMode] = useState("soonest");
+
   const [showPast, setShowPast] = useState(true);
 
-  // ✅ Compact + expanded
+  /*
+   * الوضع المضغوط وتفاصيل الكروت.
+   */
   const [compactMode, setCompactMode] = useState(true);
-  const [expandedIds, setExpandedIds] = useState({});
-  const toggleExpanded = (id) => {
-    setExpandedIds((prev) => ({ ...prev, [id]: !prev[id] }));
-  };
 
-  // ✅ Toolbar collapsible
+  const [expandedIds, setExpandedIds] = useState({});
+
+  function toggleExpanded(id) {
+    setExpandedIds((previous) => ({
+      ...previous,
+
+      [id]: !previous[id],
+    }));
+  }
+
+  /*
+   * فتح وإغلاق أدوات البحث والفلترة.
+   */
   const [toolsOpen, setToolsOpen] = useState(false);
 
-  // Filter upcoming
+  /**
+   * فلترة وترتيب الحجوزات القادمة.
+   */
   const filteredUpcoming = useMemo(() => {
     const term = safeLower(searchTerm).trim();
+
     let list = [...upcoming];
 
     if (serviceFilter !== "all") {
-      list = list.filter((b) => b.selectedService === serviceFilter);
+      list = list.filter(
+        (booking) => booking.selectedService === serviceFilter,
+      );
     }
 
     if (term) {
-      list = list.filter((b) => {
-        const name = safeLower(b.fullName);
-        const phonePretty = safeLower(e164ToLocalPretty(b.phoneNumber));
-        const phoneRaw = safeLower(b.phoneNumber);
+      list = list.filter((booking) => {
+        const name = safeLower(booking.fullName);
+
+        const prettyPhone = safeLower(e164ToLocalPretty(booking.phoneNumber));
+
+        const rawPhone = safeLower(booking.phoneNumber);
+
         return (
           name.includes(term) ||
-          phonePretty.includes(term) ||
-          phoneRaw.includes(term)
+          prettyPhone.includes(term) ||
+          rawPhone.includes(term)
         );
       });
     }
 
     if (sortMode === "newest") {
-      list.sort((a, b) => {
-        const da =
-          typeof a.createdAt === "string"
-            ? new Date(a.createdAt)
-            : a.createdAt?.toDate?.() ?? new Date(0);
-        const dbb =
-          typeof b.createdAt === "string"
-            ? new Date(b.createdAt)
-            : b.createdAt?.toDate?.() ?? new Date(0);
-        return dbb - da;
+      list.sort((firstBooking, secondBooking) => {
+        const firstCreatedAt =
+          typeof firstBooking.createdAt === "string"
+            ? new Date(firstBooking.createdAt)
+            : (firstBooking.createdAt?.toDate?.() ?? new Date(0));
+
+        const secondCreatedAt =
+          typeof secondBooking.createdAt === "string"
+            ? new Date(secondBooking.createdAt)
+            : (secondBooking.createdAt?.toDate?.() ?? new Date(0));
+
+        return secondCreatedAt - firstCreatedAt;
       });
     } else {
-      list.sort((a, b) => {
-        const da = new Date(`${a.selectedDate}T${a.selectedTime}:00`);
-        const dbb = new Date(`${b.selectedDate}T${b.selectedTime}:00`);
-        return da - dbb;
+      list.sort((firstBooking, secondBooking) => {
+        const firstDate = new Date(
+          `${firstBooking.selectedDate}T${firstBooking.selectedTime}:00`,
+        );
+
+        const secondDate = new Date(
+          `${secondBooking.selectedDate}T${secondBooking.selectedTime}:00`,
+        );
+
+        return firstDate - secondDate;
       });
     }
 
     return list;
   }, [upcoming, searchTerm, serviceFilter, sortMode]);
 
-  // Filter past
+  /**
+   * فلترة وترتيب السجل المؤقت.
+   */
   const filteredPast = useMemo(() => {
     const term = safeLower(searchTerm).trim();
+
     let list = [...recentPast];
 
     if (serviceFilter !== "all") {
       list = list.filter(
-        (b) => (b.selectedService ?? "both") === serviceFilter
+        (booking) => (booking.selectedService ?? "both") === serviceFilter,
       );
     }
 
     if (term) {
-      list = list.filter((b) => {
-        const name = safeLower(b.fullName);
-        const phonePretty = safeLower(e164ToLocalPretty(b.phoneNumber));
-        const phoneRaw = safeLower(b.phoneNumber);
+      list = list.filter((booking) => {
+        const name = safeLower(booking.fullName);
+
+        const prettyPhone = safeLower(e164ToLocalPretty(booking.phoneNumber));
+
+        const rawPhone = safeLower(booking.phoneNumber);
+
         return (
           name.includes(term) ||
-          phonePretty.includes(term) ||
-          phoneRaw.includes(term)
+          prettyPhone.includes(term) ||
+          rawPhone.includes(term)
         );
       });
     }
 
-    list.sort((a, b) => {
-      const da = b.cancelledAt
-        ? new Date(b.cancelledAt)
-        : new Date(`${b.selectedDate}T${b.selectedTime}:00`);
-      const dbb = a.cancelledAt
-        ? new Date(a.cancelledAt)
-        : new Date(`${a.selectedDate}T${a.selectedTime}:00`);
-      return da - dbb;
+    list.sort((firstBooking, secondBooking) => {
+      function toDate(value, fallback) {
+        if (typeof value === "string") {
+          return new Date(value);
+        }
+
+        if (value?.toDate) {
+          return value.toDate();
+        }
+
+        return new Date(fallback);
+      }
+
+      const firstDate = toDate(
+        firstBooking.cancelledAt,
+        `${firstBooking.selectedDate}T${firstBooking.selectedTime}:00`,
+      );
+
+      const secondDate = toDate(
+        secondBooking.cancelledAt,
+        `${secondBooking.selectedDate}T${secondBooking.selectedTime}:00`,
+      );
+
+      return secondDate - firstDate;
     });
 
     return list;
   }, [recentPast, searchTerm, serviceFilter]);
 
+  /**
+   * تجميع الحجوزات القادمة حسب التاريخ.
+   */
   const upcomingByDate = useMemo(() => {
-    return Object.entries(
-      filteredUpcoming.reduce((acc, b) => {
-        (acc[b.selectedDate] = acc[b.selectedDate] || []).push(b);
-        return acc;
-      }, {})
-    ).sort(([a], [b]) => a.localeCompare(b));
+    const grouped = filteredUpcoming.reduce((result, booking) => {
+      if (!result[booking.selectedDate]) {
+        result[booking.selectedDate] = [];
+      }
+
+      result[booking.selectedDate].push(booking);
+
+      return result;
+    }, {});
+
+    return Object.entries(grouped).sort(([firstDate], [secondDate]) =>
+      firstDate.localeCompare(secondDate),
+    );
   }, [filteredUpcoming]);
 
+  /*
+   * أول حجز بالقائمة هو الدور الجاي.
+   */
   const nextId = filteredUpcoming[0]?.id ?? null;
 
   return (
-    <section className="min-h-screen bg-gray-100 pt-24 p-4 font-body" dir="rtl">
-      <div className="max-w-5xl mx-auto bg-white rounded-2xl shadow-xl p-4 sm:p-6 space-y-4">
-        {/* Top Bar */}
+    <section
+      className="
+        min-h-screen
+        bg-gray-100
+        p-4 pt-24
+        font-body
+      "
+      dir="rtl"
+    >
+      <div
+        className="
+          mx-auto max-w-5xl
+          space-y-4
+          rounded-2xl bg-white
+          p-4 shadow-xl
+          sm:p-6
+        "
+      >
+        {/* الشريط العلوي */}
         <div className="flex items-center justify-between gap-3">
           <button
+            type="button"
             onClick={() => navigate(-1)}
-            className="text-blue-700 hover:text-blue-900 text-sm font-semibold"
+            className="
+              text-sm font-semibold
+              text-blue-700
+              transition
+              hover:text-blue-900
+            "
           >
             ← الرجوع
           </button>
 
           <div className="flex-1">
-            <div className="flex items-center justify-center gap-2 flex-wrap">
-              <h1 className="text-lg sm:text-xl font-extrabold text-gold">
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <h1
+                className="
+                  text-lg font-extrabold
+                  text-gold
+                  sm:text-xl
+                "
+              >
                 لوحة الحجوزات
               </h1>
 
-              <span className="text-[11px] font-bold px-3 py-1 rounded-full border bg-emerald-50 text-emerald-800 border-emerald-200">
+              <span
+                className="
+                  rounded-full
+                  border border-emerald-200
+                  bg-emerald-50
+                  px-3 py-1
+                  text-[11px] font-bold
+                  text-emerald-800
+                "
+              >
                 القادمة: {filteredUpcoming.length}
               </span>
 
-              <span className="text-[11px] font-bold px-3 py-1 rounded-full border bg-yellow-50 text-yellow-900 border-yellow-200">
+              <span
+                className="
+                  rounded-full
+                  border border-yellow-200
+                  bg-yellow-50
+                  px-3 py-1
+                  text-[11px] font-bold
+                  text-yellow-900
+                "
+              >
                 السجل: {filteredPast.length}
               </span>
             </div>
           </div>
 
-          <div className="hidden sm:flex items-center gap-2 text-[11px] text-gray-400">
+          <div
+            className="
+              hidden items-center gap-2
+              text-[11px] text-gray-400
+              sm:flex
+            "
+          >
             <FaSyncAlt className="opacity-70" />
+
             <span>
               {lastUpdated
                 ? `آخر تحديث: ${String(lastUpdated.getHours()).padStart(
                     2,
-                    "0"
+                    "0",
                   )}:${String(lastUpdated.getMinutes()).padStart(2, "0")}`
                 : "آخر تحديث: —"}
             </span>
           </div>
         </div>
 
-        {/* ✅ Toolbar (collapsible + نفس ارتفاع المضغوط) */}
+        {/* أدوات البحث والفلترة */}
         <Toolbar
           toolsOpen={toolsOpen}
           setToolsOpen={setToolsOpen}
@@ -182,29 +302,83 @@ export default function AdminBookingsPage() {
 
         {loading ? (
           <div className="space-y-3">
-            <div className="h-20 rounded-2xl bg-gray-100 border border-gray-200 animate-pulse" />
-            <div className="h-28 rounded-2xl bg-gray-100 border border-gray-200 animate-pulse" />
-            <div className="h-28 rounded-2xl bg-gray-100 border border-gray-200 animate-pulse" />
+            <div
+              className="
+                h-20 animate-pulse
+                rounded-2xl
+                border border-gray-200
+                bg-gray-100
+              "
+            />
+
+            <div
+              className="
+                h-28 animate-pulse
+                rounded-2xl
+                border border-gray-200
+                bg-gray-100
+              "
+            />
+
+            <div
+              className="
+                h-28 animate-pulse
+                rounded-2xl
+                border border-gray-200
+                bg-gray-100
+              "
+            />
           </div>
         ) : (
           <div className="space-y-4">
-            {/* Upcoming */}
-            <div className="rounded-2xl border border-gray-200 bg-white p-3 sm:p-4">
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-base sm:text-lg font-extrabold text-gray-900">
+            {/* الحجوزات القادمة */}
+            <div
+              className="
+                rounded-2xl
+                border border-gray-200
+                bg-white p-3
+                sm:p-4
+              "
+            >
+              <div className="mb-3 flex items-center justify-between">
+                <h2
+                  className="
+                    text-base font-extrabold
+                    text-gray-900
+                    sm:text-lg
+                  "
+                >
                   📆 الحجوزات القادمة
                 </h2>
-                <span className="text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full px-3 py-1">
+
+                <span
+                  className="
+                    rounded-full
+                    border border-emerald-200
+                    bg-emerald-50
+                    px-3 py-1
+                    text-[11px] font-bold
+                    text-emerald-800
+                  "
+                >
                   {filteredUpcoming.length} موعد
                 </span>
               </div>
 
               {filteredUpcoming.length === 0 ? (
-                <div className="rounded-xl bg-gray-50 border border-gray-200 p-6 text-center">
-                  <p className="text-gray-900 font-extrabold">
+                <div
+                  className="
+                    rounded-xl
+                    border border-gray-200
+                    bg-gray-50 p-6
+                    text-center
+                  "
+                >
+                  <p className="font-extrabold text-gray-900">
                     لا توجد حجوزات.
                   </p>
-                  <p className="text-xs text-gray-500 mt-1">
+
+                  <p className="mt-1 text-xs text-gray-500">
                     أي حجز جديد سيظهر هنا تلقائيًا.
                   </p>
                 </div>
@@ -219,27 +393,27 @@ export default function AdminBookingsPage() {
                       compactMode={compactMode}
                       expandedIds={expandedIds}
                       toggleExpanded={toggleExpanded}
-                      onCancel={(b) => actions.cancelBooking(b)}
+                      onCancel={(booking) => actions.cancelBooking(booking)}
                     />
                   ))}
                 </div>
               )}
             </div>
 
-            {/* Past */}
+            {/* السجل المؤقت */}
             <PastSection
               showPast={showPast}
               setShowPast={setShowPast}
               filteredPast={filteredPast}
               compactMode={compactMode}
-              expandedIds={expandedIds}
-              toggleExpanded={toggleExpanded}
-              onRestore={(b) => actions.restoreBooking(b, upcoming)}
-              onDelete={(b) => actions.deleteBookingForever(b)}
+              onRestore={(booking) => actions.restoreBooking(booking, upcoming)}
+              onDelete={(booking, mode) =>
+                actions.deleteBookingForever(booking, mode)
+              }
             />
 
             <div className="text-center text-[11px] text-gray-400">
-              بحث بالاسم/الهاتف → اتصال → وإذا لزم: إلغاء/استرجاع/حذف.
+              بحث بالاسم أو الهاتف ← اتصال ← وإذا لزم: إلغاء أو استرجاع أو حذف.
             </div>
           </div>
         )}

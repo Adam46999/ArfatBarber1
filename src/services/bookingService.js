@@ -7,7 +7,6 @@ import {
   doc,
   getDoc,
   getDocs,
-  increment,
   query,
   runTransaction,
   serverTimestamp,
@@ -16,6 +15,7 @@ import {
 } from "firebase/firestore";
 
 import { toILPhoneE164 } from "../utils/phone";
+import { cancelBookingWithStats } from "./completedStats";
 
 /**
  * يحوّل التاريخ والساعة إلى معرّف ثابت للموعد.
@@ -58,6 +58,7 @@ function matchesExistingAttempt(existing, payload) {
  */
 export async function fetchBlockedDay(dateYMD) {
   const snapshot = await getDoc(doc(db, "blockedDays", dateYMD));
+
   return snapshot.exists();
 }
 
@@ -178,11 +179,6 @@ export async function createBooking(payload) {
 
   const slotRef = doc(db, "bookedSlots", slotId);
 
-  const monthKey = String(payload?.selectedDate || "").slice(0, 7);
-
-  const monthRef =
-    monthKey.length === 7 ? doc(db, "statsMonthly", monthKey) : null;
-
   await runTransaction(db, async (transaction) => {
     /*
      * نقرأ الحجز والموعد أولًا قبل تنفيذ أي كتابة.
@@ -254,6 +250,13 @@ export async function createBooking(payload) {
 
       cancelledAt: payload?.cancelledAt ?? null,
 
+      /*
+       * هذه الحقول تمنع احتساب نفس الدور مرتين.
+       */
+      completedStatsCounted: false,
+      completedStatsMonth: null,
+      completedStatsCountedAt: null,
+
       notify: {
         onCreateSentAt: null,
         r24hSentAt: null,
@@ -281,25 +284,6 @@ export async function createBooking(payload) {
         merge: true,
       },
     );
-
-    /*
-     * تحديث الإحصائيات داخل نفس Transaction.
-     *
-     * بهذا لا ننتظر عملية منفصلة بعد نجاح الحجز،
-     * ولا يشعر المستخدم أن الصفحة علقت بعد تثبيت الموعد.
-     */
-    if (monthRef) {
-      transaction.set(
-        monthRef,
-        {
-          total: increment(1),
-          updatedAt: serverTimestamp(),
-        },
-        {
-          merge: true,
-        },
-      );
-    }
   });
 
   return bookingRef.id;
@@ -364,75 +348,16 @@ export function logBookingClientEvent(event) {
 
 /**
  * إلغاء الحجز وتحرير الموعد.
+ *
+ * إذا كان الدور قد بدأ وانحسب بالإحصائيات،
+ * ينقص العدد تلقائيًا عند الإلغاء.
+ *
+ * إذا لم يبدأ الدور بعد،
+ * ينلغى بدون التأثير على الإحصائيات.
  */
 export async function cancelBooking(bookingId) {
-  const bookingRef = doc(db, "bookings", bookingId);
-
   try {
-    await runTransaction(db, async (transaction) => {
-      const snapshot = await transaction.get(bookingRef);
-
-      if (!snapshot.exists()) {
-        throw new Error("Booking not found");
-      }
-
-      const booking = snapshot.data();
-
-      /*
-       * إذا كان ملغى سابقًا، لا نكرر العملية.
-       */
-      if (booking.cancelledAt) return;
-
-      const slotId = makeSlotId(booking.selectedDate, booking.selectedTime);
-
-      const slotRef = doc(db, "bookedSlots", slotId);
-
-      /*
-       * تعليم الحجز كملغى.
-       */
-      transaction.update(bookingRef, {
-        cancelledAt: serverTimestamp(),
-      });
-
-      /*
-       * تحرير الموعد.
-       */
-      transaction.set(
-        slotRef,
-        {
-          bookingId,
-          selectedDate: booking.selectedDate,
-          selectedTime: booking.selectedTime,
-          active: false,
-          updatedAt: serverTimestamp(),
-        },
-        {
-          merge: true,
-        },
-      );
-
-      /*
-       * إنقاص إحصائيات الشهر.
-       */
-      const monthKey = String(booking.selectedDate || "").slice(0, 7);
-
-      if (!monthKey || monthKey.length !== 7) {
-        return;
-      }
-
-      const monthRef = doc(db, "statsMonthly", monthKey);
-
-      transaction.set(
-        monthRef,
-        {
-          total: increment(-1),
-          updatedAt: serverTimestamp(),
-        },
-        {
-          merge: true,
-        },
-      );
-    });
+    await cancelBookingWithStats(bookingId);
   } catch (error) {
     console.error("cancelBooking failed:", error);
 
