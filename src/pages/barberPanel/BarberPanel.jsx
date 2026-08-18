@@ -830,8 +830,8 @@ export default function BarberPanel() {
             !dayIsClosedByHours &&
             !isDayBlocked && (
               <div className="border-t border-slate-100 bg-slate-50/60 px-4 py-5 sm:px-7">
-                <div className="mb-4 flex items-center justify-between gap-3">
-                  <div>
+                <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="shrink-0">
                     <h2 className="text-base font-black text-slate-900 sm:text-lg">
                       الأوقات
                     </h2>
@@ -840,6 +840,26 @@ export default function BarberPanel() {
                       مطابقة للأوقات الظاهرة للزبون
                     </p>
                   </div>
+
+                  <ExtraSlotsCard
+                    selectedDate={selectedDate}
+                    extraSlots={extraSlots}
+                    loadingExtras={loadingExtras}
+                    savingExtras={savingExtras}
+                    applyMode={applyMode}
+                    setApplyMode={setApplyMode}
+                    applyUntil={applyUntil}
+                    setApplyUntil={setApplyUntil}
+                    onApply={(nextValue) =>
+                      applyExtraSlotsChange({
+                        nextValue,
+                        applyMode,
+                        applyUntil,
+                        setStatusMessage,
+                        selectedDate,
+                      })
+                    }
+                  />
                 </div>
 
                 <TimesGrid
@@ -890,36 +910,6 @@ export default function BarberPanel() {
 
       <RecentBookingsCard recentBookings={recentBookings} />
 
-      {/* =====================================================
-          4. الساعات الإضافية
-      ====================================================== */}
-
-      {selectedDate &&
-        weeklyHoursReady &&
-        !dayIsClosedByHours &&
-        !isDayBlocked && (
-          <div className="mx-auto max-w-3xl">
-            <ExtraSlotsCard
-              selectedDate={selectedDate}
-              extraSlots={extraSlots}
-              loadingExtras={loadingExtras}
-              savingExtras={savingExtras}
-              applyMode={applyMode}
-              setApplyMode={setApplyMode}
-              applyUntil={applyUntil}
-              setApplyUntil={setApplyUntil}
-              onApply={(nextValue) =>
-                applyExtraSlotsChange({
-                  nextValue,
-                  applyMode,
-                  applyUntil,
-                  setStatusMessage,
-                  selectedDate,
-                })
-              }
-            />
-          </div>
-        )}
 
       {/* =====================================================
           5. ملاحظة الهيرو — آخر شيء
