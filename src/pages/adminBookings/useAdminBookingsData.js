@@ -187,7 +187,7 @@ export function useAdminBookingsData() {
        * ينقص من الإحصائيات تلقائيًا.
        */
       async cancelBooking(booking) {
-        await cancelBookingWithStats(booking.id);
+        await cancelBookingWithStats(booking.id, "BARBER");
 
         const cancelledAt = new Date().toISOString();
 
@@ -208,6 +208,7 @@ export function useAdminBookingsData() {
             ...booking,
 
             cancelledAt,
+            cancelledBy: "BARBER",
 
             completedStatsCounted: false,
             completedStatsCountedAt: null,
@@ -269,6 +270,7 @@ export function useAdminBookingsData() {
          */
         await updateDoc(doc(db, "bookings", booking.id), {
           cancelledAt: deleteField(),
+          cancelledBy: deleteField(),
 
           completedStatsCounted: false,
           completedStatsCountedAt: null,
@@ -313,6 +315,7 @@ export function useAdminBookingsData() {
           ...booking,
 
           cancelledAt: null,
+          cancelledBy: null,
 
           completedStatsCounted: false,
           completedStatsCountedAt: null,

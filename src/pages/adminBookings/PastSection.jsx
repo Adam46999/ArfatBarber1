@@ -32,6 +32,61 @@ function bookingStarted(booking) {
 }
 
 /**
+ * يعطي الحلاق وصفًا واضحًا لحالة الدور في السجل.
+ *
+ * الحجوزات القديمة قد تكون ملغية بدون cancelledBy،
+ * لذلك لا نخمن مين ألغى.
+ */
+function getHistoryStatus(booking) {
+  if (!booking?.cancelledAt) {
+    return {
+      label: "انتهى الموعد",
+      detail: "✓ انتهى الموعد بدون إلغاء",
+      classes: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    };
+  }
+
+  if (booking.cancelledBy === "BARBER") {
+    return {
+      label: "ألغاه الحلاق",
+      detail: "✂️ ألغاه الحلاق",
+      classes: "border-rose-200 bg-rose-50 text-rose-700",
+    };
+  }
+
+  if (booking.cancelledBy === "CUSTOMER") {
+    return {
+      label: "ألغاه الزبون",
+      detail: "👤 ألغاه الزبون",
+      classes: "border-amber-200 bg-amber-50 text-amber-800",
+    };
+  }
+
+  return {
+    label: "ملغي (قديم)",
+    detail: "🚫 حجز ملغي - مصدر الإلغاء غير مسجل",
+    classes: "border-slate-200 bg-slate-100 text-slate-700",
+  };
+}
+
+function HistoryStatusBadge({ booking }) {
+  const status = getHistoryStatus(booking);
+
+  return (
+    <span
+      className={`
+        shrink-0 rounded-full border
+        px-2 py-0.5
+        text-[9px] font-black
+        sm:text-[10px]
+        ${status.classes}
+      `}
+    >
+      {status.label}
+    </span>
+  );
+}
+/**
  * نافذة الحذف النهائي.
  *
  * إذا بدأ وقت الدور ولم يكن ملغيًا:
@@ -259,6 +314,8 @@ function DeleteBookingDialog({ booking, onClose, onDelete, deleting }) {
  * الملغية والمنتهية.
  */
 function BookingDetails({ booking, onRestore, onRequestDelete }) {
+  const historyStatus = getHistoryStatus(booking);
+
   return (
     <>
       <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -308,35 +365,20 @@ function BookingDetails({ booking, onRestore, onRequestDelete }) {
         </span>
       </div>
 
-      {booking.cancelledAt ? (
-        <div
-          className="
-            mb-3 inline-block
-            rounded-xl
-            border border-red-200
-            bg-red-50
-            px-3 py-2
-            text-[11px] font-semibold
-            text-red-700
-          "
-        >
-          🚫 تم الإلغاء: {formatDateTime(booking.cancelledAt)}
-        </div>
-      ) : (
-        <div
-          className="
-            mb-3 inline-block
-            rounded-xl
-            border border-emerald-200
-            bg-emerald-50
-            px-3 py-2
-            text-[11px] font-semibold
-            text-emerald-700
-          "
-        >
-          ✓ مرّ وقت الدور بدون إلغاء
-        </div>
-      )}
+      <div
+        className={`
+          mb-3 inline-block
+          rounded-xl border
+          px-3 py-2
+          text-[11px] font-semibold
+          ${historyStatus.classes}
+        `}
+      >
+        {historyStatus.detail}
+        {booking.cancelledAt
+          ? ` • ${formatDateTime(booking.cancelledAt)}`
+          : ""}
+      </div>
 
       <div
         className="
@@ -558,15 +600,19 @@ export default function PastSection({
                         "
                       aria-label="فتح تفاصيل السجل"
                     >
-                      <span
-                        className="
-                            truncate
-                            text-sm font-black
-                            text-gray-900
-                            sm:text-base
-                          "
-                      >
-                        {name}
+                      <span className="flex min-w-0 items-center gap-2">
+                        <span
+                          className="
+                              truncate
+                              text-sm font-black
+                              text-gray-900
+                              sm:text-base
+                            "
+                        >
+                          {name}
+                        </span>
+
+                        <HistoryStatusBadge booking={booking} />
                       </span>
 
                       <div className="flex shrink-0 items-center gap-2">
@@ -625,17 +671,21 @@ export default function PastSection({
                   >
                     <div className="min-w-0 flex-1 space-y-2">
                       <div className="flex items-start justify-between gap-3">
-                        <h3
-                          className="
-                              break-words
-                              text-lg font-black
-                              leading-snug
-                              text-gray-900
-                              sm:text-xl
-                            "
-                        >
-                          {name}
-                        </h3>
+                        <div className="flex min-w-0 flex-wrap items-center gap-2">
+                          <h3
+                            className="
+                                break-words
+                                text-lg font-black
+                                leading-snug
+                                text-gray-900
+                                sm:text-xl
+                              "
+                          >
+                            {name}
+                          </h3>
+
+                          <HistoryStatusBadge booking={booking} />
+                        </div>
 
                         <span className={timePillClasses}>
                           <FaClock className="opacity-90" />

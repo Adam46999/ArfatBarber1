@@ -357,7 +357,7 @@ export function logBookingClientEvent(event) {
  */
 export async function cancelBooking(bookingId) {
   try {
-    await cancelBookingWithStats(bookingId);
+    await cancelBookingWithStats(bookingId, "CUSTOMER");
   } catch (error) {
     console.error("cancelBooking failed:", error);
 

@@ -265,10 +265,15 @@ export async function deletePastBookingWithStats(
  * إذا كان وقت الدور بدأ وانحسب مسبقًا،
  * ينقص العدد مباشرة حتى لا يبقى رقم غلط.
  */
-export async function cancelBookingWithStats(bookingId) {
+export async function cancelBookingWithStats(bookingId, cancelledBy = null) {
   if (!bookingId) return;
 
-  await runTransaction(db, async (transaction) => {
+  const safeCancelledBy =
+    cancelledBy === "BARBER" || cancelledBy === "CUSTOMER"
+      ? cancelledBy
+      : null;
+
+  const cancelledNow = await runTransaction(db, async (transaction) => {
     const bookingRef = doc(db, "bookings", bookingId);
     const bookingSnapshot = await transaction.get(bookingRef);
 
@@ -278,7 +283,7 @@ export async function cancelBookingWithStats(bookingId) {
 
     const booking = bookingSnapshot.data() || {};
 
-    if (isBookingCancelled(booking)) return;
+    if (isBookingCancelled(booking)) return false;
 
     const monthKey = getBookingMonthKey(booking);
 
@@ -312,5 +317,39 @@ export async function cancelBookingWithStats(bookingId) {
         { merge: true },
       );
     }
+
+    return true;
   });
+
+  /*
+   * cancelledBy معلومة إضافية فقط.
+   * إذا فشل حفظها، الإلغاء الأساسي يظل ناجحًا.
+   */
+  if (!cancelledNow || !safeCancelledBy) return;
+
+  try {
+    await runTransaction(db, async (transaction) => {
+      const bookingRef = doc(db, "bookings", bookingId);
+      const bookingSnapshot = await transaction.get(bookingRef);
+
+      if (!bookingSnapshot.exists()) return;
+
+      const booking = bookingSnapshot.data() || {};
+
+      /*
+       * حماية من سباق الاسترجاع:
+       * لا نكتب مصدر إلغاء إذا الحجز تم استرجاعه.
+       */
+      if (!isBookingCancelled(booking)) return;
+
+      transaction.update(bookingRef, {
+        cancelledBy: safeCancelledBy,
+      });
+    });
+  } catch (error) {
+    console.warn(
+      "Cancellation source metadata write skipped:",
+      error?.code || error,
+    );
+  }
 }
