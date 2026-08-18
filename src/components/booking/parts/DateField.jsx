@@ -10,6 +10,16 @@ registerLocale("ar", ar);
 registerLocale("he", he);
 registerLocale("en", enUS);
 
+const DAY_KEYS = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+];
+
 function parseYMD(valueYMD) {
   if (!valueYMD) return null;
 
@@ -33,6 +43,7 @@ function DateField({
   onChangeYMD,
   onBlur,
   t,
+  workingHours,
   ...accessibilityProps
 }) {
   const { i18n } = useTranslation();
@@ -50,7 +61,16 @@ function DateField({
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const isSunday = (date) => date.getDay() === 0;
+  const isClosedDate = (date) => {
+    if (!workingHours) {
+      return true;
+    }
+
+    const dayKey = DAY_KEYS[date.getDay()];
+    const hours = workingHours?.[dayKey];
+
+    return !hours?.from || !hours?.to;
+  };
 
   const getDayClassName = (date) => {
     const normalizedDate = new Date(date);
@@ -58,7 +78,7 @@ function DateField({
 
     const isToday = normalizedDate.getTime() === today.getTime();
     const isPast = normalizedDate < today;
-    const isClosed = isSunday(date);
+    const isClosed = isClosedDate(date);
 
     const classes = [];
 
@@ -97,7 +117,7 @@ function DateField({
         selected={selectedDate}
         onChange={handleChange}
         minDate={today}
-        filterDate={(date) => !isSunday(date)}
+        filterDate={(date) => !isClosedDate(date)}
         locale={language}
         calendarStartDay={language === "en" ? 0 : 1}
         dayClassName={getDayClassName}

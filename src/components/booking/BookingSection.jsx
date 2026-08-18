@@ -951,6 +951,7 @@ function BookingSection() {
               >
                 <DateField
                   valueYMD={form.selectedDate}
+                  workingHours={workingHours}
                   onChangeYMD={(selectedDate) => {
                     setForm((currentForm) => ({
                       ...currentForm,

@@ -1,20 +1,55 @@
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
+import useWeeklyWorkingHours from "../hooks/useWeeklyWorkingHours";
+
+const DAY_KEYS = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+];
 
 function BookingIntro() {
   const { t, i18n } = useTranslation();
   const isArabic = i18n.language === "ar";
   const fontClass = isArabic ? "font-ar" : "font-heading";
 
-  const workingHours = [
-    { day: 'Sunday', hours: 'Closed' },
-    { day: 'Monday', hours: 'Closed' },
-    { day: 'Tuesday', hours: '12:00 – 21:00' },
-    { day: 'Wednesday', hours: '12:00 – 21:00' },
-    { day: 'Thursday', hours: '12:00 – 22:00' },
-    { day: 'Friday', hours: '13:00 – 23:30' },
-    { day: 'Saturday', hours: '11:00 – 19:30' },
-  ];
+  const {
+    weeklyHours,
+    loading: loadingWeeklyHours,
+    error: weeklyHoursError,
+  } = useWeeklyWorkingHours({
+    live: true,
+  });
+
+  const workingHours = DAY_KEYS.map((day) => {
+    const hours = weeklyHours?.[day] || null;
+
+    if (loadingWeeklyHours) {
+      return { day, hours: "...", closed: false };
+    }
+
+    if (weeklyHoursError || !weeklyHours) {
+      return { day, hours: "...", closed: false };
+    }
+
+    if (!hours?.from || !hours?.to) {
+      return {
+        day,
+        hours: t("closed", { defaultValue: "Closed" }),
+        closed: true,
+      };
+    }
+
+    return {
+      day,
+      hours: `${hours.from} \u2013 ${hours.to}`,
+      closed: false,
+    };
+  });
 
   return (
     <section className={`min-h-screen bg-primary text-light ${fontClass} flex flex-col items-center justify-start pt-24 px-4`}>
@@ -33,10 +68,10 @@ function BookingIntro() {
       <div className="mt-10 w-full max-w-md" data-aos="fade-up" data-aos-delay="100">
         <h2 className="text-xl font-semibold mb-4 text-center text-gold">{t('working_hours')}</h2>
         <ul className="bg-white text-darkText rounded-lg shadow-md divide-y divide-gray-200">
-          {workingHours.map(({ day, hours }) => (
+          {workingHours.map(({ day, hours, closed }) => (
             <li key={day} className="flex justify-between p-3 px-5">
               <span>{t(day)}</span>
-              <span className={hours === 'Closed' ? 'text-red-500' : ''}>{hours}</span>
+              <span className={closed ? 'text-red-500' : ''}>{hours}</span>
             </li>
           ))}
         </ul>
