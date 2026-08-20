@@ -1,41 +1,35 @@
-// src/pages/barberPanel/reviews/ReviewsManagerPage.jsx
+import { useMemo, useState } from "react";
+
 import TabsBar from "./TabsBar";
-import SummaryCards from "./SummaryCards";
 import FiltersBar from "./FiltersBar";
 import ReviewsList from "./ReviewsList";
 import BlockedPhonesPanel from "./BlockedPhonesPanel";
 import ArchivedPanel from "./ArchivedPanel";
 import UndoToast from "./UndoToast";
 
-import { useMemo } from "react";
 import { useReviewsManager } from "./useReviewsManager";
-import { useNavigate } from "react-router-dom";
 
 export default function ReviewsManagerPage() {
-  const navigate = useNavigate();
+  const [refreshing, setRefreshing] = useState(false);
+  const [message, setMessage] = useState("");
 
   const {
     tab,
     setTab,
 
-    // data
     filteredReviews,
     archived,
     blocked,
-    summary,
     count,
     avg,
 
-    // loading
     loadingReviews,
     loadingArchived,
     loadingBlocked,
     loadingSummary,
 
-    // pagination
     hasMore,
 
-    // filters
     qText,
     setQText,
     stars,
@@ -43,148 +37,266 @@ export default function ReviewsManagerPage() {
     sortBy,
     setSortBy,
 
-    // actions
     fetchReviews,
     fetchArchived,
     fetchBlocked,
     fetchSummary,
+
     archiveReview,
     restoreReview,
     deleteArchivedPermanently,
     blockPhoneEverywhere,
     unblockPhoneEverywhere,
 
-    // undo
     undo,
     setUndo,
     undoArchive,
   } = useReviewsManager();
 
+  const activeTab =
+    tab === "blocked" || tab === "archived" ? tab : "reviews";
+
   const counts = useMemo(
     () => ({
-      reviews: filteredReviews?.length || 0,
+      reviews: Number(count || 0),
       blocked: blocked?.length || 0,
       archived: archived?.length || 0,
     }),
-    [filteredReviews, blocked, archived],
+    [count, blocked, archived],
   );
 
   const blockedSet = useMemo(() => {
-    const s = new Set();
-    (blocked || []).forEach((b) => {
-      const key = String(b.phoneKey || b.id || "");
-      if (key) s.add(key);
+    const result = new Set();
+
+    (blocked || []).forEach((item) => {
+      const phoneKey = String(item.phoneKey || item.id || "").trim();
+
+      if (phoneKey) {
+        result.add(phoneKey);
+      }
     });
-    return s;
+
+    return result;
   }, [blocked]);
 
-  const onRefresh = async () => {
-    await Promise.all([
-      fetchReviews({ reset: true }),
-      fetchBlocked(),
-      fetchArchived(),
-      fetchSummary(),
-    ]);
-  };
-
   const anyLoading =
-    loadingReviews || loadingBlocked || loadingArchived || loadingSummary;
+    loadingReviews ||
+    loadingArchived ||
+    loadingBlocked ||
+    loadingSummary ||
+    refreshing;
+
+  const filtersActive =
+    String(qText || "").trim() !== "" ||
+    stars !== "all" ||
+    sortBy !== "newest";
+
+  function flash(text) {
+    setMessage(text);
+
+    window.setTimeout(() => {
+      setMessage("");
+    }, 3000);
+  }
+
+  async function onRefresh() {
+    if (refreshing) return;
+
+    setRefreshing(true);
+    setMessage("");
+
+    try {
+      await Promise.all([
+        fetchReviews({ reset: true }),
+        fetchArchived(),
+        fetchBlocked(),
+        fetchSummary(),
+      ]);
+
+      flash("تم تحديث التقييمات.");
+    } catch (error) {
+      console.error("Failed to refresh reviews manager:", error);
+      setMessage("تعذر تحديث البيانات. حاول مرة ثانية.");
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
+  async function handleArchive(reviewId) {
+    try {
+      await archiveReview(reviewId);
+    } catch (error) {
+      console.error("Failed to archive review:", error);
+      setMessage("تعذر إخفاء التقييم. حاول مرة ثانية.");
+    }
+  }
+
+  async function handleRestore(reviewId) {
+    try {
+      await restoreReview(reviewId);
+      flash("تم إظهار التقييم من جديد.");
+    } catch (error) {
+      console.error("Failed to restore review:", error);
+      setMessage("تعذر إظهار التقييم. حاول مرة ثانية.");
+    }
+  }
+
+  async function handleDeleteForever(reviewId) {
+    const confirmed = window.confirm(
+      "حذف التقييم نهائيًا؟ لا يمكن التراجع بعد الحذف.",
+    );
+
+    if (!confirmed) return;
+
+    try {
+      await deleteArchivedPermanently(reviewId);
+      flash("تم حذف التقييم نهائيًا.");
+    } catch (error) {
+      console.error("Failed to delete archived review:", error);
+      setMessage("تعذر حذف التقييم. حاول مرة ثانية.");
+    }
+  }
+
+  async function handleBlock(phoneKey, reviewId) {
+    const confirmed = window.confirm(
+      "حظر الزبون؟ لن يتمكن من إرسال تقييمات أو حجوزات جديدة.",
+    );
+
+    if (!confirmed) return;
+
+    try {
+      await blockPhoneEverywhere(phoneKey, reviewId);
+      flash("تم حظر الزبون.");
+    } catch (error) {
+      console.error("Failed to block phone:", error);
+      setMessage("تعذر حظر الزبون. حاول مرة ثانية.");
+    }
+  }
+
+  async function handleUnblock(phoneKey) {
+    try {
+      await unblockPhoneEverywhere(phoneKey);
+      flash("تم فك الحظر.");
+    } catch (error) {
+      console.error("Failed to unblock phone:", error);
+      setMessage("تعذر فك الحظر. حاول مرة ثانية.");
+    }
+  }
 
   return (
     <div
-      className="min-h-screen bg-gray-100 px-4"
       dir="rtl"
+      className="min-h-screen bg-slate-100 px-3 sm:px-4"
       style={{
-        paddingTop: "calc(var(--header-h, 96px) + 16px)",
-        paddingBottom: "24px",
+        paddingTop: "calc(var(--header-h, 96px) + 12px)",
+        paddingBottom: "28px",
       }}
     >
-      <div className="w-full max-w-4xl mx-auto">
-        {/* Card */}
-        <div className="bg-white shadow-xl rounded-2xl border border-gray-200 p-5 md:p-8">
-          {/* Title + Back */}
-          <div className="flex flex-row-reverse items-center justify-between mb-6">
+      <div className="mx-auto w-full max-w-4xl space-y-3">
+        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="flex items-center justify-between gap-3 p-3">
+            <div className="flex min-w-0 items-center gap-2">
+              <h1 className="shrink-0 text-lg font-black text-slate-950">
+                التقييمات
+              </h1>
+
+              <span className="truncate text-xs font-bold text-slate-500">
+                {count ? `${Number(avg || 0).toFixed(1)} ★ · ${count} تقييم` : "لا يوجد تقييمات"}
+              </span>
+            </div>
+
             <button
-              onClick={() => navigate(-1)}
-              className="text-sm flex items-center gap-1 text-gray-600 hover:text-gray-800 transition"
-              aria-label="رجوع"
-              title="رجوع"
+              type="button"
+              onClick={onRefresh}
+              disabled={anyLoading}
+              className="
+                shrink-0 rounded-xl border border-slate-200
+                bg-slate-50 px-3 py-2
+                text-xs font-black text-slate-700
+                transition hover:bg-slate-100
+                disabled:cursor-not-allowed disabled:opacity-50
+              "
             >
-              <span className="text-lg">←</span> الرجوع
+              {refreshing ? "..." : "↻ تحديث"}
             </button>
-
-            <div className="text-right">
-              <div className="text-2xl font-black text-gray-900">
-                إدارة التقييمات
-              </div>
-              <div className="text-sm text-gray-500 mt-1">
-                أرشف تقييمات، احظر/فك حظر أرقام، وراجع الأرشيف — بشكل منظم
-                وواضح.
-              </div>
-            </div>
           </div>
 
-          {/* Tabs */}
-          <div className="mb-3">
-            <TabsBar tab={tab} setTab={setTab} counts={counts} />
+          <div className="border-t border-slate-100 p-2">
+            <TabsBar
+              tab={activeTab}
+              setTab={setTab}
+              counts={counts}
+            />
           </div>
+        </section>
 
-          {/* Summary (بس بالتقييمات) */}
-          {tab === "reviews" ? (
-            <div className="mb-3">
-              <SummaryCards count={count} avg={avg} byStar={summary?.byStar} />
+        {message ? (
+          <div
+            className={[
+              "rounded-2xl border px-4 py-3 text-sm font-bold",
+              message.includes("تعذر")
+                ? "border-rose-200 bg-rose-50 text-rose-700"
+                : "border-emerald-200 bg-emerald-50 text-emerald-700",
+            ].join(" ")}
+          >
+            {message}
+          </div>
+        ) : null}
+
+        {activeTab === "reviews" ? (
+          <>
+            <FiltersBar
+              qText={qText}
+              setQText={setQText}
+              stars={stars}
+              setStars={setStars}
+              sortBy={sortBy}
+              setSortBy={setSortBy}
+            />
+
+            <div className="flex items-center justify-between px-1">
+              <h2 className="text-sm font-black text-slate-800">
+                آراء الزبائن
+              </h2>
+
+              <span className="text-[11px] font-bold text-slate-500">
+                {filtersActive
+                  ? `${filteredReviews.length} نتيجة`
+                  : `${count || 0} تقييم`}
+              </span>
             </div>
-          ) : null}
 
-          {/* Content */}
-          {tab === "reviews" ? (
-            <>
-              <div className="mb-3">
-                <FiltersBar
-                  qText={qText}
-                  setQText={setQText}
-                  stars={stars}
-                  setStars={setStars}
-                  sortBy={sortBy}
-                  setSortBy={setSortBy}
-                  onRefresh={onRefresh}
-                  loading={anyLoading}
-                />
-              </div>
-
-              <ReviewsList
-                items={filteredReviews}
-                loading={loadingReviews}
-                hasMore={hasMore}
-                onLoadMore={() => fetchReviews({ reset: false })}
-                blockedSet={blockedSet}
-                onArchive={archiveReview}
-                onBlock={blockPhoneEverywhere}
-                onUnblock={unblockPhoneEverywhere}
-              />
-            </>
-          ) : null}
-
-          {tab === "blocked" ? (
-            <BlockedPhonesPanel
-              blocked={blocked}
-              loading={loadingBlocked}
-              onUnblock={unblockPhoneEverywhere}
+            <ReviewsList
+              items={filteredReviews}
+              loading={loadingReviews}
+              hasMore={hasMore}
+              onLoadMore={() => fetchReviews({ reset: false })}
+              blockedSet={blockedSet}
+              onArchive={handleArchive}
+              onBlock={handleBlock}
+              onUnblock={handleUnblock}
             />
-          ) : null}
+          </>
+        ) : null}
 
-          {tab === "archived" ? (
-            <ArchivedPanel
-              items={archived}
-              loading={loadingArchived}
-              onRestore={restoreReview}
-              onDeleteForever={deleteArchivedPermanently}
-            />
-          ) : null}
-        </div>
+        {activeTab === "blocked" ? (
+          <BlockedPhonesPanel
+            blocked={blocked}
+            loading={loadingBlocked}
+            onUnblock={handleUnblock}
+          />
+        ) : null}
+
+        {activeTab === "archived" ? (
+          <ArchivedPanel
+            items={archived}
+            loading={loadingArchived}
+            onRestore={handleRestore}
+            onDeleteForever={handleDeleteForever}
+          />
+        ) : null}
       </div>
 
-      {/* Undo Toast */}
       <UndoToast
         undo={undo}
         onUndo={undoArchive}
