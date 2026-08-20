@@ -262,6 +262,8 @@ export async function createBooking(payload) {
         r24hSentAt: null,
         r2hSentAt: null,
         r30mSentAt: null,
+        barberOnCreateSentAt: null,
+        barberOnCreateStatus: null,
         ...(payload?.notify || {}),
       },
 

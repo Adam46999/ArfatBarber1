@@ -30,4 +30,5 @@ jobs:
       - name: Run reminders
         env:
           FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+          BARBER_DEVICE_VERIFICATION_SECRET: ${{ secrets.BARBER_DEVICE_VERIFICATION_SECRET }}
         run: node scripts/notifications/runReminders.js

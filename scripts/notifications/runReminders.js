@@ -26,6 +26,7 @@ import { buildOnCreatePayload, buildReminderPayload } from "./templates.js";
 import { sendToTokens } from "./sendFcm.js";
 
 import runTestNotifications from "./runTestNotifications.js";
+import processBarberOnCreate from "./processBarberOnCreate.js";
 
 /**
  * حذف القيم المكررة والفارغة.
@@ -294,6 +295,23 @@ async function processReminders() {
 async function main() {
   try {
     await processOnCreate();
+
+    /*
+     * إشعار الحلاق مستقل تمامًا عن إشعارات الزبون.
+     *
+     * أي خطأ هنا يتم تسجيله فقط، ولا يوقف:
+     * - تذكيرات الزبون.
+     * - إشعارات الاختبار.
+     * - بقية تشغيل النظام.
+     */
+    try {
+      await processBarberOnCreate();
+    } catch (barberNotificationError) {
+      console.error(
+        "❌ barber notification processing failed:",
+        barberNotificationError,
+      );
+    }
 
     await processReminders();
 

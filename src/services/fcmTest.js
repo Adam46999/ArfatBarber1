@@ -95,7 +95,7 @@ export async function saveDeviceToken(token) {
     ref,
     {
       token,
-      role: ident.role,
+      requestedRole: ident.role,
       username: ident.username,
       userAgent: navigator.userAgent || null,
       platform: navigator.platform || null,

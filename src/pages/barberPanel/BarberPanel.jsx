@@ -25,6 +25,7 @@ import DateDropdown from "./components/DateDropdown";
 import TimesGrid from "./components/TimesGrid";
 import ExtraSlotsCard from "./components/ExtraSlotsCard";
 import RecentBookingsCard from "./components/RecentBookingsCard";
+import NotificationTestCard from "./components/NotificationTestCard";
 
 function timeToMinutes(time) {
   if (!time) return null;
@@ -909,6 +910,12 @@ export default function BarberPanel() {
       ====================================================== */}
 
       <RecentBookingsCard recentBookings={recentBookings} />
+
+      {/* =====================================================
+          4. إعداد إشعارات الحلاق
+      ====================================================== */}
+
+      <NotificationTestCard />
 
 
       {/* =====================================================
