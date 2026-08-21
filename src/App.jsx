@@ -20,23 +20,6 @@ function App() {
     try {
       const messaging = getMessaging(app);
 
-      Notification.requestPermission()
-        .then((permission) => {
-          if (permission === "granted") {
-            return getToken(messaging, {
-              vapidKey:
-                "BMSKYpj6OfL2RinVjw4jUNlL-Hbi1Ev4eiTibIKlvFwqSULUm42ricVJRcKbptmiepuDbl3andf-F2tf7Cmr-U8",
-            });
-          }
-        })
-        .then((currentToken) => {
-          if (currentToken) {
-            console.log("✅ Token:", currentToken);
-          }
-        })
-        .catch((err) => {
-          console.warn("🔒 FCM error:", err);
-        });
 
       // ✅ استقبال الإشعار في حال كان المستخدم يفتح الموقع
       onMessage(messaging, (payload) => {

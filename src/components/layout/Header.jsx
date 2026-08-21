@@ -210,14 +210,6 @@ function Header() {
           {t("home")}
         </Link>
 
-        <Link
-          to="/about"
-          className="block py-2 hover:text-gold focus:outline-none focus-visible:ring-2 focus-visible:ring-gold rounded"
-          onClick={() => setMenuOpen(false)}
-          aria-current={location.pathname === "/about" ? "page" : undefined}
-        >
-          {t("about")}
-        </Link>
 
         <Link
           to="/contact"
