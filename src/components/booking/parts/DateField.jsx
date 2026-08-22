@@ -61,25 +61,13 @@ const AVAILABILITY_LABELS = {
 
 const AVAILABILITY_LEGEND_LABELS = {
   ar: {
-    label: "دليل توفر المواعيد",
-    available: "متاح",
-    limited: "محدود",
-    low: "قليل",
-    full: "ممتلئ",
+    label: "الرقم = المواعيد المتاحة · 0 = ممتلئ",
   },
   he: {
-    label: "מקרא זמינות תורים",
-    available: "פנוי",
-    limited: "מוגבל",
-    low: "מעט",
-    full: "מלא",
+    label: "המספר = תורים פנויים · 0 = מלא",
   },
   en: {
-    label: "Appointment availability legend",
-    available: "Available",
-    limited: "Limited",
-    low: "Low",
-    full: "Full",
+    label: "Number = available appointments · 0 = full",
   },
 };
 
@@ -103,11 +91,6 @@ function getAvailabilityVisual(summary, language) {
     Number(summary.availableSlots) || 0,
   );
 
-  const availabilityRatio = Math.max(
-    0,
-    Math.min(1, Number(summary.availabilityRatio) || 0),
-  );
-
   if (summary.status === "full" || availableSlots === 0) {
     return {
       kind: "full",
@@ -116,26 +99,18 @@ function getAvailabilityVisual(summary, language) {
     };
   }
 
-  if (availabilityRatio > 0.5) {
+  if (availableSlots <= 3) {
     return {
-      kind: "available",
-      text: "",
-      label: labels.available(availableSlots),
-    };
-  }
-
-  if (availabilityRatio >= 0.25) {
-    return {
-      kind: "limited",
-      text: "",
-      label: labels.limited(availableSlots),
+      kind: "low",
+      text: String(availableSlots),
+      label: labels.low(availableSlots),
     };
   }
 
   return {
-    kind: "low",
-    text: availableSlots <= 3 ? String(availableSlots) : "",
-    label: labels.low(availableSlots),
+    kind: "available",
+    text: availableSlots >= 9 ? "9+" : String(availableSlots),
+    label: labels.available(availableSlots),
   };
 }
 
@@ -286,54 +261,9 @@ function DateField({
       {canShowAvailability ? (
         <div
           className="booking-calendar__availability-legend"
-          role="list"
-          aria-label={legendLabels.label}
+          role="note"
         >
-          <span
-            className="booking-calendar__legend-item"
-            role="listitem"
-          >
-            <span
-              className="booking-calendar__legend-swatch booking-calendar__legend-swatch--available"
-              aria-hidden="true"
-            />
-            <span>{legendLabels.available}</span>
-          </span>
-
-          <span
-            className="booking-calendar__legend-item"
-            role="listitem"
-          >
-            <span
-              className="booking-calendar__legend-swatch booking-calendar__legend-swatch--limited"
-              aria-hidden="true"
-            />
-            <span>{legendLabels.limited}</span>
-          </span>
-
-          <span
-            className="booking-calendar__legend-item"
-            role="listitem"
-          >
-            <span
-              className="booking-calendar__legend-swatch booking-calendar__legend-swatch--low"
-              aria-hidden="true"
-            >
-              1
-            </span>
-            <span>{legendLabels.low}</span>
-          </span>
-
-          <span
-            className="booking-calendar__legend-item"
-            role="listitem"
-          >
-            <span
-              className="booking-calendar__legend-swatch booking-calendar__legend-swatch--full"
-              aria-hidden="true"
-            />
-            <span>{legendLabels.full}</span>
-          </span>
+          {legendLabels.label}
         </div>
       ) : null}
 
@@ -692,6 +622,45 @@ function DateField({
           color: #555b64;
         }
 
+        /* أرقام مباشرة وواضحة لعدد المواعيد المتاحة */
+        .booking-calendar-wrapper
+          .booking-calendar__availability--available,
+        .booking-calendar-wrapper
+          .booking-calendar__availability--low,
+        .booking-calendar-wrapper
+          .booking-calendar__availability--full {
+          min-width: 15px;
+          height: 15px;
+          padding: 0 3px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 999px;
+          font-size: 8px;
+          font-weight: 900;
+          line-height: 1;
+        }
+
+        .booking-calendar-wrapper
+          .booking-calendar__availability--available {
+          background: #568560;
+          color: #ffffff;
+        }
+
+        .booking-calendar-wrapper
+          .booking-calendar__availability--low {
+          border: 1px solid #d6a046;
+          background: #f7e7c6;
+          color: #7a4c00;
+        }
+
+        .booking-calendar-wrapper
+          .booking-calendar__availability--full {
+          border: 1px solid #d4d6da;
+          background: #ececed;
+          color: #666b73;
+        }
+
         .booking-calendar-wrapper .booking-calendar__availability-legend {
           display: flex;
           align-items: center;
@@ -809,11 +778,15 @@ function DateField({
           }
 
           .booking-calendar-wrapper
+            .booking-calendar__availability--available,
+          .booking-calendar-wrapper
             .booking-calendar__availability--low,
           .booking-calendar-wrapper
             .booking-calendar__availability--full {
-            min-width: 10px;
-            height: 10px;
+            min-width: 13px;
+            height: 13px;
+            padding-inline: 2px;
+            font-size: 7px;
           }
 
           .booking-calendar-wrapper .react-datepicker__month {

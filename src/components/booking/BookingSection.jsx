@@ -234,8 +234,7 @@ function BookingSection() {
   /**
    * لا نشغّل ملخص الشهر إلا عندما يصل المستخدم للتقويم.
    */
-  const [monthAvailabilityEnabled, setMonthAvailabilityEnabled] =
-    useState(false);
+  const [monthAvailabilityEnabled, setMonthAvailabilityEnabled] = useState(true);
 
   const [errors, setErrors] = useState({});
 
