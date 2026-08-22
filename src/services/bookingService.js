@@ -15,6 +15,12 @@ import {
 } from "firebase/firestore";
 
 import { toILPhoneE164 } from "../utils/phone";
+import defaultWorkingHours from "../constants/workingHours";
+import {
+  applyExtraSlots,
+  generateSlots30Min,
+  safeInt,
+} from "../utils/slots";
 import { cancelBookingWithStats } from "./completedStats";
 
 /**
@@ -357,6 +363,632 @@ export function logBookingClientEvent(event) {
  * إذا لم يبدأ الدور بعد،
  * ينلغى بدون التأثير على الإحصائيات.
  */
+/**
+ * أقل مدة مسموحة قبل الموعد لتغييره.
+ *
+ * نفس سياسة الإلغاء الحالية حتى لا يصبح
+ * تغيير الموعد طريقة للالتفاف على حد الإلغاء.
+ */
+const RESCHEDULE_WINDOW_MIN = 50;
+
+function normalizeBookingCode(value) {
+  return String(value || "").trim().toUpperCase();
+}
+
+function getBookingStartMs(booking) {
+  if (booking?.startAt?.toMillis) {
+    const value = booking.startAt.toMillis();
+
+    if (Number.isFinite(value)) {
+      return value;
+    }
+  }
+
+  if (booking?.startAt?.toDate) {
+    const value = booking.startAt.toDate()?.getTime?.();
+
+    if (Number.isFinite(value)) {
+      return value;
+    }
+  }
+
+  const dateYMD = String(booking?.selectedDate || "").trim();
+  const timeHHMM = String(booking?.selectedTime || "").trim();
+
+  if (
+    !/^\d{4}-\d{2}-\d{2}$/.test(dateYMD) ||
+    !/^\d{2}:\d{2}$/.test(timeHHMM)
+  ) {
+    return Number.NaN;
+  }
+
+  const value = new Date(
+    `${dateYMD}T${timeHHMM}:00`,
+  ).getTime();
+
+  return Number.isFinite(value)
+    ? value
+    : Number.NaN;
+}
+
+function extractWeeklyHoursForReschedule(data) {
+  if (!data || typeof data !== "object") {
+    return defaultWorkingHours;
+  }
+
+  if (
+    data.weekly &&
+    typeof data.weekly === "object" &&
+    !Array.isArray(data.weekly)
+  ) {
+    return data.weekly;
+  }
+
+  if (
+    data.weeklyHours &&
+    typeof data.weeklyHours === "object" &&
+    !Array.isArray(data.weeklyHours)
+  ) {
+    return data.weeklyHours;
+  }
+
+  const hasDirectDay = Object.keys(
+    defaultWorkingHours,
+  ).some((dayKey) =>
+    Object.prototype.hasOwnProperty.call(
+      data,
+      dayKey,
+    ),
+  );
+
+  return hasDirectDay
+    ? data
+    : defaultWorkingHours;
+}
+
+function getWeekdayName(dateYMD) {
+  const date = new Date(`${dateYMD}T00:00:00`);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return date.toLocaleDateString("en-US", {
+    weekday: "long",
+  });
+}
+
+/**
+ * تغيير موعد الحجز نفسه بدون إنشاء حجز جديد.
+ *
+ * جميع التغييرات الحساسة:
+ * - تثبيت الساعة الجديدة
+ * - تحديث الحجز
+ * - تحرير الساعة القديمة
+ *
+ * تتم داخل Transaction واحدة.
+ */
+export async function rescheduleBooking({
+  bookingId,
+  bookingCode,
+  selectedDate,
+  selectedTime,
+}) {
+  const safeBookingId = String(
+    bookingId || "",
+  ).trim();
+
+  const safeBookingCode =
+    normalizeBookingCode(bookingCode);
+
+  const safeSelectedDate = String(
+    selectedDate || "",
+  ).trim();
+
+  const safeSelectedTime = String(
+    selectedTime || "",
+  ).trim();
+
+  if (
+    !safeBookingId ||
+    !safeBookingCode ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(
+      safeSelectedDate,
+    ) ||
+    !/^\d{2}:\d{2}$/.test(
+      safeSelectedTime,
+    )
+  ) {
+    throw new Error(
+      "INVALID_RESCHEDULE_REQUEST",
+    );
+  }
+
+  const targetTimestamp = new Date(
+    `${safeSelectedDate}T${safeSelectedTime}:00`,
+  ).getTime();
+
+  if (!Number.isFinite(targetTimestamp)) {
+    throw new Error(
+      "INVALID_TARGET_DATE_TIME",
+    );
+  }
+
+  const currentMs = Date.now();
+
+  if (targetTimestamp <= currentMs) {
+    throw new Error("TARGET_TIME_IN_PAST");
+  }
+
+  const bookingRef = doc(
+    db,
+    "bookings",
+    safeBookingId,
+  );
+
+  const [rescheduleBookingSnap, rescheduleSettingsSnap] =
+    await Promise.all([
+      getDoc(bookingRef),
+      getDoc(doc(db, "barberSettings", "global")),
+    ]);
+
+  if (!rescheduleBookingSnap.exists()) {
+    throw new Error("BOOKING_NOT_FOUND");
+  }
+
+  const rescheduleCurrentBooking =
+    rescheduleBookingSnap.data() || {};
+
+  if (
+    normalizeBookingCode(rescheduleCurrentBooking.bookingCode) !==
+    safeBookingCode
+  ) {
+    throw new Error("INVALID_BOOKING_CODE");
+  }
+
+  const rescheduleSettings = rescheduleSettingsSnap.exists()
+    ? rescheduleSettingsSnap.data() || {}
+    : {};
+
+  const limitOnePerDay =
+    typeof rescheduleSettings.limitOneBookingPerDayPerPhone === "boolean"
+      ? rescheduleSettings.limitOneBookingPerDayPerPhone
+      : Boolean(rescheduleSettings.limitOneBookingPerDay);
+
+  if (limitOnePerDay) {
+    const phone = toILPhoneE164(
+      rescheduleCurrentBooking.phoneNumber,
+    );
+
+    const dayBookings =
+      await fetchActiveBookingsByDate(safeSelectedDate);
+
+    const hasOtherBooking = dayBookings.some(
+      (candidate) =>
+        candidate.id !== safeBookingId &&
+        toILPhoneE164(candidate.phoneNumber) === phone,
+    );
+
+    if (hasOtherBooking) {
+      throw new Error("PHONE_ALREADY_BOOKED_TODAY");
+    }
+  }
+  return runTransaction(
+    db,
+    async (transaction) => {
+      const bookingSnapshot =
+        await transaction.get(bookingRef);
+
+      if (!bookingSnapshot.exists()) {
+        throw new Error("BOOKING_NOT_FOUND");
+      }
+
+      const booking =
+        bookingSnapshot.data() || {};
+
+      if (booking.cancelledAt) {
+        throw new Error("BOOKING_CANCELLED");
+      }
+
+      const storedCode =
+        normalizeBookingCode(
+          booking.bookingCode,
+        );
+
+      if (
+        !storedCode ||
+        storedCode !== safeBookingCode
+      ) {
+        throw new Error(
+          "INVALID_BOOKING_CODE",
+        );
+      }
+
+      const oldDate = String(
+        booking.selectedDate || "",
+      ).trim();
+
+      const oldTime = String(
+        booking.selectedTime || "",
+      ).trim();
+
+      if (
+        oldDate === safeSelectedDate &&
+        oldTime === safeSelectedTime
+      ) {
+        throw new Error(
+          "SAME_BOOKING_TIME",
+        );
+      }
+
+      const oldStartMs =
+        getBookingStartMs(booking);
+
+      if (!Number.isFinite(oldStartMs)) {
+        throw new Error(
+          "INVALID_CURRENT_BOOKING_TIME",
+        );
+      }
+
+      const minutesLeft = Math.floor(
+        (oldStartMs - currentMs) / 60000,
+      );
+
+      if (
+        minutesLeft <
+        RESCHEDULE_WINDOW_MIN
+      ) {
+        throw new Error(
+          "RESCHEDULE_WINDOW_CLOSED",
+        );
+      }
+
+      if (
+        booking.completedStatsCounted ===
+        true
+      ) {
+        throw new Error(
+          "BOOKING_ALREADY_COUNTED",
+        );
+      }
+
+      const oldSlotRef = doc(
+        db,
+        "bookedSlots",
+        makeSlotId(oldDate, oldTime),
+      );
+
+      const newSlotRef = doc(
+        db,
+        "bookedSlots",
+        makeSlotId(
+          safeSelectedDate,
+          safeSelectedTime,
+        ),
+      );
+
+      const blockedDayRef = doc(
+        db,
+        "blockedDays",
+        safeSelectedDate,
+      );
+
+      const blockedTimesRef = doc(
+        db,
+        "blockedTimes",
+        safeSelectedDate,
+      );
+
+      const slotExtrasRef = doc(
+        db,
+        "slotExtras",
+        safeSelectedDate,
+      );
+
+      const weeklyHoursRef = doc(
+        db,
+        "barberSettings",
+        "hours",
+      );
+
+      const [
+        oldSlotSnapshot,
+        newSlotSnapshot,
+        blockedDaySnapshot,
+        blockedTimesSnapshot,
+        slotExtrasSnapshot,
+        weeklyHoursSnapshot,
+      ] = await Promise.all([
+        transaction.get(oldSlotRef),
+        transaction.get(newSlotRef),
+        transaction.get(blockedDayRef),
+        transaction.get(blockedTimesRef),
+        transaction.get(slotExtrasRef),
+        transaction.get(weeklyHoursRef),
+      ]);
+
+      if (blockedDaySnapshot.exists()) {
+        throw new Error(
+          "TARGET_DAY_BLOCKED",
+        );
+      }
+
+      const blockedTimes =
+        blockedTimesSnapshot.exists()
+          ? blockedTimesSnapshot.data()
+              ?.times
+          : [];
+
+      if (
+        Array.isArray(blockedTimes) &&
+        blockedTimes.includes(
+          safeSelectedTime,
+        )
+      ) {
+        throw new Error(
+          "TARGET_TIME_BLOCKED",
+        );
+      }
+
+      /*
+       * نتأكد أن الساعة الجديدة موجودة فعلًا
+       * ضمن نفس جدول الدوام والـExtra Slots
+       * الذي يعتمد عليه الحجز العادي.
+       */
+      const weeklyHours =
+        weeklyHoursSnapshot.exists()
+          ? extractWeeklyHoursForReschedule(
+              weeklyHoursSnapshot.data(),
+            )
+          : defaultWorkingHours;
+
+      const weekday =
+        getWeekdayName(
+          safeSelectedDate,
+        );
+
+      const dayHours =
+        weekday
+          ? weeklyHours?.[weekday]
+          : null;
+
+      if (
+        !dayHours?.from ||
+        !dayHours?.to
+      ) {
+        throw new Error(
+          "TARGET_DAY_CLOSED",
+        );
+      }
+
+      const extraSlots =
+        slotExtrasSnapshot.exists()
+          ? safeInt(
+              slotExtrasSnapshot.data()
+                ?.extraSlots,
+              0,
+            )
+          : 0;
+
+      const validTargetSlots =
+        applyExtraSlots(
+          generateSlots30Min(
+            dayHours.from,
+            dayHours.to,
+          ),
+          extraSlots,
+        );
+
+      if (
+        !validTargetSlots.includes(
+          safeSelectedTime,
+        )
+      ) {
+        throw new Error(
+          "TARGET_TIME_NOT_AVAILABLE",
+        );
+      }
+
+      if (
+        oldSlotSnapshot.exists() &&
+        oldSlotSnapshot.data()?.active ===
+          true
+      ) {
+        const owner =
+          oldSlotSnapshot.data()
+            ?.bookingId;
+
+        if (
+          !owner || owner !== safeBookingId
+        ) {
+          throw new Error(
+            "OLD_SLOT_CONFLICT",
+          );
+        }
+      }
+
+      if (
+        newSlotSnapshot.exists() &&
+        newSlotSnapshot.data()?.active ===
+          true
+      ) {
+        const occupyingBookingId =
+          newSlotSnapshot.data()?.bookingId;
+
+        /*
+         * أي slot فعّال ليس للحجز نفسه
+         * نعتبره محجوزًا.
+         *
+         * لا نحاول إصلاح بيانات قديمة هنا
+         * لأن الأولوية هي ألا نسرق موعدًا
+         * من حجز آخر تحت أي ظرف.
+         */
+        if (
+          !occupyingBookingId ||
+          occupyingBookingId !==
+            safeBookingId
+        ) {
+          throw new Error(
+            "TIME_ALREADY_BOOKED",
+          );
+        }
+      }
+
+      const previousCount = Number(
+        booking.rescheduleCount || 0,
+      );
+
+      const nextCount =
+        Number.isFinite(previousCount)
+          ? previousCount + 1
+          : 1;
+
+      /*
+       * نحافظ على flags الخاصة بإنشاء الحجز،
+       * ونصفّر فقط تذكيرات الوقت.
+       */
+      const nextNotify = {
+        ...(booking.notify || {}),
+        r24hSentAt: null,
+        r2hSentAt: null,
+        r30mSentAt: null,
+      };
+
+      transaction.update(
+        bookingRef,
+        {
+          selectedDate:
+            safeSelectedDate,
+
+          selectedTime:
+            safeSelectedTime,
+
+          timestamp:
+            targetTimestamp,
+
+          startAt: new Date(
+            targetTimestamp,
+          ),
+
+          notify: nextNotify,
+
+          reminderSent_60: false,
+          reminderSent_30: false,
+
+          rescheduledAt:
+            serverTimestamp(),
+
+          rescheduledAtMs:
+            currentMs,
+
+          rescheduleCount:
+            nextCount,
+
+          lastReschedule: {
+            fromDate: oldDate,
+            fromTime: oldTime,
+            fromTimestamp:
+              oldStartMs,
+
+            toDate:
+              safeSelectedDate,
+            toTime:
+              safeSelectedTime,
+            toTimestamp:
+              targetTimestamp,
+
+            changedBy:
+              "CUSTOMER",
+            changedAtMs:
+              currentMs,
+          },
+
+          updatedAt:
+            serverTimestamp(),
+        },
+      );
+
+      transaction.set(
+        newSlotRef,
+        {
+          bookingId:
+            safeBookingId,
+
+          selectedDate:
+            safeSelectedDate,
+
+          selectedTime:
+            safeSelectedTime,
+
+          active: true,
+
+          updatedAt:
+            serverTimestamp(),
+        },
+        {
+          merge: true,
+        },
+      );
+
+      /*
+       * الساعة القديمة تتحرر فقط
+       * لو الـslot نفسه يعود لهذا الحجز.
+       */
+      if (
+        oldSlotSnapshot.exists() &&
+        oldSlotSnapshot.data()
+          ?.bookingId ===
+          safeBookingId
+      ) {
+        transaction.set(
+          oldSlotRef,
+          {
+            bookingId:
+              safeBookingId,
+
+            selectedDate:
+              oldDate,
+
+            selectedTime:
+              oldTime,
+
+            active: false,
+
+            updatedAt:
+              serverTimestamp(),
+          },
+          {
+            merge: true,
+          },
+        );
+      }
+
+      return {
+        bookingId:
+          safeBookingId,
+
+        previousDate:
+          oldDate,
+
+        previousTime:
+          oldTime,
+
+        selectedDate:
+          safeSelectedDate,
+
+        selectedTime:
+          safeSelectedTime,
+
+        timestamp:
+          targetTimestamp,
+
+        rescheduleCount:
+          nextCount,
+      };
+    },
+  );
+}
+
 export async function cancelBooking(bookingId) {
   try {
     await cancelBookingWithStats(bookingId, "CUSTOMER");

@@ -27,6 +27,8 @@ import {
   toILPhoneE164,
 } from "../../utils/phone";
 import { cancelBooking } from "../../services/bookingService";
+import ReschedulePanel from "./ReschedulePanel";
+import SuccessModal from "./parts/SuccessModal";
 
 const CANCELLATION_WINDOW_MIN = 50;
 
@@ -167,6 +169,8 @@ function BookingTracker() {
   const [codeInputs, setCodeInputs] = useState({});
   const [errorMessages, setErrorMessages] = useState({});
   const [cancellingId, setCancellingId] = useState("");
+  const [reschedulingId, setReschedulingId] = useState("");
+  const [rescheduleSuccess, setRescheduleSuccess] = useState(null);
 
   const handlePhoneChange = (event) => {
     setPhone(event.target.value);
@@ -273,6 +277,20 @@ function BookingTracker() {
     }
   };
 
+  const handleStartReschedule = (booking) => {
+    const code = (codeInputs[booking.docId] || "").trim();
+    if (!code || code !== booking.bookingCode) {
+      setErrorMessages((p) => ({ ...p, [booking.docId]: "رمز التحقق غير صحيح." }));
+      return;
+    }
+    const check = canCancelFixed(getStartAtDate(booking));
+    if (!check.ok) {
+      setErrorMessages((p) => ({ ...p, [booking.docId]: check.reason.replaceAll("الإلغاء", "التعديل") }));
+      return;
+    }
+    setErrorMessages((p) => ({ ...p, [booking.docId]: "" }));
+    setReschedulingId(booking.docId);
+  };
   const handleCancel = async (booking) => {
     const code = (codeInputs[booking.docId] || "").trim();
 
@@ -342,6 +360,7 @@ function BookingTracker() {
       className="relative scroll-mt-28 overflow-hidden bg-[#f8f6f1] px-4 py-16 font-body text-primary md:scroll-mt-32 md:py-20"
       style={{ scrollMarginTop: 120 }}
     >
+      <SuccessModal visible={Boolean(rescheduleSuccess)} onClose={() => setRescheduleSuccess(null)} code={rescheduleSuccess?.code || ""} t={t} title="تم تغيير موعدك بنجاح" oldDate={rescheduleSuccess?.oldDate ? formatDayAndDate(rescheduleSuccess.oldDate) : ""} oldTime={rescheduleSuccess?.oldTime || ""} newDate={rescheduleSuccess?.newDate ? formatDayAndDate(rescheduleSuccess.newDate) : ""} newTime={rescheduleSuccess?.newTime || ""} codeNote="هذا نفس كود الحجز السابق، لم يتغيّر." />
       <div className="pointer-events-none absolute inset-0" aria-hidden="true">
         <div className="absolute -bottom-24 left-10 h-72 w-72 rounded-full bg-gold/10 blur-3xl" />
       </div>
@@ -462,6 +481,7 @@ function BookingTracker() {
               });
 
               const isCancelling = cancellingId === booking.docId;
+              const isRescheduling = reschedulingId === booking.docId;
 
               const enteredCode = codeInputs[booking.docId] || "";
 
@@ -605,6 +625,11 @@ function BookingTracker() {
                             />
                           </div>
 
+                          <button type="button" onClick={() => handleStartReschedule(booking)} disabled={isCancelling || isRescheduling || !enteredCode.trim()} className="flex min-h-[54px] items-center justify-center gap-2 rounded-2xl border border-[#c9a64d] bg-[#fff9e8] px-5 text-sm font-extrabold text-[#76550f] disabled:cursor-not-allowed disabled:opacity-50">
+                            <CalendarDays className="h-5 w-5" aria-hidden="true" />
+                            <span>تعديل الموعد</span>
+                          </button>
+
                           <button
                             type="button"
                             onClick={() => handleCancel(booking)}
@@ -655,6 +680,14 @@ function BookingTracker() {
                       </div>
                     </div>
                   </div>
+                  {isRescheduling ? (
+                    <ReschedulePanel
+                      booking={booking}
+                      bookingCode={enteredCode}
+                      onClose={() => setReschedulingId("")}
+                      onSuccess={({ selectedDate, selectedTime }) => { setReschedulingId(""); setRescheduleSuccess({ code: enteredCode, oldDate: booking.selectedDate, oldTime: booking.selectedTime, newDate: selectedDate, newTime: selectedTime }); void handleCheck(); }}
+                    />
+                  ) : null}
                 </article>
               );
             })}
