@@ -15,6 +15,7 @@ import PhoneInput from "./parts/PhoneInput";
 import SectionTitle from "../common/SectionTitle";
 
 import useAvailableTimes from "../../hooks/useAvailableTimes";
+import useMonthAvailability from "../../hooks/useMonthAvailability";
 import useBookingSubmit from "../../hooks/useBookingSubmit";
 import useWeeklyWorkingHours from "../../hooks/useWeeklyWorkingHours";
 
@@ -181,6 +182,27 @@ function translate(t, key, fallback, options = {}) {
    المكوّن
    ========================================================= */
 
+function BookingCalendarIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-5 w-5"
+      aria-hidden="true"
+    >
+      <rect x="3" y="5" width="18" height="16" rx="2" />
+      <path d="M16 3v4" />
+      <path d="M8 3v4" />
+      <path d="M3 10h18" />
+      <path d="m8.5 15 2 2 4.5-4.5" />
+    </svg>
+  );
+}
+
 function BookingSection() {
   const { t, i18n } = useTranslation();
 
@@ -201,6 +223,19 @@ function BookingSection() {
   });
 
   const [activeStep, setActiveStep] = useState(1);
+
+  /**
+   * الشهر الظاهر حاليًا داخل تقويم الحجز.
+   */
+  const [visibleCalendarMonth, setVisibleCalendarMonth] = useState(
+    () => new Date(),
+  );
+
+  /**
+   * لا نشغّل ملخص الشهر إلا عندما يصل المستخدم للتقويم.
+   */
+  const [monthAvailabilityEnabled, setMonthAvailabilityEnabled] =
+    useState(false);
 
   const [errors, setErrors] = useState({});
 
@@ -260,6 +295,23 @@ function BookingSection() {
     timesError,
     refreshTimes,
   } = useAvailableTimes(form.selectedDate, workingHours);
+
+  /**
+   * ملخص توفر الشهر الظاهر في التقويم.
+   *
+   * يبدأ فقط عند تفاعل المستخدم مع التقويم
+   * حتى لا نضيف قراءات Firebase لزائر لم يصل للحجز.
+   */
+  const {
+    summaryByDate: monthAvailabilityByDate,
+    loading: monthAvailabilityLoading,
+    ready: monthAvailabilityReady,
+    error: monthAvailabilityError,
+  } = useMonthAvailability({
+    monthDate: visibleCalendarMonth,
+    workingHours,
+    enabled: monthAvailabilityEnabled,
+  });
 
   /* =======================================================
      إرسال الحجز
@@ -630,14 +682,14 @@ function BookingSection() {
 
   const submitMessageClasses = (() => {
     if (submitStage === "error" || submitStage === "offline") {
-      return "border-red-200 " + "bg-red-50 " + "text-red-800";
+      return "border-red-200/80 bg-gradient-to-r from-red-50 via-[#fff9f7] to-red-50 text-red-900 shadow-[0_10px_26px_rgba(127,29,29,0.08)]";
     }
 
     if (submitStage === "success") {
       return "border-emerald-200 " + "bg-emerald-50 " + "text-emerald-800";
     }
 
-    return "border-amber-200 " + "bg-amber-50 " + "text-amber-900";
+    return "border-[#d8bd74]/55 bg-gradient-to-r from-[#fff9e8] via-[#fffdf7] to-[#fbf1d6] text-[#715619] shadow-[0_10px_26px_rgba(128,94,22,0.10)]";
   })();
 
   return (
@@ -645,7 +697,7 @@ function BookingSection() {
       id="booking"
       dir={isRTL ? "rtl" : "ltr"}
       className={[
-        "bg-[#f8f8f8]",
+        "border-t border-[#c8a34d]/10 bg-gradient-to-b from-[#f8f6f1] via-[#f6f2e9] to-[#efe9de]",
         "text-primary",
         "py-16",
         "px-4",
@@ -653,7 +705,7 @@ function BookingSection() {
       ].join(" ")}
     >
       <div className="mx-auto max-w-xl">
-        <SectionTitle>{translate(t, "book_now", "احجز الآن")}</SectionTitle>
+        <SectionTitle icon={<BookingCalendarIcon />}>{translate(t, "book_now", "احجز الآن")}</SectionTitle>
 
         {/* ===============================================
             حالة الإنترنت
@@ -749,7 +801,7 @@ function BookingSection() {
 
         <div id="booking-form-start" />
 
-        <div className="space-y-6 rounded-2xl border border-gray-100 bg-white p-6 shadow-xl sm:p-8">
+        <div className="space-y-6 rounded-[28px] border border-[#c8a34d]/20 bg-gradient-to-b from-white via-[#fffdf9] to-[#faf6ed] p-5 shadow-[0_24px_70px_rgba(31,24,12,0.14)] ring-1 ring-white/80 sm:p-8">
           {/* =============================================
               نافذة نجاح الحجز
               ============================================= */}
@@ -832,9 +884,8 @@ function BookingSection() {
                     aria-describedby={isInvalid ? "err-fullName" : undefined}
                     className={[
                       "w-full",
-                      "rounded-xl",
+                      "min-h-[50px] rounded-[14px] bg-white/90 px-4 py-3 shadow-[inset_0_1px_2px_rgba(15,23,42,0.04)]",
                       "border",
-                      "p-3",
                       "outline-none",
                       "transition",
                       "focus:ring-2",
@@ -843,7 +894,7 @@ function BookingSection() {
                         ? "border-red-500 focus:ring-red-300"
                         : isValid
                           ? "border-emerald-500 focus:ring-emerald-300"
-                          : "border-gray-300 focus:border-gold focus:ring-gold/40",
+                          : "border-[#d9d3c6] hover:border-[#c8a34d]/55 focus:border-[#c8a34d] focus:ring-[#c8a34d]/25",
                     ].join(" ")}
                   />
                 );
@@ -947,11 +998,17 @@ function BookingSection() {
               <div
                 onFocusCapture={() => {
                   setActiveStep(3);
+                  setMonthAvailabilityEnabled(true);
                 }}
               >
                 <DateField
                   valueYMD={form.selectedDate}
                   workingHours={workingHours}
+                  onVisibleMonthChange={setVisibleCalendarMonth}
+                  availabilityByDate={monthAvailabilityByDate}
+                  availabilityReady={monthAvailabilityReady}
+                  availabilityLoading={monthAvailabilityLoading}
+                  availabilityError={monthAvailabilityError}
                   onChangeYMD={(selectedDate) => {
                     setForm((currentForm) => ({
                       ...currentForm,
@@ -1201,10 +1258,10 @@ function BookingSection() {
             {submitMessage && submitStage !== "success" && (
               <div
                 className={[
-                  "rounded-2xl",
+                  "rounded-[18px]",
                   "border",
-                  "px-4",
-                  "py-4",
+                  "px-4 sm:px-5",
+                  "py-4 sm:py-[18px]",
                   submitMessageClasses,
                 ].join(" ")}
                 role={
@@ -1235,7 +1292,7 @@ function BookingSection() {
                           disabled={!isOnline}
                           className="rounded-xl bg-red-700 px-4 py-2 text-xs font-bold text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                          إعادة المحاولة
+                          {translate(t, "retry", "إعادة المحاولة")}
                         </button>
 
                         <button
@@ -1243,7 +1300,7 @@ function BookingSection() {
                           onClick={clearSubmitError}
                           className="rounded-xl border border-current px-4 py-2 text-xs font-bold transition hover:bg-white/50"
                         >
-                          إغلاق الرسالة
+                          {translate(t, "close_message", "إغلاق الرسالة")}
                         </button>
                       </div>
                     )}
@@ -1261,16 +1318,16 @@ function BookingSection() {
               disabled={bookingSystemUnavailable}
               aria-busy={isSubmitting ? "true" : "false"}
               className={[
-                "w-full",
-                "rounded-xl",
-                "py-3",
-                "font-bold",
-                "shadow",
-                "transition",
+                "w-full min-h-[54px] touch-manipulation",
+                "rounded-[16px]",
+                "px-5 py-3.5",
+                "font-extrabold tracking-[0.01em]",
+                "shadow-[0_12px_28px_rgba(128,94,22,0.20)]",
+                "outline-none transition-[filter,box-shadow,border-color] duration-200 focus-visible:ring-4 focus-visible:ring-[#c8a34d]/25",
 
                 bookingSystemUnavailable
-                  ? "cursor-not-allowed bg-gray-300 text-gray-600"
-                  : "bg-gradient-to-r from-gold to-yellow-400 text-primary hover:scale-[1.02] hover:shadow-lg",
+                  ? "cursor-not-allowed border border-[#ddd6c8] bg-[#e9e5dc] text-[#8a857b] shadow-none"
+                  : "border border-[#b98b32]/70 bg-gradient-to-r from-[#b98b32] via-[#e0c36e] to-[#c49b43] text-[#171717] hover:brightness-[1.04] hover:shadow-[0_15px_34px_rgba(128,94,22,0.26)]",
 
                 hasFormErrors && !bookingSystemUnavailable
                   ? "ring-1 ring-amber-300"
@@ -1291,7 +1348,7 @@ function BookingSection() {
 
             {!isSubmitting && hasFormErrors && (
               <p className="text-center text-xs font-medium text-slate-500">
-                اضغط تأكيد الحجز وسنوضح لك أي معلومة ناقصة.
+                {translate(t, "missing_fields_hint", "اضغط تأكيد الحجز وسنوضح لك أي معلومة ناقصة.")}
               </p>
             )}
           </form>
