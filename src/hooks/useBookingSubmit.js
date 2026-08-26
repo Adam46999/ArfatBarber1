@@ -2,14 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { getMessaging, getToken } from "firebase/messaging";
 
 import { doc, getDoc } from "firebase/firestore";
 
 import { app, db } from "../firebase";
 
 import {
-  attachFcmTokenToBooking,
   createBooking,
   fetchActiveBookingsByDate,
   getBookingByRequestId,
@@ -273,55 +271,6 @@ async function readLimitOnePerDaySetting() {
   }
 
   return Boolean(data.limitOneBookingPerDay);
-}
-
-/**
- * تجهيز الإشعارات بعد نجاح الحجز.
- *
- * لا ننتظر هذه العملية،
- * لذلك فشل الإشعار لا يمنع الحجز.
- */
-function startNotificationSetup(bookingId, requestId, bookingDetails) {
-  if (!bookingId) {
-    return;
-  }
-
-  void (async () => {
-    try {
-      const messaging = getMessaging(app);
-
-      const fcmToken = await getToken(
-        messaging,
-
-        {
-          vapidKey:
-            "BMSKYpj6OfL2RinVjw4jUNlL-Hbi1Ev4eiTibIKlvFwqSULUm42ricVJRcKbptmiepuDbl3andf-F2tf7Cmr-U8",
-        },
-      );
-
-      if (!fcmToken) {
-        return;
-      }
-
-      await attachFcmTokenToBooking(bookingId, fcmToken);
-    } catch (error) {
-      console.warn("FCM setup skipped:", error);
-
-      logBookingClientEvent({
-        type: "FCM_TOKEN_FAILED",
-
-        stage: "notifications",
-
-        requestId,
-
-        selectedDate: bookingDetails.selectedDate,
-
-        selectedTime: bookingDetails.selectedTime,
-
-        errorCode: error?.code || error?.message || "FCM_FAILED",
-      });
-    }
-  })();
 }
 
 export default function useBookingSubmit(form, setForm, t) {
@@ -1059,8 +1008,6 @@ export default function useBookingSubmit(form, setForm, t) {
             ...EMPTY_FORM,
           });
 
-          startNotificationSetup(bookingId, requestId, normalizedValues);
-
           logBookingClientEvent({
             type: "BOOKING_RECOVERED_AFTER_TIMEOUT",
 
@@ -1108,7 +1055,6 @@ export default function useBookingSubmit(form, setForm, t) {
         /**
          * تجهيز الإشعارات بعد النجاح.
          */
-        startNotificationSetup(bookingId, requestId, normalizedValues);
 
         logBookingClientEvent({
           type: "BOOKING_CREATED",
