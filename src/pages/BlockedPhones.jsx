@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import {
   Ban,
   Check,
@@ -13,12 +13,13 @@ import {
 import {
   collection,
   getDocs,
-  deleteDoc,
   doc,
-  setDoc,
+  writeBatch,
 } from "firebase/firestore";
 
 import { db } from "../firebase";
+
+const BARBER_ID = "arfat";
 import {
   toILPhoneE164,
   isILPhoneE164,
@@ -100,9 +101,18 @@ export default function BlockedPhones() {
     setWorkingPhone(phone);
 
     try {
-      await setDoc(doc(db, "blockedPhones", phone), {
+      const batch = writeBatch(db);
+      const blockData = {
+        phoneKey: phone,
+        from: "manual",
+        fromBarberId: BARBER_ID,
         blockedAt: Date.now(),
-      });
+      };
+
+      batch.set(doc(db, "blockedPhones", phone), blockData);
+      batch.set(doc(db, "barbers", BARBER_ID, "blockedPhones", phone), blockData);
+
+      await batch.commit();
 
       setNewPhone("");
       setInfo("تم حظر الرقم بنجاح.");
@@ -122,7 +132,12 @@ export default function BlockedPhones() {
     setWorkingPhone(phone);
 
     try {
-      await deleteDoc(doc(db, "blockedPhones", phone));
+      const batch = writeBatch(db);
+
+      batch.delete(doc(db, "blockedPhones", phone));
+      batch.delete(doc(db, "barbers", BARBER_ID, "blockedPhones", phone));
+
+      await batch.commit();
       setInfo("تم فك الحظر عن الرقم.");
       setConfirmPhone("");
       await fetchBlockedPhones();
