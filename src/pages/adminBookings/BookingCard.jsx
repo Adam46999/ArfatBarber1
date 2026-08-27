@@ -180,7 +180,8 @@ export default function BookingCard({
             </div>
           </div>
 
-          <div className="mt-3 flex flex-wrap items-center gap-2">
+          {!booking.manualBooking && (
+            <div className="mt-3 flex flex-wrap items-center gap-2">
             <a
               href={`tel:${booking.phoneNumber}`}
               className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-extrabold text-blue-800 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-200"
@@ -206,14 +207,15 @@ export default function BookingCard({
                 {serviceLabel(booking.selectedService)}
               </span>
             )}
-          </div>
+            </div>
+          )}
 
           <div className="mt-2 text-[11px] text-gray-500">
             تم الحجز: {formatDateTime(booking.createdAt)}
           </div>
 
           <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-            <CopyReminderButton fullWidth />
+            {!booking.manualBooking && <CopyReminderButton fullWidth />}
 
             <button
               type="button"
@@ -313,7 +315,8 @@ export default function BookingCard({
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          {!booking.manualBooking && (
+            <div className="flex flex-wrap items-center gap-2">
             <a
               href={`tel:${booking.phoneNumber}`}
               className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-extrabold text-blue-800 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-200"
@@ -337,7 +340,8 @@ export default function BookingCard({
 
               {serviceLabel(booking.selectedService)}
             </span>
-          </div>
+            </div>
+          )}
 
           <div className="text-[11px] text-gray-500">
             تم الحجز: {formatDateTime(booking.createdAt)}
@@ -345,7 +349,7 @@ export default function BookingCard({
         </div>
 
         <div className="flex flex-col gap-2 sm:flex-row sm:pt-0">
-          <CopyReminderButton fullWidth />
+          {!booking.manualBooking && <CopyReminderButton fullWidth />}
 
           <button
             type="button"

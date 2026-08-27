@@ -11,6 +11,7 @@ import useWeeklyWorkingHours from "../../hooks/useWeeklyWorkingHours";
 
 // utils slots
 import { generateSlots30Min, applyExtraSlots } from "../../utils/slots";
+import { createBooking } from "../../services/bookingService";
 import { todayYMD, getWeekdayNameEN } from "./utils/dates";
 
 // hooks
@@ -49,6 +50,10 @@ export default function BarberPanel() {
   // نبدأ على اليوم مباشرة لتكون الصفحة مفيدة من أول لحظة
   const [selectedDate, setSelectedDate] = useState(() => todayYMD());
   const [statusMessage, setStatusMessage] = useState("");
+  const [manualBookingSaving, setManualBookingSaving] = useState(false);
+  const [manualBookingDraft, setManualBookingDraft] = useState(null);
+  const [manualBookingName, setManualBookingName] = useState("");
+  const [manualBookingError, setManualBookingError] = useState("");
 
   // التنبيه المفتوح في Bottom Sheet
   const [activeAlert, setActiveAlert] = useState(null);
@@ -84,7 +89,13 @@ export default function BarberPanel() {
   const { isDayBlocked, loadingBlock, toggleDay } = useBlockedDay(selectedDate);
 
   // blocked times
-  const { blockedTimes, selectedTimes, handleToggleTime, handleApplyBlock } =
+  const {
+    blockedTimes,
+    selectedTimes,
+    setSelectedTimes,
+    handleToggleTime,
+    handleApplyBlock,
+  } =
     useBlockedTimes({
       selectedDate,
       bookings,
@@ -106,6 +117,127 @@ export default function BarberPanel() {
       workingHours,
       activeBookings,
     });
+
+  function closeManualBookingModal() {
+    if (manualBookingSaving) return;
+
+    setManualBookingDraft(null);
+    setManualBookingName("");
+    setManualBookingError("");
+  }
+
+  useEffect(() => {
+    if (!manualBookingDraft) return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const handleManualBookingKeyDown = (event) => {
+      if (event.key !== "Escape" || manualBookingSaving) return;
+
+      setManualBookingDraft(null);
+      setManualBookingName("");
+      setManualBookingError("");
+    };
+
+    window.addEventListener("keydown", handleManualBookingKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleManualBookingKeyDown);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [manualBookingDraft, manualBookingSaving]);
+  function handleManualBooking() {
+    if (selectedTimes.length !== 1 || manualBookingSaving) return;
+
+    const selectedTime = selectedTimes[0];
+
+    const alreadyBooked = bookings.some(
+      (booking) =>
+        booking.selectedDate === selectedDate &&
+        booking.selectedTime === selectedTime &&
+        !booking.cancelledAt,
+    );
+
+    if (alreadyBooked || blockedTimes.includes(selectedTime)) {
+      setSelectedTimes([]);
+      setStatusMessage("هذه الساعة لم تعد متاحة.");
+      return;
+    }
+
+    setManualBookingDraft({
+      selectedDate,
+      selectedTime,
+    });
+
+    setManualBookingName("");
+    setManualBookingError("");
+  }
+
+  async function handleManualBookingSubmit(event) {
+    event?.preventDefault();
+
+    if (!manualBookingDraft || manualBookingSaving) return;
+
+    const fullName = manualBookingName.trim();
+
+    if (!fullName) {
+      setManualBookingError("اكتب اسم الزبون لإتمام الحجز.");
+      return;
+    }
+
+    if (fullName.length > 80) {
+      setManualBookingError("اسم الزبون طويل جدًا.");
+      return;
+    }
+
+    const bookingDate = manualBookingDraft.selectedDate;
+    const bookingTime = manualBookingDraft.selectedTime;
+
+    setManualBookingError("");
+    setManualBookingSaving(true);
+
+    try {
+      await createBooking({
+        fullName,
+        phoneNumber: "",
+        selectedDate: bookingDate,
+        selectedTime: bookingTime,
+        selectedService: "",
+        manualBooking: true,
+        createdBy: "BARBER",
+        createdAtMs: Date.now(),
+      });
+
+      setManualBookingDraft(null);
+      setManualBookingName("");
+      setSelectedTimes([]);
+
+      setStatusMessage(
+        `✅ تم حجز الساعة ${bookingTime} باسم ${fullName}`,
+      );
+    } catch (error) {
+      console.error("manual booking error:", error);
+
+      if (error?.message === "TIME_ALREADY_BOOKED") {
+        setManualBookingDraft(null);
+        setManualBookingName("");
+        setSelectedTimes([]);
+
+        setStatusMessage(
+          `الساعة ${bookingTime} أصبحت محجوزة قبل إتمام العملية.`,
+        );
+
+        return;
+      }
+
+      setManualBookingError(
+        "تعذر تثبيت الحجز. الاسم محفوظ، حاول مرة أخرى.",
+      );
+    } finally {
+      setManualBookingSaving(false);
+    }
+  }
 
   // ====== auto logout ======
   useEffect(() => {
@@ -873,13 +1005,27 @@ export default function BarberPanel() {
 
                 <div className="mt-2">
                   {selectedTimes.length > 0 ? (
-                    <button
+                    <>
+                      <button
                       onClick={handleApplyBlock}
                       className="w-full rounded-xl bg-rose-600 py-3 font-black text-white transition-colors hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-300"
                     >
                       {t("remove_selected_times") ||
                         "تطبيق الحظر على الساعات المحددة"}
                     </button>
+                    {selectedTimes.length === 1 ? (
+                      <button
+                        type="button"
+                        onClick={handleManualBooking}
+                        disabled={manualBookingSaving}
+                        className="mt-2 w-full rounded-xl border border-emerald-300 bg-emerald-50 py-3 font-black text-emerald-800 transition-colors hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {manualBookingSaving
+                          ? "جاري تثبيت الحجز..."
+                          : "حجز الدور باسم زبون"}
+                      </button>
+                    ) : null}
+                  </>
                   ) : (
                     <p className="text-xs font-semibold text-slate-500">
                       اختر ساعة أو أكثر ثم اضغط لحظرها.
@@ -920,6 +1066,101 @@ export default function BarberPanel() {
           معلومات فقط — بدون إجراءات
       ====================================================== */}
 
+      {manualBookingDraft && (
+        <div
+          className="fixed inset-0 z-[120] flex items-end justify-center bg-black/40 sm:items-center sm:px-4"
+          onClick={closeManualBookingModal}
+          role="presentation"
+        >
+          <form
+            onSubmit={handleManualBookingSubmit}
+            onClick={(event) => event.stopPropagation()}
+            className="w-full max-w-md rounded-t-3xl border border-slate-200 bg-white p-5 shadow-2xl sm:rounded-3xl"
+            dir="rtl"
+            role="dialog"
+            aria-modal="true"
+            aria-label="حجز دور باسم زبون"
+          >
+            <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-slate-200 sm:hidden" />
+
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-black text-emerald-700">
+                  حجز يدوي
+                </p>
+
+                <h3 className="mt-1 text-xl font-black text-slate-950">
+                  حجز الساعة {manualBookingDraft.selectedTime}
+                </h3>
+
+                <p className="mt-1 text-xs font-semibold text-slate-500">
+                  {manualBookingDraft.selectedDate}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={closeManualBookingModal}
+                disabled={manualBookingSaving}
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xl font-black text-slate-500 transition hover:bg-slate-200 disabled:opacity-50"
+                aria-label="إغلاق"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="mt-5">
+              <label
+                htmlFor="manual-booking-name"
+                className="mb-2 block text-sm font-black text-slate-800"
+              >
+                اسم الزبون
+              </label>
+
+              <input
+                id="manual-booking-name"
+                type="text"
+                value={manualBookingName}
+                onChange={(event) => {
+                  setManualBookingName(event.target.value);
+                  setManualBookingError("");
+                }}
+                maxLength={80}
+                autoFocus
+                autoComplete="off"
+                placeholder="اكتب اسم الزبون"
+                disabled={manualBookingSaving}
+                className="h-12 w-full rounded-xl border border-slate-300 bg-white px-4 text-base font-bold text-slate-900 outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 disabled:bg-slate-100"
+              />
+
+              {manualBookingError ? (
+                <p className="mt-2 text-sm font-bold text-rose-600">
+                  {manualBookingError}
+                </p>
+              ) : null}
+            </div>
+
+            <div className="mt-5 grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={closeManualBookingModal}
+                disabled={manualBookingSaving}
+                className="h-12 rounded-xl border border-slate-200 bg-white font-black text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+              >
+                إلغاء
+              </button>
+
+              <button
+                type="submit"
+                disabled={manualBookingSaving}
+                className="h-12 rounded-xl bg-emerald-600 font-black text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {manualBookingSaving ? "جاري الحجز..." : "تأكيد الحجز"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
       {activeAlert && (
         <div
           className="fixed inset-0 z-[100] flex items-end justify-center bg-black/35"
