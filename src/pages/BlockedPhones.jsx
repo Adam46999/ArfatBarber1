@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Ban,
   Check,
@@ -165,7 +165,7 @@ export default function BlockedPhones() {
 
   return (
     <div
-      className="min-h-full bg-[#f4f5f7] px-3 pb-28 pt-4 sm:px-5 sm:pt-6"
+      className="min-h-full bg-[#f4f5f7] px-3 pb-28 pt-20 sm:px-5 sm:pt-20"
       dir="rtl"
     >
       <div className="mx-auto w-full max-w-4xl space-y-4">
