@@ -255,6 +255,11 @@ export default function BarberMobileApp() {
     };
   }, [stopCurrentAnimation]);
 
+  useEffect(() => {
+    if (TABS[activeIndex]?.id !== "bookings") return;
+    window.dispatchEvent(new Event("barber-bookings-refresh"));
+  }, [activeIndex]);
+
   const handlePointerDown = (event) => {
     if (event.pointerType === "mouse" && event.button !== 0) {
       return;

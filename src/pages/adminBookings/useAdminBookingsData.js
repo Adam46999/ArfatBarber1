@@ -170,10 +170,12 @@ export function useAdminBookingsData() {
      * - ينحذف بعد ساعتين.
      */
     const interval = window.setInterval(fetchAndClassify, 60 * 1000);
+    window.addEventListener("barber-bookings-refresh", fetchAndClassify);
 
     return () => {
       alive = false;
 
+      window.removeEventListener("barber-bookings-refresh", fetchAndClassify);
       window.clearInterval(interval);
     };
   }, []);

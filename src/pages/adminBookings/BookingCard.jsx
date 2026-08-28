@@ -215,6 +215,9 @@ export default function BookingCard({
           </div>
 
           <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+          {booking.manualBooking && booking.phoneNumber && <div>📞 {e164ToLocalPretty(booking.phoneNumber)}</div>}
+          {booking.manualBooking && booking.selectedService && <div>✂️ {serviceLabel(booking.selectedService)}</div>}
+
             {!booking.manualBooking && <CopyReminderButton fullWidth />}
 
             <button
@@ -349,6 +352,12 @@ export default function BookingCard({
         </div>
 
         <div className="flex flex-col gap-2 sm:flex-row sm:pt-0">
+          {booking.manualBooking && booking.phoneNumber && <div>📞 {e164ToLocalPretty(booking.phoneNumber)}</div>}
+          {booking.manualBooking && booking.selectedService && <div>✂️ {serviceLabel(booking.selectedService)}</div>}
+
+          {booking.manualBooking && booking.phoneNumber && <div>📞 {e164ToLocalPretty(booking.phoneNumber)}</div>}
+          {booking.manualBooking && booking.selectedService && <div>✂️ {serviceLabel(booking.selectedService)}</div>}
+
           {!booking.manualBooking && <CopyReminderButton fullWidth />}
 
           <button

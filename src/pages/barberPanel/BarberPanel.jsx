@@ -1,6 +1,7 @@
 // src/pages/barberPanel/BarberPanel.jsx
 
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 
@@ -12,6 +13,7 @@ import useWeeklyWorkingHours from "../../hooks/useWeeklyWorkingHours";
 // utils slots
 import { generateSlots30Min, applyExtraSlots } from "../../utils/slots";
 import { createBooking } from "../../services/bookingService";
+import { isILPhoneE164, toILPhoneE164 } from "../../utils/phone";
 import { todayYMD, getWeekdayNameEN } from "./utils/dates";
 
 // hooks
@@ -54,6 +56,9 @@ export default function BarberPanel() {
   const [manualBookingDraft, setManualBookingDraft] = useState(null);
   const [manualBookingName, setManualBookingName] = useState("");
   const [manualBookingError, setManualBookingError] = useState("");
+  const [manualBookingDetailsOpen, setManualBookingDetailsOpen] = useState(false);
+  const [manualBookingPhone, setManualBookingPhone] = useState("");
+  const [manualBookingService, setManualBookingService] = useState("");
 
   // التنبيه المفتوح في Bottom Sheet
   const [activeAlert, setActiveAlert] = useState(null);
@@ -138,6 +143,9 @@ export default function BarberPanel() {
       setManualBookingDraft(null);
       setManualBookingName("");
       setManualBookingError("");
+      setManualBookingDetailsOpen(false);
+      setManualBookingPhone("");
+      setManualBookingService("");
     };
 
     window.addEventListener("keydown", handleManualBookingKeyDown);
@@ -172,6 +180,9 @@ export default function BarberPanel() {
 
     setManualBookingName("");
     setManualBookingError("");
+    setManualBookingDetailsOpen(false);
+    setManualBookingPhone("");
+    setManualBookingService("");
   }
 
   async function handleManualBookingSubmit(event) {
@@ -191,6 +202,22 @@ export default function BarberPanel() {
       return;
     }
 
+    const rawPhone = manualBookingPhone.trim();
+    let phoneNumber = "";
+
+    if (rawPhone) {
+      phoneNumber = toILPhoneE164(rawPhone);
+
+      if (!isILPhoneE164(phoneNumber)) {
+        setManualBookingError("رقم التلفون مش صحيح. تأكد منه أو اتركه فاضي.");
+        return;
+      }
+    }
+
+    const selectedService =
+      manualBookingService === "haircut" || manualBookingService === "beard"
+        ? manualBookingService
+        : "";
     const bookingDate = manualBookingDraft.selectedDate;
     const bookingTime = manualBookingDraft.selectedTime;
 
@@ -200,10 +227,10 @@ export default function BarberPanel() {
     try {
       await createBooking({
         fullName,
-        phoneNumber: "",
+        phoneNumber,
         selectedDate: bookingDate,
         selectedTime: bookingTime,
-        selectedService: "",
+        selectedService,
         manualBooking: true,
         createdBy: "BARBER",
         createdAtMs: Date.now(),
@@ -211,6 +238,9 @@ export default function BarberPanel() {
 
       setManualBookingDraft(null);
       setManualBookingName("");
+      setManualBookingDetailsOpen(false);
+      setManualBookingPhone("");
+      setManualBookingService("");
       setSelectedTimes([]);
 
       setStatusMessage(
@@ -238,6 +268,13 @@ export default function BarberPanel() {
       setManualBookingSaving(false);
     }
   }
+
+  useEffect(() => {
+    if (!statusMessage.startsWith("✅ تم حجز الساعة")) return undefined;
+
+    const timer = setTimeout(() => setStatusMessage(""), 4500);
+    return () => clearTimeout(timer);
+  }, [statusMessage]);
 
   // ====== auto logout ======
   useEffect(() => {
@@ -1043,7 +1080,7 @@ export default function BarberPanel() {
           )}
 
           {statusMessage && (
-            <div className="border-t border-emerald-200 bg-emerald-50 px-4 py-3 text-center text-sm font-black text-emerald-800">
+            <div className="pointer-events-none fixed inset-x-3 top-20 z-[130] mx-auto max-w-sm rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-center text-sm font-black leading-relaxed text-emerald-800 shadow-lg sm:inset-x-auto sm:left-1/2 sm:w-full sm:-translate-x-1/2">
               {statusMessage}
             </div>
           )}
@@ -1066,7 +1103,7 @@ export default function BarberPanel() {
           معلومات فقط — بدون إجراءات
       ====================================================== */}
 
-      {manualBookingDraft && (
+      {manualBookingDraft && createPortal(
         <div
           className="fixed inset-0 z-[120] flex items-end justify-center bg-black/40 sm:items-center sm:px-4"
           onClick={closeManualBookingModal}
@@ -1133,6 +1170,75 @@ export default function BarberPanel() {
                 className="h-12 w-full rounded-xl border border-slate-300 bg-white px-4 text-base font-bold text-slate-900 outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 disabled:bg-slate-100"
               />
 
+              <button
+                type="button"
+                onClick={() =>
+                  setManualBookingDetailsOpen((current) => !current)
+                }
+                disabled={manualBookingSaving}
+                className="mt-3 text-sm font-black text-emerald-700 transition hover:text-emerald-800 disabled:opacity-50"
+              >
+                {manualBookingDetailsOpen
+                  ? "− إخفاء التفاصيل"
+                  : "+ إضافة رقم أو خدمة"}
+              </button>
+
+              {manualBookingDetailsOpen ? (
+                <div className="mt-3 space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                  <div>
+                    <label
+                      htmlFor="manual-booking-phone"
+                      className="mb-1.5 block text-sm font-black text-slate-700"
+                    >
+                      رقم التلفون
+                      <span className="mr-1 text-xs font-semibold text-slate-400">
+                        (اختياري)
+                      </span>
+                    </label>
+
+                    <input
+                      id="manual-booking-phone"
+                      type="tel"
+                      inputMode="tel"
+                      value={manualBookingPhone}
+                      onChange={(event) => {
+                        setManualBookingPhone(event.target.value);
+                        setManualBookingError("");
+                      }}
+                      autoComplete="tel"
+                      placeholder="مثال: 0501234567"
+                      disabled={manualBookingSaving}
+                      className="h-12 w-full rounded-xl border border-slate-300 bg-white px-4 text-base font-bold text-slate-900 outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 disabled:bg-slate-100"
+                    />
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="manual-booking-service"
+                      className="mb-1.5 block text-sm font-black text-slate-700"
+                    >
+                      شو بده يعمل؟
+                      <span className="mr-1 text-xs font-semibold text-slate-400">
+                        (اختياري)
+                      </span>
+                    </label>
+
+                    <select
+                      id="manual-booking-service"
+                      value={manualBookingService}
+                      onChange={(event) =>
+                        setManualBookingService(event.target.value)
+                      }
+                      disabled={manualBookingSaving}
+                      className="h-12 w-full rounded-xl border border-slate-300 bg-white px-4 text-base font-bold text-slate-900 outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 disabled:bg-slate-100"
+                    >
+                      <option value="">بدون اختيار</option>
+                      <option value="haircut">قص شعر</option>
+                      <option value="beard">تعليم لحية</option>
+                    </select>
+                  </div>
+                </div>
+              ) : null}
               {manualBookingError ? (
                 <p className="mt-2 text-sm font-bold text-rose-600">
                   {manualBookingError}
@@ -1159,7 +1265,8 @@ export default function BarberPanel() {
               </button>
             </div>
           </form>
-        </div>
+        </div>,
+        document.body,
       )}
       {activeAlert && (
         <div
