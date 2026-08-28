@@ -56,6 +56,7 @@ export default function BarberPanel() {
   const [manualBookingDraft, setManualBookingDraft] = useState(null);
   const [manualBookingName, setManualBookingName] = useState("");
   const [manualBookingError, setManualBookingError] = useState("");
+  const [manualBookingSuccess, setManualBookingSuccess] = useState(null);
   const [manualBookingDetailsOpen, setManualBookingDetailsOpen] = useState(false);
   const [manualBookingPhone, setManualBookingPhone] = useState("");
   const [manualBookingService, setManualBookingService] = useState("");
@@ -129,6 +130,7 @@ export default function BarberPanel() {
     setManualBookingDraft(null);
     setManualBookingName("");
     setManualBookingError("");
+    setManualBookingSuccess(null);
   }
 
   useEffect(() => {
@@ -157,6 +159,7 @@ export default function BarberPanel() {
   }, [manualBookingDraft, manualBookingSaving]);
   function handleManualBooking() {
     if (selectedTimes.length !== 1 || manualBookingSaving) return;
+    setManualBookingSuccess(null);
 
     const selectedTime = selectedTimes[0];
 
@@ -236,16 +239,12 @@ export default function BarberPanel() {
         createdAtMs: Date.now(),
       });
 
-      setManualBookingDraft(null);
-      setManualBookingName("");
-      setManualBookingDetailsOpen(false);
-      setManualBookingPhone("");
-      setManualBookingService("");
+      setManualBookingSuccess({
+        fullName,
+        selectedDate: bookingDate,
+        selectedTime: bookingTime,
+      });
       setSelectedTimes([]);
-
-      setStatusMessage(
-        `✅ تم حجز الساعة ${bookingTime} باسم ${fullName}`,
-      );
     } catch (error) {
       console.error("manual booking error:", error);
 
@@ -1105,22 +1104,62 @@ export default function BarberPanel() {
 
       {manualBookingDraft && createPortal(
         <div
-          className="fixed inset-0 z-[120] flex items-end justify-center bg-black/40 sm:items-center sm:px-4"
+          className="fixed inset-0 z-[120] flex items-center justify-center bg-black/40 backdrop-blur-sm"
           onClick={closeManualBookingModal}
           role="presentation"
         >
           <form
             onSubmit={handleManualBookingSubmit}
             onClick={(event) => event.stopPropagation()}
-            className="w-full max-w-md rounded-t-3xl border border-slate-200 bg-white p-5 shadow-2xl sm:rounded-3xl"
+            className="relative mx-4 flex max-h-[calc(100dvh-2rem)] w-full max-w-sm flex-col overflow-y-auto rounded-2xl border border-green-400 bg-white px-5 py-7 text-right shadow-2xl sm:px-6 sm:py-8"
             dir="rtl"
             role="dialog"
             aria-modal="true"
             aria-label="حجز دور باسم زبون"
           >
-            <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-slate-200 sm:hidden" />
+            {manualBookingSuccess ? (
+              <div className="flex w-full flex-col items-center gap-4 text-center">
+                <button
+                  type="button"
+                  onClick={closeManualBookingModal}
+                  className="absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full text-xl font-bold text-gray-500 transition hover:bg-gray-100 hover:text-red-600"
+                  aria-label="إغلاق"
+                >
+                  ×
+                </button>
 
-            <div className="flex items-start justify-between gap-4">
+                <div className="text-4xl">✅</div>
+
+                <h3 className="text-xl font-black text-emerald-700">
+                  تم حجز الدور بنجاح
+                </h3>
+
+                <p className="text-base font-black text-slate-900">
+                  {manualBookingSuccess.fullName}
+                </p>
+
+                <div className="w-full rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                  <p className="font-bold text-slate-800">
+                    {manualBookingSuccess.selectedDate}
+                  </p>
+                  <p className="mt-1 text-sm font-bold text-slate-600">
+                    الساعة {manualBookingSuccess.selectedTime}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={closeManualBookingModal}
+                  className="mt-1 h-12 w-full rounded-xl bg-emerald-600 font-black text-white transition hover:bg-emerald-700"
+                >
+                  إغلاق
+                </button>
+              </div>
+            ) : (
+              <>
+            <div className="hidden" />
+
+            <div className="w-full text-center">
               <div>
                 <p className="text-xs font-black text-emerald-700">
                   حجز يدوي
@@ -1139,7 +1178,7 @@ export default function BarberPanel() {
                 type="button"
                 onClick={closeManualBookingModal}
                 disabled={manualBookingSaving}
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xl font-black text-slate-500 transition hover:bg-slate-200 disabled:opacity-50"
+                className="absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full text-xl font-bold text-gray-500 transition hover:bg-gray-100 hover:text-red-600 disabled:opacity-50"
                 aria-label="إغلاق"
               >
                 ×
@@ -1264,6 +1303,8 @@ export default function BarberPanel() {
                 {manualBookingSaving ? "جاري الحجز..." : "تأكيد الحجز"}
               </button>
             </div>
+              </>
+            )}
           </form>
         </div>,
         document.body,
