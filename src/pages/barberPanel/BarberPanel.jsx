@@ -956,6 +956,37 @@ export default function BarberPanel() {
               />
             </div>
 
+            {selectedDate ? (
+              <div className="mt-4">
+                <div className="grid w-full grid-cols-[68px_minmax(0,1fr)_68px] items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => moveSelectedDate(-1)}
+                    disabled={isToday}
+                    className="h-12 w-[68px] touch-manipulation select-none rounded-xl border border-slate-200 bg-white text-xs font-black text-slate-700 transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
+                    aria-label="اليوم السابق"
+                  >
+                    السابق
+                  </button>
+
+                  <div className="flex h-12 min-w-0 items-center justify-center rounded-xl border border-amber-200 bg-amber-50 px-2 text-center shadow-sm">
+                    <span className="text-[11px] font-black leading-4 text-slate-800 sm:text-sm sm:leading-5">
+                      {selectedDateHeaderLabel}
+                    </span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => moveSelectedDate(1)}
+                    className="h-12 w-[68px] touch-manipulation select-none rounded-xl border border-slate-200 bg-white text-xs font-black text-slate-700 transition active:scale-[0.98]"
+                    aria-label="اليوم التالي"
+                  >
+                    التالي
+                  </button>
+                </div>
+              </div>
+            ) : null}
+
             {/* =================================================
                 حالة اليوم
                 المنطق الداخلي هنا بقي كما كان
@@ -1039,36 +1070,6 @@ export default function BarberPanel() {
             )}
           </div>
 
-          {selectedDate ? (
-            <div className="border-t border-slate-100 bg-white px-4 py-3 sm:px-7">
-              <div className="mx-auto grid w-full max-w-xl grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => moveSelectedDate(-1)}
-                  disabled={isToday}
-                  className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-xs font-black text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
-                  aria-label="اليوم السابق"
-                >
-                  السابق
-                </button>
-
-                <div className="min-w-0 rounded-xl border border-amber-200 bg-amber-50 px-2 py-2 text-center shadow-sm">
-                  <span className="block truncate text-xs font-black leading-5 text-slate-800 sm:text-sm">
-                    {selectedDateHeaderLabel}
-                  </span>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => moveSelectedDate(1)}
-                  className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-xs font-black text-slate-700 transition hover:bg-slate-100"
-                  aria-label="اليوم التالي"
-                >
-                  التالي
-                </button>
-              </div>
-            </div>
-          ) : null}
 
           {/* شبكة الساعات */}
           {selectedDate &&
