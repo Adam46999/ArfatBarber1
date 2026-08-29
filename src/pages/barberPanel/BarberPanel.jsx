@@ -879,7 +879,9 @@ export default function BarberPanel() {
               <div className="mt-0.5 text-[10px] font-semibold text-slate-500">
                 {loadingSettings
                   ? "جاري التحميل..."
-                  : limitOnePerDay
+                  : savingSettings
+                    ? "جاري الحفظ..."
+                    : limitOnePerDay
                     ? "مفعّل"
                     : "غير مفعّل"}
               </div>
