@@ -957,13 +957,13 @@ export default function BarberPanel() {
             </div>
 
             {selectedDate ? (
-              <div className="mt-4">
+              <div className="sticky top-[64px] z-40 -mx-4 mt-4 border-y border-slate-100 bg-white/95 px-4 py-2 shadow-sm backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:px-0 sm:py-0 sm:shadow-none sm:backdrop-blur-none">
                 <div className="grid w-full grid-cols-[68px_minmax(0,1fr)_68px] items-center gap-2">
                   <button
                     type="button"
                     onClick={() => moveSelectedDate(-1)}
                     disabled={isToday}
-                    className="h-12 w-[68px] touch-manipulation select-none rounded-xl border border-slate-200 bg-white text-xs font-black text-slate-700 transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
+                    className="h-12 w-[68px] touch-manipulation select-none rounded-xl border border-slate-200 bg-white text-xs font-black text-slate-700 transition disabled:cursor-not-allowed disabled:opacity-40"
                     aria-label="اليوم السابق"
                   >
                     السابق
@@ -978,7 +978,7 @@ export default function BarberPanel() {
                   <button
                     type="button"
                     onClick={() => moveSelectedDate(1)}
-                    className="h-12 w-[68px] touch-manipulation select-none rounded-xl border border-slate-200 bg-white text-xs font-black text-slate-700 transition active:scale-[0.98]"
+                    className="h-12 w-[68px] touch-manipulation select-none rounded-xl border border-slate-200 bg-white text-xs font-black text-slate-700 transition"
                     aria-label="اليوم التالي"
                   >
                     التالي
