@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+import { useState } from "react";
 
 export default function TimesGrid({
   times,
@@ -6,6 +6,7 @@ export default function TimesGrid({
   bookings,
   blockedTimes,
   selectedTimes,
+  recentChange,
   onToggleTime,
 }) {
   const [selectedBookedTime, setSelectedBookedTime] = useState("");
@@ -31,6 +32,9 @@ export default function TimesGrid({
           const booked = Boolean(bookedBooking);
           const isBlocked = blockedTimes.includes(time);
           const isSelected = selectedTimes.includes(time);
+          const isRecentChange =
+            recentChange?.date === selectedDate &&
+            recentChange.times?.includes(time);
 
           return (
             <button

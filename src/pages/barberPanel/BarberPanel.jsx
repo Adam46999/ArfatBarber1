@@ -98,6 +98,7 @@ export default function BarberPanel() {
   const {
     blockedTimes,
     selectedTimes,
+    recentChange,
     setSelectedTimes,
     handleToggleTime,
     handleApplyBlock,
@@ -1116,6 +1117,7 @@ export default function BarberPanel() {
                   bookings={bookings}
                   blockedTimes={blockedTimes}
                   selectedTimes={selectedTimes}
+                  recentChange={recentChange}
                   onToggleTime={handleToggleTime}
                 />
 

@@ -17,6 +17,7 @@ export default function useBlockedTimes({
 }) {
   const [blockedTimes, setBlockedTimes] = useState([]);
   const [selectedTimes, setSelectedTimes] = useState([]);
+  const [recentChange, setRecentChange] = useState(null);
 
   useEffect(() => {
     if (!selectedDate) {
@@ -72,6 +73,7 @@ export default function useBlockedTimes({
       try {
         const ref = doc(db, "blockedTimes", selectedDate);
         await updateDoc(ref, { times: arrayRemove(time) });
+        setRecentChange({ date: selectedDate, times: [time] });
         setStatusMessage?.("✅ تم استرجاع الساعة بنجاح");
       } catch (err) {
         console.error("restore blocked time error:", err);
@@ -112,6 +114,7 @@ export default function useBlockedTimes({
       }
 
       setBlockedTimes((prev) => [...prev, ...selectedTimes]);
+      setRecentChange({ date: selectedDate, times: [...selectedTimes] });
       setSelectedTimes([]);
       setStatusMessage?.("✅ تم حظر الأوقات بنجاح");
     } catch (err) {
@@ -122,9 +125,17 @@ export default function useBlockedTimes({
     setTimeout(() => setStatusMessage?.(""), 2500);
   };
 
+  useEffect(() => {
+    if (!recentChange) return undefined;
+
+    const timer = setTimeout(() => setRecentChange(null), 2200);
+    return () => clearTimeout(timer);
+  }, [recentChange]);
+
   return {
     blockedTimes,
     selectedTimes,
+    recentChange,
     setSelectedTimes,
     handleToggleTime,
     handleApplyBlock,
