@@ -328,6 +328,56 @@ export default function BarberPanel() {
 
   const isToday = selectedDate === todayYMD();
 
+  const selectedDateHeaderLabel = useMemo(() => {
+    if (!selectedDate) return "";
+
+    const [year, month, day] = selectedDate.split("-").map(Number);
+    const [todayYear, todayMonth, todayDay] = todayYMD().split("-").map(Number);
+
+    const diffDays = Math.round(
+      (Date.UTC(year, month - 1, day) -
+        Date.UTC(todayYear, todayMonth - 1, todayDay)) /
+        86400000,
+    );
+
+    const relative =
+      diffDays === 0
+        ? "اليوم"
+        : diffDays === 1
+          ? "بكرا"
+          : diffDays === 2
+            ? "بعد بكرا"
+            : "";
+
+    const weekdays = [
+      "الأحد",
+      "الاثنين",
+      "الثلاثاء",
+      "الأربعاء",
+      "الخميس",
+      "الجمعة",
+      "السبت",
+    ];
+
+    const weekday = weekdays[new Date(year, month - 1, day).getDay()];
+    const dateLabel = `${String(day).padStart(2, "0")}/${String(month).padStart(2, "0")}/${year}`;
+
+    return [relative, weekday, dateLabel].filter(Boolean).join(" • ");
+  }, [selectedDate]);
+
+  function moveSelectedDate(days) {
+    if (!selectedDate) return;
+
+    const [year, month, day] = selectedDate.split("-").map(Number);
+    const nextDate = new Date(year, month - 1, day);
+    nextDate.setDate(nextDate.getDate() + days);
+
+    const nextYmd = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, "0")}-${String(nextDate.getDate()).padStart(2, "0")}`;
+
+    if (nextYmd < todayYMD()) return;
+    setSelectedDate(nextYmd);
+  }
+
   const gridTimesFiltered = useMemo(() => {
     if (!timesForBarberGrid.length) {
       return [];
@@ -884,14 +934,11 @@ export default function BarberPanel() {
         <section className="bg-white">
           {/* اختيار التاريخ */}
           <div className="px-4 py-5 sm:px-7 sm:py-6">
-            <div className="mb-3 flex items-center justify-between gap-3">
+            <div className="mb-3">
               <label className="text-base font-black text-slate-800">
                 اختر التاريخ
               </label>
 
-              <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-black text-slate-500">
-                {isToday ? "اليوم" : selectedDate}
-              </span>
             </div>
 
             <div className="space-y-3">
@@ -992,6 +1039,37 @@ export default function BarberPanel() {
             )}
           </div>
 
+          {selectedDate ? (
+            <div className="border-t border-slate-100 bg-white px-4 py-3 sm:px-7">
+              <div className="mx-auto grid w-full max-w-xl grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => moveSelectedDate(-1)}
+                  disabled={isToday}
+                  className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-xs font-black text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+                  aria-label="اليوم السابق"
+                >
+                  السابق
+                </button>
+
+                <div className="min-w-0 rounded-xl border border-amber-200 bg-amber-50 px-2 py-2 text-center shadow-sm">
+                  <span className="block truncate text-xs font-black leading-5 text-slate-800 sm:text-sm">
+                    {selectedDateHeaderLabel}
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => moveSelectedDate(1)}
+                  className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-xs font-black text-slate-700 transition hover:bg-slate-100"
+                  aria-label="اليوم التالي"
+                >
+                  التالي
+                </button>
+              </div>
+            </div>
+          ) : null}
+
           {/* شبكة الساعات */}
           {selectedDate &&
             weeklyHoursReady &&
@@ -1008,6 +1086,7 @@ export default function BarberPanel() {
                       مطابقة للأوقات الظاهرة للزبون
                     </p>
                   </div>
+
 
                   <ExtraSlotsCard
                     selectedDate={selectedDate}
