@@ -70,7 +70,7 @@ function Header() {
   return (
     <header
       ref={headerRef}
-      className={`bg-primary text-light shadow-md fixed top-0 left-0 w-full z-50 ${fontClass}`}
+      className={`fixed top-0 left-0 w-full z-50 border-b border-[#c7a34f]/20 bg-[#171717] text-light shadow-[0_8px_28px_rgba(0,0,0,0.24)] ${fontClass}`}
       role="banner"
     >
       <a
@@ -81,7 +81,7 @@ function Header() {
       </a>
 
       {/* ✅ ارتفاع أنظف + محاذاة Premium */}
-      <div className="max-w-7xl mx-auto px-6 h-[64px] flex items-center justify-between relative">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 h-[64px] flex items-center justify-between relative">
         {/* الشعار */}
         <Link
           to="/"
@@ -146,7 +146,7 @@ function Header() {
         <div className="md:hidden flex items-center gap-2">
           {/* (2) تهدئة شكل اللغة (Wrapper) */}
           <div className="rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-colors px-2 py-1">
-            <LanguageSwitcher />
+            <LanguageSwitcher compact />
           </div>
 
           {/* (5) فاصل خفيف */}
