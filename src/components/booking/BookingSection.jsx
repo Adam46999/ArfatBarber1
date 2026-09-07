@@ -712,7 +712,7 @@ function BookingSection() {
 
         {!isOnline && (
           <div
-            className="mb-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3"
+            className="mb-4 rounded-[18px] border border-red-200/80 bg-gradient-to-r from-red-50 via-[#fff9f7] to-red-50 px-4 py-3.5 shadow-[0_8px_22px_rgba(127,29,29,0.07)] sm:px-5"
             role="alert"
           >
             <p className="text-sm font-bold text-red-800">
@@ -729,9 +729,9 @@ function BookingSection() {
             ساعات العمل
             =============================================== */}
 
-        <div className="mb-8">
+        <div className="mb-6 sm:mb-8">
           {loadingWeeklyHours && !workingHours ? (
-            <div className="rounded-2xl border border-gray-200 bg-white px-5 py-6 shadow-sm">
+            <div className="rounded-[18px] border border-[#e5dcc9] bg-gradient-to-r from-[#fffdf8] via-white to-[#faf6ed] px-4 py-4 shadow-[0_8px_24px_rgba(31,24,12,0.06)] sm:px-5 sm:py-5">
               <div className="flex items-center justify-center gap-3">
                 <div
                   className="h-6 w-6 animate-spin rounded-full border-2 border-gold border-t-transparent"
@@ -745,7 +745,7 @@ function BookingSection() {
             </div>
           ) : weeklyHoursError && !workingHours ? (
             <div
-              className="rounded-2xl border border-red-200 bg-red-50 px-5 py-5 text-center"
+              className="rounded-[18px] border border-red-200/80 bg-gradient-to-b from-red-50 to-[#fff9f7] px-4 py-4 text-center shadow-[0_8px_24px_rgba(127,29,29,0.07)] sm:px-5 sm:py-5"
               role="alert"
             >
               <p className="text-sm font-bold text-red-800">
@@ -760,7 +760,7 @@ function BookingSection() {
               <button
                 type="button"
                 onClick={retryWeeklyHours}
-                className="mt-4 rounded-xl bg-red-700 px-4 py-2 text-sm font-bold text-white transition hover:bg-red-800"
+                className="mt-4 min-h-[44px] rounded-xl bg-red-700 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-red-800 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-red-200"
               >
                 إعادة المحاولة
               </button>
@@ -774,7 +774,7 @@ function BookingSection() {
 
               {weeklyHoursError && (
                 <div
-                  className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3"
+                  className="mt-3 rounded-[16px] border border-amber-200/80 bg-gradient-to-r from-amber-50 via-[#fffaf0] to-amber-50 px-4 py-3.5 shadow-[0_6px_18px_rgba(146,104,20,0.06)]"
                   role="status"
                 >
                   <p className="text-xs font-semibold leading-5 text-amber-900">
@@ -788,7 +788,7 @@ function BookingSection() {
                   <button
                     type="button"
                     onClick={retryWeeklyHours}
-                    className="mt-2 text-xs font-bold text-amber-900 underline underline-offset-2"
+                    className="mt-2 inline-flex min-h-[40px] items-center rounded-xl border border-amber-300/70 bg-white/65 px-3 py-2 text-xs font-bold text-amber-900 transition hover:bg-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-200"
                   >
                     تحديث ساعات العمل
                   </button>

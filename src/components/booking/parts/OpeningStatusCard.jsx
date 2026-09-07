@@ -177,15 +177,15 @@ export default function OpeningStatusCard({ status, workingHours = {} }) {
 
   return (
     <section
-      className="overflow-hidden rounded-2xl border border-[#e3ded4] bg-white shadow-[0_10px_28px_rgba(35,29,20,0.06)]"
+      className="overflow-hidden rounded-[20px] border border-[#e6dcc8] bg-gradient-to-b from-[#fffefa] via-white to-[#fdfaf3] shadow-[0_12px_32px_rgba(35,29,20,0.07)] ring-1 ring-white/80"
       dir={isRTL ? "rtl" : "ltr"}
       aria-label={t("working_hours", {
         defaultValue: "ساعات العمل",
       })}
     >
-      <div className="border-b border-[#eee9df] px-4 py-4 sm:px-5">
+      <div className="border-b border-[#eee5d3] bg-gradient-to-r from-[#fffaf0] via-[#fffdf8] to-white px-4 py-3.5 sm:px-5 sm:py-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#f5ead0] text-[#99701c]">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[13px] border border-[#e4d2a1] bg-[#f8edcf] text-[#8c681c] shadow-[0_4px_12px_rgba(128,94,22,0.08)]">
             <FaClock className="h-4 w-4" aria-hidden="true" />
           </div>
 
@@ -244,7 +244,7 @@ export default function OpeningStatusCard({ status, workingHours = {} }) {
         </div>
       </div>
 
-      <div className="px-3 py-2 sm:px-4">
+      <div className="px-2.5 py-2 sm:px-4 sm:py-2.5">
         {DAY_KEYS.map((dayKey, index) => {
           const hours = workingHours?.[dayKey] || null;
           const isToday = index === todayIndex;
@@ -253,9 +253,9 @@ export default function OpeningStatusCard({ status, workingHours = {} }) {
             <div
               key={dayKey}
               className={[
-                "relative flex min-h-[44px] items-center justify-between gap-4",
-                "border-b border-slate-100 px-3 py-2.5 last:border-b-0",
-                isToday ? "rounded-xl bg-[#faf6ec]" : "bg-transparent",
+                "relative flex min-h-[46px] items-center justify-between gap-3 sm:gap-4",
+                "border-b border-[#eeeae2] px-3 py-2.5 last:border-b-0",
+                isToday ? "rounded-[14px] bg-[#fbf5e7] shadow-[inset_0_0_0_1px_rgba(199,157,63,0.12)]" : "bg-transparent",
               ].join(" ")}
               aria-current={isToday ? "date" : undefined}
             >
@@ -282,7 +282,7 @@ export default function OpeningStatusCard({ status, workingHours = {} }) {
                 </span>
 
                 {isToday && (
-                  <span className="rounded-full bg-[#ead8a9] px-2 py-0.5 text-[10px] font-black text-[#72520f]">
+                  <span className="rounded-full border border-[#d9bd72]/60 bg-[#f3e5bd] px-2 py-0.5 text-[10px] font-black text-[#72520f]">
                     {t("today", {
                       defaultValue:
                         language === "he"
@@ -308,7 +308,7 @@ export default function OpeningStatusCard({ status, workingHours = {} }) {
                   {formatHours(hours)}
                 </span>
               ) : (
-                <span className="shrink-0 rounded-full bg-red-50 px-2.5 py-1 text-xs font-bold text-red-600">
+                <span className="shrink-0 rounded-full border border-red-100 bg-red-50 px-2.5 py-1 text-xs font-bold text-red-600">
                   {t("closed_all_day", {
                     defaultValue: "مغلق طوال اليوم",
                   })}
