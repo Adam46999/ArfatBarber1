@@ -1,60 +1,93 @@
 // src/utils/slots.js
 
-export function safeInt(v, fallback = 0) {
-  const n = Number(v);
-  return Number.isFinite(n) ? Math.trunc(n) : fallback;
+export function safeInt(value, fallback = 0) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? Math.trunc(parsed) : fallback;
+}
+
+function parseHHMM(value) {
+  const match = String(value || "")
+    .trim()
+    .match(/^([01]\d|2[0-3]):([0-5]\d)$/);
+
+  if (!match) return null;
+
+  return Number(match[1]) * 60 + Number(match[2]);
+}
+
+function minutesToHHMM(totalMinutes) {
+  const normalized = ((Number(totalMinutes) % 1440) + 1440) % 1440;
+  const hours = Math.floor(normalized / 60);
+  const minutes = normalized % 60;
+
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 }
 
 export function addMinutesToHHMM(hhmm, minsToAdd) {
-  const [h, m] = String(hhmm || "00:00")
-    .split(":")
-    .map(Number);
+  const baseMinutes = parseHHMM(hhmm);
 
-  const base = new Date();
-  base.setHours(h || 0, m || 0, 0, 0);
-  base.setMinutes(base.getMinutes() + (Number(minsToAdd) || 0));
+  if (baseMinutes === null) {
+    return String(hhmm || "00:00");
+  }
 
-  const HH = String(base.getHours()).padStart(2, "0");
-  const MM = String(base.getMinutes()).padStart(2, "0");
-  return `${HH}:${MM}`;
+  return minutesToHHMM(baseMinutes + (Number(minsToAdd) || 0));
 }
 
 /**
- * ✅ أدوار 30 دقيقة (النهاية غير شاملة)
- * مثال: 12:00 -> 20:00 => آخر دور 19:30
+ * أدوار 30 دقيقة.
+ * وقت الإغلاق غير شامل.
+ *
+ * مثال:
+ * 12:00 -> 20:00
+ * آخر دور = 19:30
  */
 export function generateSlots30Min(from, to) {
-  if (!from || !to) return [];
-  const [fh, fm] = String(from).split(":").map(Number);
-  const [th, tm] = String(to).split(":").map(Number);
+  const startMinutes = parseHHMM(from);
+  const endMinutes = parseHHMM(to);
 
-  const cur = new Date();
-  cur.setHours(fh || 0, fm || 0, 0, 0);
-
-  const end = new Date();
-  end.setHours(th || 0, tm || 0, 0, 0);
-
-  const out = [];
-  while (cur <= end) {
-    out.push(cur.toTimeString().slice(0, 5));
-    cur.setMinutes(cur.getMinutes() + 30);
+  if (
+    startMinutes === null ||
+    endMinutes === null ||
+    startMinutes >= endMinutes
+  ) {
+    return [];
   }
-  return out;
+
+  const slots = [];
+
+  for (
+    let currentMinutes = startMinutes;
+    currentMinutes < endMinutes;
+    currentMinutes += 30
+  ) {
+    slots.push(minutesToHHMM(currentMinutes));
+  }
+
+  return slots;
 }
 
 export function applyExtraSlots(baseSlots, extraSlots) {
-  const n = safeInt(extraSlots, 0);
-  if (!n) return baseSlots;
+  const safeBaseSlots = Array.isArray(baseSlots) ? [...baseSlots] : [];
+  const count = safeInt(extraSlots, 0);
 
-  if (baseSlots.length === 0) return [];
+  if (!count) return safeBaseSlots;
+  if (safeBaseSlots.length === 0) return [];
 
-  if (n > 0) {
-    const last = baseSlots[baseSlots.length - 1];
+  if (count > 0) {
+    const lastSlot = safeBaseSlots[safeBaseSlots.length - 1];
     const extras = [];
-    for (let i = 1; i <= n; i++) extras.push(addMinutesToHHMM(last, i * 30));
-    return [...baseSlots, ...extras];
+
+    for (let index = 1; index <= count; index += 1) {
+      extras.push(addMinutesToHHMM(lastSlot, index * 30));
+    }
+
+    return [...safeBaseSlots, ...extras];
   }
 
-  const cut = Math.abs(n);
-  return baseSlots.slice(0, Math.max(0, baseSlots.length - cut));
+  const removeCount = Math.abs(count);
+
+  return safeBaseSlots.slice(
+    0,
+    Math.max(0, safeBaseSlots.length - removeCount),
+  );
 }

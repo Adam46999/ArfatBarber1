@@ -1106,6 +1106,78 @@ export default function useBookingSubmit(form, setForm, t) {
           });
 
           clearPendingAttempt(requestId);
+        } else if (
+          [
+            "BOOKING_TIME_PASSED",
+            "BOOKING_TIME_BLOCKED",
+            "BOOKING_TIME_NOT_AVAILABLE",
+          ].includes(error?.message)
+        ) {
+          const message =
+            error?.message === "BOOKING_TIME_PASSED"
+              ? getMessage(
+                  t,
+                  "booking_time_passed",
+                  "مر وقت هذا الموعد. اختر موعدًا آخر.",
+                )
+              : getMessage(
+                  t,
+                  "booking_time_no_longer_available",
+                  "هذا الموعد لم يعد متاحًا. اختر موعدًا آخر.",
+                );
+
+          /*
+           * الساعة فقط أصبحت غير صالحة.
+           * نحافظ على اليوم والاسم والهاتف والخدمة.
+           */
+          setForm((currentForm) => ({
+            ...currentForm,
+            selectedTime: "",
+          }));
+
+          setSubmitStage("error");
+          setSubmitMessage(message);
+
+          setSubmitError({
+            code: error?.message,
+            message,
+            retryable: false,
+          });
+
+          clearPendingAttempt(requestId);
+        } else if (
+          [
+            "BOOKING_DAY_BLOCKED",
+            "BOOKING_DAY_CLOSED",
+          ].includes(error?.message)
+        ) {
+          const message = getMessage(
+            t,
+            "booking_day_no_longer_available",
+            "هذا اليوم لم يعد متاحًا للحجز. اختر يومًا آخر.",
+          );
+
+          /*
+           * اليوم نفسه أصبح غير صالح.
+           * نمسح التاريخ والساعة فقط،
+           * ونحافظ على باقي معلومات الزبون.
+           */
+          setForm((currentForm) => ({
+            ...currentForm,
+            selectedDate: "",
+            selectedTime: "",
+          }));
+
+          setSubmitStage("error");
+          setSubmitMessage(message);
+
+          setSubmitError({
+            code: error?.message,
+            message,
+            retryable: false,
+          });
+
+          clearPendingAttempt(requestId);
         } else if (error?.message === "REQUEST_ID_CONFLICT") {
           const message =
             "تعذر متابعة محاولة الحجز السابقة بأمان. أعد اختيار الموعد ثم حاول مرة أخرى.";

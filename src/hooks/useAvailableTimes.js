@@ -480,8 +480,14 @@ export default function useAvailableTimes(selectedDate, workingHours) {
      * - مغادرة الصفحة.
      * - الضغط على إعادة المحاولة.
      */
+    const clockInterval = setInterval(() => {
+      recompute();
+    }, 30_000);
+
     return () => {
       isActive = false;
+
+      clearInterval(clockInterval);
 
       unsubscribeDay();
       unsubscribeTimes();

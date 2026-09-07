@@ -109,9 +109,41 @@ function getAvailabilityVisual(summary, language) {
 
   return {
     kind: "available",
-    text: availableSlots >= 9 ? "9+" : String(availableSlots),
+    text: String(availableSlots),
     label: labels.available(availableSlots),
   };
+}
+
+const MONTH_NAV_LABELS = {
+  ar: {
+    previous: "السابق",
+    next: "التالي",
+  },
+  he: {
+    previous: "הקודם",
+    next: "הבא",
+  },
+  en: {
+    previous: "Previous",
+    next: "Next",
+  },
+};
+
+const MONTH_LOCALES = {
+  ar: "ar",
+  he: "he-IL",
+  en: "en-US",
+};
+
+function getMonthName(date, language) {
+  try {
+    return new Intl.DateTimeFormat(
+      MONTH_LOCALES[language] || MONTH_LOCALES.ar,
+      { month: "long" },
+    ).format(date);
+  } catch {
+    return "";
+  }
 }
 
 function DateField({
@@ -239,7 +271,91 @@ function DateField({
         inline
         selected={selectedDate}
         onChange={handleChange}
-        onMonthChange={onVisibleMonthChange}
+        onMonthChange={(date) => {
+          if (
+            date instanceof Date &&
+            !Number.isNaN(date.getTime())
+          ) {
+            onVisibleMonthChange?.(
+              new Date(
+                date.getFullYear(),
+                date.getMonth(),
+                1,
+              ),
+            );
+          }
+        }}
+        renderCustomHeader={({
+          date,
+          decreaseMonth,
+          increaseMonth,
+          prevMonthButtonDisabled,
+          nextMonthButtonDisabled,
+        }) => {
+          const navLabels =
+            MONTH_NAV_LABELS[language] ||
+            MONTH_NAV_LABELS.ar;
+
+          const monthName =
+            getMonthName(date, language);
+
+          const monthNumber = String(
+            date.getMonth() + 1,
+          ).padStart(2, "0");
+
+          const year = date.getFullYear();
+
+          return (
+            <div
+              className="booking-calendar__custom-header"
+              dir={isRTL ? "rtl" : "ltr"}
+            >
+              <button
+                type="button"
+                className="booking-calendar__custom-nav"
+                onClick={decreaseMonth}
+                disabled={prevMonthButtonDisabled}
+                aria-label={navLabels.previous}
+                title={navLabels.previous}
+              >
+                <span aria-hidden="true">
+                  {isRTL ? "›" : "‹"}
+                </span>
+                <span>{navLabels.previous}</span>
+              </button>
+
+              <div
+                className="booking-calendar__month-title"
+                aria-live="polite"
+              >
+                <span className="booking-calendar__month-name">
+                  {monthName}
+                </span>
+
+                <span
+                  className="booking-calendar__month-number"
+                  dir="ltr"
+                >
+                  {monthNumber} / {year}
+                </span>
+              </div>
+
+              <button
+                type="button"
+                className="booking-calendar__custom-nav"
+                onClick={increaseMonth}
+                disabled={nextMonthButtonDisabled}
+                aria-label={navLabels.next}
+                title={navLabels.next}
+              >
+                <span>{navLabels.next}</span>
+                <span aria-hidden="true">
+                  {isRTL ? "‹" : "›"}
+                </span>
+              </button>
+            </div>
+          );
+        }}
         minDate={today}
         filterDate={(date) => !isClosedDate(date)}
         locale={language}
@@ -247,6 +363,8 @@ function DateField({
         dayClassName={getDayClassName}
         renderDayContents={renderDayContents}
         calendarClassName="booking-inline-calendar"
+
+        fixedHeight
         previousMonthButtonLabel={
           t?.("previous_month") ||
           (language === "en" ? "Previous month" : "الشهر السابق")
@@ -302,6 +420,110 @@ function DateField({
             rgba(250, 246, 234, 0.95) 0%,
             rgba(255, 255, 255, 1) 100%
           );
+        }
+
+        .booking-calendar-wrapper .booking-calendar__custom-header {
+          min-height: 52px;
+          display: grid;
+          grid-template-columns: 64px minmax(0, 1fr) 64px;
+          align-items: center;
+          gap: 7px;
+          width: 100%;
+        }
+
+        .booking-calendar-wrapper .booking-calendar__custom-nav {
+          min-width: 0;
+          min-height: 40px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 3px;
+          padding: 0 6px;
+          border: 1px solid #e4dcc8;
+          border-radius: 12px;
+          background: #ffffff;
+          color: #785a12;
+          box-shadow: 0 3px 10px rgba(15, 23, 42, 0.06);
+          font-family: inherit;
+          font-size: 9px;
+          font-weight: 900;
+          line-height: 1;
+          cursor: pointer;
+          transition:
+            transform 150ms ease,
+            border-color 150ms ease,
+            background-color 150ms ease,
+            box-shadow 150ms ease;
+        }
+
+        .booking-calendar-wrapper
+          .booking-calendar__custom-nav:hover:not(:disabled) {
+          transform: translateY(-1px);
+          border-color: #caa94d;
+          background: #fff9e9;
+          box-shadow: 0 5px 14px rgba(181, 138, 38, 0.12);
+        }
+
+        .booking-calendar-wrapper
+          .booking-calendar__custom-nav:active:not(:disabled) {
+          transform: scale(0.97);
+        }
+
+        .booking-calendar-wrapper
+          .booking-calendar__custom-nav:disabled {
+          cursor: not-allowed;
+          opacity: 0.28;
+          box-shadow: none;
+        }
+
+        .booking-calendar-wrapper .booking-calendar__month-title {
+          min-width: 0;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 2px;
+          text-align: center;
+          line-height: 1.2;
+        }
+
+        .booking-calendar-wrapper .booking-calendar__month-name {
+          max-width: 100%;
+          overflow: hidden;
+          color: #172033;
+          font-size: 17px;
+          font-weight: 900;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .booking-calendar-wrapper .booking-calendar__month-number {
+          color: #987524;
+          font-size: 10px;
+          font-weight: 900;
+          letter-spacing: 0.04em;
+        }
+
+        @media (max-width: 360px) {
+          .booking-calendar-wrapper .booking-calendar__custom-header {
+            grid-template-columns: 56px minmax(0, 1fr) 56px;
+            gap: 4px;
+          }
+
+          .booking-calendar-wrapper .booking-calendar__custom-nav {
+            min-height: 38px;
+            padding-inline: 4px;
+            border-radius: 10px;
+            font-size: 8px;
+          }
+
+          .booking-calendar-wrapper .booking-calendar__month-name {
+            font-size: 15px;
+          }
+
+          .booking-calendar-wrapper .booking-calendar__month-number {
+            font-size: 9px;
+          }
         }
 
         .booking-calendar-wrapper .react-datepicker__current-month {
@@ -495,8 +717,8 @@ function DateField({
 
         .booking-calendar-wrapper
           .react-datepicker__day--outside-month {
-          color: #d0d2d7;
-          opacity: 0.55;
+          visibility: hidden;
+          pointer-events: none;
         }
 
         .booking-calendar-wrapper

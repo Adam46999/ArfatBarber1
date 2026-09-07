@@ -177,21 +177,82 @@ export async function getBookingByRequestId(requestId) {
 export async function createBooking(payload) {
   const safeRequestId = cleanRequestId(payload?.requestId);
 
+  const safeSelectedDate = String(
+    payload?.selectedDate || "",
+  ).trim();
+
+  const safeSelectedTime = String(
+    payload?.selectedTime || "",
+  ).trim();
+
+  if (
+    !/^\d{4}-\d{2}-\d{2}$/.test(safeSelectedDate) ||
+    !/^\d{2}:\d{2}$/.test(safeSelectedTime)
+  ) {
+    throw new Error("INVALID_BOOKING_DATE_TIME");
+  }
+
+  const targetTimestamp = new Date(
+    `${safeSelectedDate}T${safeSelectedTime}:00`,
+  ).getTime();
+
+  if (!Number.isFinite(targetTimestamp)) {
+    throw new Error("INVALID_BOOKING_DATE_TIME");
+  }
+
   const bookingRef = safeRequestId
     ? doc(db, "bookings", safeRequestId)
     : doc(collection(db, "bookings"));
 
-  const slotId = makeSlotId(payload.selectedDate, payload.selectedTime);
+  const slotId = makeSlotId(
+    safeSelectedDate,
+    safeSelectedTime,
+  );
 
   const slotRef = doc(db, "bookedSlots", slotId);
+
+  const blockedDayRef = doc(
+    db,
+    "blockedDays",
+    safeSelectedDate,
+  );
+
+  const blockedTimesRef = doc(
+    db,
+    "blockedTimes",
+    safeSelectedDate,
+  );
+
+  const slotExtrasRef = doc(
+    db,
+    "slotExtras",
+    safeSelectedDate,
+  );
+
+  const weeklyHoursRef = doc(
+    db,
+    "barberSettings",
+    "hours",
+  );
 
   await runTransaction(db, async (transaction) => {
     /*
      * نقرأ الحجز والموعد أولًا قبل تنفيذ أي كتابة.
      */
-    const [bookingSnapshot, slotSnapshot] = await Promise.all([
+    const [
+      bookingSnapshot,
+      slotSnapshot,
+      blockedDaySnapshot,
+      blockedTimesSnapshot,
+      slotExtrasSnapshot,
+      weeklyHoursSnapshot,
+    ] = await Promise.all([
       transaction.get(bookingRef),
       transaction.get(slotRef),
+      transaction.get(blockedDayRef),
+      transaction.get(blockedTimesRef),
+      transaction.get(slotExtrasRef),
+      transaction.get(weeklyHoursRef),
     ]);
 
     /*
@@ -215,6 +276,65 @@ export async function createBooking(payload) {
     /*
      * فحص هل الموعد مسجّل كموعد فعّال.
      */
+    /*
+     * إذا وصلنا إلى هنا فهذا حجز جديد فعلًا.
+     * نعيد فحص صلاحية اليوم والساعة داخل نفس Transaction،
+     * حتى لا يمر الحجز إذا تغيّر جدول الحلاق أثناء التأكيد.
+     */
+    if (targetTimestamp <= Date.now()) {
+      throw new Error("BOOKING_TIME_PASSED");
+    }
+
+    if (blockedDaySnapshot.exists()) {
+      throw new Error("BOOKING_DAY_BLOCKED");
+    }
+
+    const blockedTimes = blockedTimesSnapshot.exists()
+      ? blockedTimesSnapshot.data()?.times
+      : [];
+
+    if (
+      Array.isArray(blockedTimes) &&
+      blockedTimes.includes(safeSelectedTime)
+    ) {
+      throw new Error("BOOKING_TIME_BLOCKED");
+    }
+
+    const weeklyHours = weeklyHoursSnapshot.exists()
+      ? extractWeeklyHoursForReschedule(
+          weeklyHoursSnapshot.data(),
+        )
+      : defaultWorkingHours;
+
+    const weekday = getWeekdayName(safeSelectedDate);
+
+    const dayHours = weekday
+      ? weeklyHours?.[weekday]
+      : null;
+
+    if (!dayHours?.from || !dayHours?.to) {
+      throw new Error("BOOKING_DAY_CLOSED");
+    }
+
+    const extraSlots = slotExtrasSnapshot.exists()
+      ? safeInt(
+          slotExtrasSnapshot.data()?.extraSlots,
+          0,
+        )
+      : 0;
+
+    const validSlots = applyExtraSlots(
+      generateSlots30Min(
+        dayHours.from,
+        dayHours.to,
+      ),
+      extraSlots,
+    );
+
+    if (!validSlots.includes(safeSelectedTime)) {
+      throw new Error("BOOKING_TIME_NOT_AVAILABLE");
+    }
+
     if (slotSnapshot.exists() && slotSnapshot.data()?.active === true) {
       const oldBookingId = slotSnapshot.data()?.bookingId;
 

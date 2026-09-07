@@ -330,8 +330,14 @@ export default function useMonthAvailability({
       },
     );
 
+    const clockInterval = setInterval(() => {
+      recompute();
+    }, 30_000);
+
     return () => {
       active = false;
+
+      clearInterval(clockInterval);
 
       unsubscribeBookedSlots();
       unsubscribeBlockedDays();
