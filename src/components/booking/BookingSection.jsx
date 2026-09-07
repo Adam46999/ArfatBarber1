@@ -1290,7 +1290,7 @@ function BookingSection() {
                           type="button"
                           onClick={retrySubmit}
                           disabled={!isOnline}
-                          className="min-h-[42px] rounded-xl bg-red-700 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50"
+                          className="min-h-[44px] rounded-xl bg-red-700 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           {translate(t, "retry", "إعادة المحاولة")}
                         </button>
@@ -1298,7 +1298,7 @@ function BookingSection() {
                         <button
                           type="button"
                           onClick={clearSubmitError}
-                          className="min-h-[42px] rounded-xl border border-current px-4 py-2.5 text-xs font-bold transition hover:bg-white/50"
+                          className="min-h-[44px] rounded-xl border border-current px-4 py-2.5 text-xs font-bold transition hover:bg-white/50"
                         >
                           {translate(t, "close_message", "إغلاق الرسالة")}
                         </button>

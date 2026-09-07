@@ -66,28 +66,28 @@ export default function SuccessModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-3 py-4 backdrop-blur-[3px] sm:px-4"
       onClick={onClose}
     >
       <div
-        className="relative mx-4 flex w-full max-w-sm flex-col items-center gap-4 rounded-2xl border border-green-400 bg-white px-5 py-7 text-center text-lg text-green-700 shadow-2xl sm:px-6 sm:py-8"
+        className="relative flex max-h-[calc(100dvh-2rem)] w-full max-w-sm flex-col items-center gap-3.5 overflow-y-auto overscroll-contain rounded-[24px] border border-emerald-200/90 bg-[linear-gradient(180deg,#fffefb_0%,#ffffff_55%,#f8fff9_100%)] px-4 py-6 text-center text-lg text-emerald-700 shadow-[0_24px_70px_rgba(15,23,42,0.24)] ring-1 ring-white/80 sm:px-6 sm:py-7"
         onClick={(e) => e.stopPropagation()}
       >
         <button
           type="button"
           onClick={onClose}
-          className="absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full text-xl font-bold text-gray-500 transition hover:bg-gray-100 hover:text-red-600"
+          className="absolute right-3 top-3 flex h-11 w-11 items-center justify-center rounded-full border border-slate-200/80 bg-white/85 text-xl font-bold text-slate-500 shadow-sm transition hover:bg-slate-50 hover:text-red-600 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-200"
           aria-label="إغلاق"
         >
           ×
         </button>
 
-        <div className="pr-8 text-xl font-bold">
+        <div className="w-full px-10 text-xl font-black leading-7 text-slate-900">
           ✅ {title || t("thank_you")}
         </div>
 
         {oldDate && newDate ? (
-          <div className="w-full rounded-2xl border border-gray-200 bg-gray-50 p-4 text-right">
+          <div className="w-full rounded-[16px] border border-[#e7dfcf] bg-gradient-to-b from-[#fffdf8] to-[#faf7f0] p-4 text-right shadow-[0_6px_18px_rgba(31,24,12,0.05)]">
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
                 <p className="text-xs font-bold text-gray-500">الموعد السابق</p>
@@ -104,7 +104,7 @@ export default function SuccessModal({
           </div>
         ) : null}
 
-        <div className="flex w-full items-center justify-between gap-3 rounded-2xl border border-dashed border-green-500 bg-green-50 px-4 py-3 text-base font-semibold text-gray-800">
+        <div className="flex w-full items-center justify-between gap-3 rounded-[16px] border border-dashed border-emerald-300 bg-gradient-to-r from-emerald-50 via-white to-emerald-50 px-4 py-3 text-base font-semibold text-slate-800 shadow-[0_6px_18px_rgba(5,150,105,0.06)]">
           <div className="min-w-0 text-right">
             <span>🔐 {t("your_code")}: </span>
             <span className="break-all font-mono font-bold">{code}</span>
@@ -113,7 +113,7 @@ export default function SuccessModal({
           <button
             type="button"
             onClick={handleCopy}
-            className="min-h-[44px] shrink-0 rounded-xl bg-green-600 px-4 text-xs font-bold text-white transition hover:bg-green-700"
+            className="min-h-[44px] shrink-0 rounded-xl bg-emerald-600 px-4 text-xs font-bold text-white shadow-sm transition hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-200"
           >
             {copied ? "✅ تم النسخ!" : "نسخ"}
           </button>
@@ -123,12 +123,12 @@ export default function SuccessModal({
           <p className="text-sm font-bold text-green-800">{codeNote}</p>
         ) : null}
 
-        <p className="text-sm text-gray-600">
+        <p className="text-sm font-medium leading-6 text-slate-600">
           احتفظ بهذا الكود لتعديل أو إلغاء الحجز لاحقًا.
         </p>
 
         {canSendToWhatsApp ? (
-          <div className="w-full border-t border-gray-100 pt-1">
+          <div className="w-full border-t border-[#ece7dd] pt-3">
             <a
               href={whatsappUrl}
               target="_blank"
