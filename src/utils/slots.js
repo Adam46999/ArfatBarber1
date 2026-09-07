@@ -35,11 +35,11 @@ export function addMinutesToHHMM(hhmm, minsToAdd) {
 
 /**
  * أدوار 30 دقيقة.
- * وقت الإغلاق غير شامل.
+ * وقت النهاية نفسه يعتبر دورًا متاحًا.
  *
  * مثال:
  * 12:00 -> 20:00
- * آخر دور = 19:30
+ * آخر دور = 20:00
  */
 export function generateSlots30Min(from, to) {
   const startMinutes = parseHHMM(from);
@@ -57,7 +57,7 @@ export function generateSlots30Min(from, to) {
 
   for (
     let currentMinutes = startMinutes;
-    currentMinutes < endMinutes;
+    currentMinutes <= endMinutes;
     currentMinutes += 30
   ) {
     slots.push(minutesToHHMM(currentMinutes));
