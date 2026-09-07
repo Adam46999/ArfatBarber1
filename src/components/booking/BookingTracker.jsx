@@ -357,7 +357,7 @@ function BookingTracker() {
     <section
       id="check-booking"
       dir="rtl"
-      className="relative scroll-mt-28 overflow-hidden bg-[#f8f6f1] px-4 py-16 font-body text-primary md:scroll-mt-32 md:py-20"
+      className="relative scroll-mt-28 overflow-hidden bg-[#f8f6f1] px-3 py-10 font-body text-primary sm:px-4 sm:py-14 md:scroll-mt-32 md:py-16"
       style={{ scrollMarginTop: 120 }}
     >
       <SuccessModal visible={Boolean(rescheduleSuccess)} onClose={() => setRescheduleSuccess(null)} code={rescheduleSuccess?.code || ""} t={t} title="تم تغيير موعدك بنجاح" oldDate={rescheduleSuccess?.oldDate ? formatDayAndDate(rescheduleSuccess.oldDate) : ""} oldTime={rescheduleSuccess?.oldTime || ""} newDate={rescheduleSuccess?.newDate ? formatDayAndDate(rescheduleSuccess.newDate) : ""} newTime={rescheduleSuccess?.newTime || ""} codeNote="هذا نفس كود الحجز السابق، لم يتغيّر." />
@@ -380,14 +380,14 @@ function BookingTracker() {
           </span>
         </SectionTitle>
 
-        <div className="mt-6 rounded-[26px] border border-[#e3dccf] bg-white p-4 shadow-[0_16px_40px_rgba(40,32,20,0.08)] sm:p-6">
+        <div className="mt-5 rounded-[24px] border border-[#e5dcc9] bg-[linear-gradient(180deg,#fffdf8_0%,#ffffff_100%)] p-4 shadow-[0_14px_36px_rgba(40,32,20,0.07)] ring-1 ring-white/80 sm:mt-6 sm:p-5">
           <form
             onSubmit={handleCheck}
-            className="flex flex-col gap-3 sm:flex-row"
+            className="flex flex-col gap-2.5 sm:flex-row sm:gap-3"
           >
             <div className="relative min-w-0 flex-1">
               <Phone
-                className="pointer-events-none absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"
+                className="pointer-events-none absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#9a7625]"
                 aria-hidden="true"
               />
 
@@ -401,7 +401,7 @@ function BookingTracker() {
                 value={phone}
                 onChange={handlePhoneChange}
                 disabled={loading}
-                className="h-[52px] w-full rounded-2xl border border-slate-300 bg-white py-3 pl-4 pr-12 text-right text-base font-semibold text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#b88a25] focus:ring-4 focus:ring-[#d7b55c]/20 disabled:bg-slate-50"
+                className="h-[54px] w-full rounded-[16px] border border-[#ddd5c5] bg-[#fffdfa] py-3 pl-4 pr-12 text-right text-[15px] font-semibold text-slate-900 shadow-[inset_0_1px_2px_rgba(15,23,42,0.04)] outline-none transition placeholder:text-slate-400 focus:border-[#c9a44b] focus:ring-4 focus:ring-[#c9a44b]/15 disabled:bg-slate-50"
               />
             </div>
 
@@ -409,10 +409,10 @@ function BookingTracker() {
               type="submit"
               disabled={loading || !phone.trim()}
               className={[
-                "flex min-h-[52px] items-center justify-center gap-2 rounded-2xl px-6 text-sm font-extrabold transition sm:min-w-[145px]",
+                "flex min-h-[54px] items-center justify-center gap-2 rounded-[16px] px-6 text-sm font-extrabold transition-[filter,box-shadow,background-color] sm:min-w-[145px]",
                 loading || !phone.trim()
-                  ? "cursor-not-allowed bg-slate-200 text-slate-500"
-                  : "bg-gradient-to-br from-[#d7b457] to-[#bd9135] text-[#172033] shadow-[0_8px_18px_rgba(157,112,21,0.20)] hover:brightness-105",
+                  ? "cursor-not-allowed border border-[#ddd6c8] bg-[#e9e5dc] text-[#8a857b]"
+                  : "border border-[#b98b32]/70 bg-gradient-to-r from-[#b98b32] via-[#e0c36e] to-[#c49b43] text-[#171717] shadow-[0_10px_22px_rgba(128,94,22,0.18)] hover:brightness-[1.04] hover:shadow-[0_12px_26px_rgba(128,94,22,0.24)]",
               ].join(" ")}
             >
               {loading ? (
@@ -444,7 +444,7 @@ function BookingTracker() {
 
           {successMessage && (
             <div
-              className="mt-4 flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-800"
+              className="mt-4 flex items-center gap-3 rounded-[16px] border border-emerald-200/80 bg-gradient-to-r from-emerald-50 via-white to-emerald-50 px-4 py-3.5 text-sm font-bold text-emerald-800 shadow-[0_6px_18px_rgba(5,150,105,0.05)]"
               role="status"
             >
               <CheckCircle2 className="h-5 w-5 shrink-0" aria-hidden="true" />
@@ -455,7 +455,7 @@ function BookingTracker() {
 
           {notFound && (
             <div
-              className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-right"
+              className="mt-4 rounded-[16px] border border-amber-200/80 bg-gradient-to-r from-amber-50 via-[#fffaf0] to-amber-50 px-4 py-3.5 text-right shadow-[0_6px_18px_rgba(146,104,20,0.05)]"
               role="status"
             >
               <p className="text-sm font-extrabold text-amber-900">
@@ -488,12 +488,12 @@ function BookingTracker() {
               return (
                 <article
                   key={booking.docId}
-                  className="overflow-hidden rounded-[26px] border border-[#e2dbcf] bg-white shadow-[0_14px_36px_rgba(38,31,20,0.08)]"
+                  className="overflow-hidden rounded-[24px] border border-[#e5dcc9] bg-[linear-gradient(180deg,#fffefa_0%,#ffffff_100%)] shadow-[0_14px_38px_rgba(38,31,20,0.075)] ring-1 ring-white/80"
                 >
-                  <header className="border-b border-[#eee8dc] bg-[#fcfaf5] p-4 sm:p-5">
+                  <header className="border-b border-[#eee5d3] bg-gradient-to-r from-[#fffaf0] via-[#fffdf8] to-white p-3.5 sm:p-5">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex min-w-0 items-center gap-3">
-                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#ead698] text-[#6d500e]">
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] border border-[#e1cb8b] bg-[#f3e4b8] text-[#76550f] shadow-[0_4px_12px_rgba(128,94,22,0.07)]">
                           <UserRound className="h-6 w-6" aria-hidden="true" />
                         </div>
 
@@ -512,7 +512,7 @@ function BookingTracker() {
                         </div>
                       </div>
 
-                      <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-extrabold text-emerald-700">
+                      <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-emerald-200/90 bg-emerald-50 px-2.5 py-1.5 text-[11px] font-extrabold text-emerald-700 shadow-sm sm:px-3 sm:text-xs">
                         <ShieldCheck className="h-4 w-4" aria-hidden="true" />
 
                         {t("active_booking", {
@@ -523,7 +523,7 @@ function BookingTracker() {
                   </header>
 
                   <div className="p-4 sm:p-5">
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
                       <DetailItem
                         label={t("date", {
                           defaultValue: "التاريخ",
@@ -559,9 +559,9 @@ function BookingTracker() {
                       />
                     </div>
 
-                    <div className="mt-5 rounded-2xl border border-red-100 bg-red-50/45 p-4">
+                    <div className="mt-4 rounded-[18px] border border-[#e7dfcf] bg-gradient-to-b from-[#fffdf8] to-[#faf7f0] p-3.5 shadow-[0_8px_22px_rgba(31,24,12,0.05)] sm:mt-5 sm:p-4">
                       <div className="flex items-start gap-3">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-red-500 shadow-sm">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#eadfca] bg-[#fffaf0] text-[#9a7625] shadow-sm">
                           <KeyRound className="h-5 w-5" aria-hidden="true" />
                         </div>
 
@@ -612,7 +612,7 @@ function BookingTracker() {
                               })}
                               disabled={isCancelling}
                               className={[
-                                "h-[54px] w-full rounded-2xl border bg-white py-3 pl-4 pr-12",
+                                "h-[54px] w-full rounded-[16px] border bg-[#fffdfa] py-3 pl-4 pr-12 shadow-[inset_0_1px_2px_rgba(15,23,42,0.04)]",
                                 "text-right text-base font-extrabold tracking-wide text-slate-900",
                                 "outline-none transition",
                                 "placeholder:font-normal placeholder:tracking-normal placeholder:text-slate-400",
@@ -625,7 +625,7 @@ function BookingTracker() {
                             />
                           </div>
 
-                          <button type="button" onClick={() => handleStartReschedule(booking)} disabled={isCancelling || isRescheduling || !enteredCode.trim()} className="flex min-h-[54px] items-center justify-center gap-2 rounded-2xl border border-[#c9a64d] bg-[#fff9e8] px-5 text-sm font-extrabold text-[#76550f] disabled:cursor-not-allowed disabled:opacity-50">
+                          <button type="button" onClick={() => handleStartReschedule(booking)} disabled={isCancelling || isRescheduling || !enteredCode.trim()} className="flex min-h-[54px] items-center justify-center gap-2 rounded-[16px] border border-[#c9a64d] bg-[#fff9e8] px-5 text-sm font-extrabold text-[#76550f] shadow-[0_6px_16px_rgba(128,94,22,0.08)] transition hover:bg-[#fff5d8] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#c9a44b]/20 disabled:cursor-not-allowed disabled:opacity-50">
                             <CalendarDays className="h-5 w-5" aria-hidden="true" />
                             <span>تعديل الموعد</span>
                           </button>
@@ -635,12 +635,12 @@ function BookingTracker() {
                             onClick={() => handleCancel(booking)}
                             disabled={isCancelling || !enteredCode.trim()}
                             className={[
-                              "flex min-h-[54px] items-center justify-center gap-2 rounded-2xl px-5",
+                              "flex min-h-[54px] items-center justify-center gap-2 rounded-[16px] px-5",
                               "text-sm font-extrabold transition",
                               "sm:min-w-[150px]",
                               isCancelling || !enteredCode.trim()
                                 ? "cursor-not-allowed bg-slate-200 text-slate-500"
-                                : "bg-red-600 text-white shadow-[0_8px_18px_rgba(220,38,38,0.18)] hover:bg-red-700",
+                                : "bg-red-600 text-white shadow-[0_8px_18px_rgba(220,38,38,0.16)] hover:bg-red-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-red-200",
                             ].join(" ")}
                           >
                             {isCancelling ? (
