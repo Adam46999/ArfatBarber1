@@ -16,7 +16,7 @@ export default function ServiceSelector({ selectedService, onSelect, rtl }) {
 
   return (
     <div
-      className="grid gap-4"
+      className="grid gap-3 sm:gap-4"
       style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}
     >
       {SERVICES.map((s) => (
