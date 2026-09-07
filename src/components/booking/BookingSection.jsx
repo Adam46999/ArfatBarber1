@@ -1084,7 +1084,7 @@ function BookingSection() {
                 </div>
               ) : loadingWeeklyHours || !workingHours ? (
                 <div
-                  className="flex items-center justify-center gap-3 rounded-xl border border-gray-200 bg-gray-50 px-4 py-6"
+                  className="flex items-center justify-center gap-3 rounded-[16px] border border-[#e5dcc9] bg-gradient-to-r from-[#fffdf8] via-white to-[#faf6ed] px-4 py-4 shadow-[0_6px_18px_rgba(31,24,12,0.05)] sm:py-5"
                   role="status"
                 >
                   <div
@@ -1098,7 +1098,7 @@ function BookingSection() {
                 </div>
               ) : loadingTimes || !timesReady ? (
                 <div
-                  className="flex items-center justify-center gap-3 rounded-xl border border-gray-200 bg-gray-50 px-4 py-6"
+                  className="flex items-center justify-center gap-3 rounded-[16px] border border-[#e5dcc9] bg-gradient-to-r from-[#fffdf8] via-white to-[#faf6ed] px-4 py-4 shadow-[0_6px_18px_rgba(31,24,12,0.05)] sm:py-5"
                   role="status"
                 >
                   <div
@@ -1116,7 +1116,7 @@ function BookingSection() {
                 </div>
               ) : timesError ? (
                 <div
-                  className="rounded-xl border border-red-200 bg-red-50 px-4 py-4 text-center"
+                  className="rounded-[16px] border border-red-200/80 bg-gradient-to-b from-red-50 to-[#fff9f7] px-4 py-4 text-center shadow-[0_6px_18px_rgba(127,29,29,0.06)]"
                   role="alert"
                 >
                   <p className="text-sm font-bold text-red-800">
@@ -1130,14 +1130,14 @@ function BookingSection() {
                   <button
                     type="button"
                     onClick={refreshTimes}
-                    className="mt-3 rounded-xl bg-red-700 px-4 py-2 text-sm font-bold text-white transition hover:bg-red-800"
+                    className="mt-3 min-h-[44px] rounded-xl bg-red-700 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-red-800 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-red-200"
                   >
                     إعادة المحاولة
                   </button>
                 </div>
               ) : isDayBlocked ? (
                 <div
-                  className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-4 text-center"
+                  className="rounded-[16px] border border-amber-200/80 bg-gradient-to-b from-amber-50 to-[#fffaf1] px-4 py-4 text-center shadow-[0_6px_18px_rgba(146,104,20,0.05)]"
                   role="status"
                 >
                   <p className="text-sm font-bold text-amber-900">
@@ -1186,7 +1186,7 @@ function BookingSection() {
 
               {availabilityNotice && (
                 <div
-                  className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3"
+                  className="mt-3 rounded-[14px] border border-amber-200/80 bg-gradient-to-r from-amber-50 via-[#fffaf0] to-amber-50 px-4 py-3.5 shadow-[0_5px_16px_rgba(146,104,20,0.05)]"
                   role="alert"
                 >
                   <p className="text-xs font-semibold leading-5 text-amber-900">
