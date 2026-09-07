@@ -16,12 +16,12 @@ const PhoneInput = forwardRef(function PhoneInput(
   ref
 ) {
   const base =
-    "w-full p-3 rounded-xl border transition focus:ring-2 outline-none";
+    "w-full min-h-[54px] rounded-[16px] border bg-[#fffdfa] px-4 py-3.5 text-[15px] shadow-[inset_0_1px_2px_rgba(15,23,42,0.04)] outline-none transition-[border-color,box-shadow,background-color] duration-200 focus:ring-2";
   const state = isInvalid
     ? "border-red-500 focus:ring-red-300"
     : isValid
     ? "border-emerald-500 focus:ring-emerald-300"
-    : "border-gray-300 focus:border-gold focus:ring-gold/40";
+    : "border-[#ddd5c5] focus:border-[#c9a44b] focus:ring-[#c9a44b]/25";
 
   return (
     <input

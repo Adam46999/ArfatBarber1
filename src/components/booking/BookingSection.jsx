@@ -698,8 +698,8 @@ function BookingSection() {
       className={[
         "border-t border-[#c8a34d]/10 bg-gradient-to-b from-[#f8f6f1] via-[#f6f2e9] to-[#efe9de]",
         "text-primary",
-        "py-16",
-        "px-4",
+        "py-10 sm:py-14",
+        "px-3 sm:px-4",
         fontClass,
       ].join(" ")}
     >
@@ -841,7 +841,7 @@ function BookingSection() {
 
           <form
             onSubmit={handleFormSubmit}
-            className="space-y-8"
+            className="space-y-5 sm:space-y-6"
             ref={messageRef}
             noValidate
           >
@@ -849,7 +849,7 @@ function BookingSection() {
                 الاسم
                 =========================================== */}
 
-            <div id="field-fullName">
+            <div id="field-fullName" className="scroll-mt-24 rounded-[20px] border border-[#e7e0d2] bg-[linear-gradient(180deg,#fffdfa_0%,#ffffff_100%)] p-4 shadow-[0_8px_24px_rgba(15,23,42,0.045)] transition-[border-color,box-shadow] duration-200 focus-within:border-[#c9a44b]/70 focus-within:shadow-[0_10px_28px_rgba(128,94,22,0.10)] sm:p-5">
               <label
                 htmlFor="booking-full-name"
                 className="mb-2 block text-sm font-semibold text-gold"
@@ -883,7 +883,7 @@ function BookingSection() {
                     aria-describedby={isInvalid ? "err-fullName" : undefined}
                     className={[
                       "w-full",
-                      "min-h-[50px] rounded-[14px] bg-white/90 px-4 py-3 shadow-[inset_0_1px_2px_rgba(15,23,42,0.04)]",
+                      "min-h-[54px] rounded-[16px] bg-[#fffdfa] px-4 py-3.5 text-[15px] shadow-[inset_0_1px_2px_rgba(15,23,42,0.04)]",
                       "border",
                       "outline-none",
                       "transition",
@@ -917,7 +917,7 @@ function BookingSection() {
                 الهاتف
                 =========================================== */}
 
-            <div id="field-phoneNumber">
+            <div id="field-phoneNumber" className="scroll-mt-24 rounded-[20px] border border-[#e7e0d2] bg-[linear-gradient(180deg,#fffdfa_0%,#ffffff_100%)] p-4 shadow-[0_8px_24px_rgba(15,23,42,0.045)] transition-[border-color,box-shadow] duration-200 focus-within:border-[#c9a44b]/70 focus-within:shadow-[0_10px_28px_rgba(128,94,22,0.10)] sm:p-5">
               <label
                 htmlFor="booking-phone"
                 className="mb-2 block text-sm font-semibold text-gold"
@@ -989,7 +989,7 @@ function BookingSection() {
                 التاريخ
                 =========================================== */}
 
-            <div id="field-selectedDate">
+            <div id="field-selectedDate" className="scroll-mt-24 rounded-[20px] border border-[#e7e0d2] bg-[linear-gradient(180deg,#fffdfa_0%,#ffffff_100%)] p-4 shadow-[0_8px_24px_rgba(15,23,42,0.045)] transition-[border-color,box-shadow] duration-200 focus-within:border-[#c9a44b]/70 focus-within:shadow-[0_10px_28px_rgba(128,94,22,0.10)] sm:p-5">
               <label className="mb-2 block text-sm font-semibold text-gold">
                 {translate(t, "choose_date", "اختر التاريخ")}
               </label>
@@ -1069,7 +1069,7 @@ function BookingSection() {
                 الساعة
                 =========================================== */}
 
-            <div id="field-selectedTime">
+            <div id="field-selectedTime" className="scroll-mt-24 rounded-[20px] border border-[#e7e0d2] bg-[linear-gradient(180deg,#fffdfa_0%,#ffffff_100%)] p-4 shadow-[0_8px_24px_rgba(15,23,42,0.045)] transition-[border-color,box-shadow] duration-200 focus-within:border-[#c9a44b]/70 focus-within:shadow-[0_10px_28px_rgba(128,94,22,0.10)] sm:p-5">
               <label className="mb-3 block text-sm font-semibold text-gold">
                 {translate(t, "choose_time", "اختر الساعة")}
               </label>
@@ -1213,7 +1213,7 @@ function BookingSection() {
                 الخدمة
                 =========================================== */}
 
-            <div id="field-selectedService">
+            <div id="field-selectedService" className="scroll-mt-24 rounded-[20px] border border-[#e7e0d2] bg-[linear-gradient(180deg,#fffdfa_0%,#ffffff_100%)] p-4 shadow-[0_8px_24px_rgba(15,23,42,0.045)] transition-[border-color,box-shadow] duration-200 focus-within:border-[#c9a44b]/70 focus-within:shadow-[0_10px_28px_rgba(128,94,22,0.10)] sm:p-5">
               <label className="mb-3 block text-sm font-semibold text-gold">
                 {translate(t, "choose_service", "اختر الخدمة")}
               </label>
@@ -1261,6 +1261,7 @@ function BookingSection() {
                   "border",
                   "px-4 sm:px-5",
                   "py-4 sm:py-[18px]",
+                  "shadow-[0_8px_22px_rgba(15,23,42,0.06)]",
                   submitMessageClasses,
                 ].join(" ")}
                 role={
@@ -1289,7 +1290,7 @@ function BookingSection() {
                           type="button"
                           onClick={retrySubmit}
                           disabled={!isOnline}
-                          className="rounded-xl bg-red-700 px-4 py-2 text-xs font-bold text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50"
+                          className="min-h-[42px] rounded-xl bg-red-700 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           {translate(t, "retry", "إعادة المحاولة")}
                         </button>
@@ -1297,7 +1298,7 @@ function BookingSection() {
                         <button
                           type="button"
                           onClick={clearSubmitError}
-                          className="rounded-xl border border-current px-4 py-2 text-xs font-bold transition hover:bg-white/50"
+                          className="min-h-[42px] rounded-xl border border-current px-4 py-2.5 text-xs font-bold transition hover:bg-white/50"
                         >
                           {translate(t, "close_message", "إغلاق الرسالة")}
                         </button>
@@ -1312,15 +1313,16 @@ function BookingSection() {
                 زر تأكيد الحجز
                 =========================================== */}
 
-            <button
-              type="submit"
-              disabled={bookingSystemUnavailable}
+            <div className="rounded-[22px] border border-[#eadfca] bg-[linear-gradient(180deg,#fffdf8_0%,#fbf7ee_100%)] p-3 shadow-[0_10px_30px_rgba(128,94,22,0.08)] sm:p-4">
+              <button
+                type="submit"
+                disabled={bookingSystemUnavailable}
               aria-busy={isSubmitting ? "true" : "false"}
               className={[
-                "w-full min-h-[54px] touch-manipulation",
+                "w-full min-h-[58px] touch-manipulation sm:min-h-[60px]",
                 "rounded-[16px]",
-                "px-5 py-3.5",
-                "font-extrabold tracking-[0.01em]",
+                "px-5 py-4",
+                "text-[15px] font-extrabold tracking-[0.01em] sm:text-base",
                 "shadow-[0_12px_28px_rgba(128,94,22,0.20)]",
                 "outline-none transition-[filter,box-shadow,border-color] duration-200 focus-visible:ring-4 focus-visible:ring-[#c8a34d]/25",
 
@@ -1346,10 +1348,11 @@ function BookingSection() {
             </button>
 
             {!isSubmitting && hasFormErrors && (
-              <p className="text-center text-xs font-medium text-slate-500">
+              <p className="mt-2.5 px-2 text-center text-xs font-medium leading-5 text-slate-500">
                 {translate(t, "missing_fields_hint", "اضغط تأكيد الحجز وسنوضح لك أي معلومة ناقصة.")}
               </p>
             )}
+            </div>
           </form>
         </div>
       </div>

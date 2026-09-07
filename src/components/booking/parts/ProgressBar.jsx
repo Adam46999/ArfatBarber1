@@ -28,8 +28,8 @@ export default function ProgressBar({ step = 1, completed = {}, labels }) {
 
   return (
     <div className="w-full" dir={dir} aria-label="Progress steps">
-      <div className="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-gray-100 rounded-t-2xl -mt-6 -mx-6 px-6 pt-6">
-        <ol className="flex items-end justify-between gap-3 sm:gap-4 select-none">
+      <div className="sticky top-0 z-30 -mx-5 -mt-5 rounded-t-[27px] border-b border-[#eadfca]/80 bg-[#fffdfa]/95 px-4 pb-3 pt-5 shadow-[0_8px_22px_rgba(31,24,12,0.05)] backdrop-blur sm:-mx-8 sm:-mt-8 sm:px-6 sm:pt-6">
+        <ol className="flex items-end justify-between gap-1.5 select-none sm:gap-3">
           {Icons.map((Icon, idx) => {
             const idx1 = idx + 1;
             const isActive = idx1 === current;
@@ -55,19 +55,19 @@ export default function ProgressBar({ step = 1, completed = {}, labels }) {
                     className={`h-10 w-10 rounded-full border flex items-center justify-center
                       ${
                         isActive
-                          ? "border-amber-400 bg-amber-50"
+                          ? "border-[#c9a44b] bg-[#fff7dc] shadow-[0_0_0_3px_rgba(201,164,75,0.13)]"
                           : isDone
-                            ? "border-blue-500 bg-blue-50"
-                            : "border-slate-300 bg-slate-50"
+                            ? "border-[#d9c17a] bg-[#fffaf0]"
+                            : "border-[#ddd8ce] bg-[#f8f7f4]"
                       }`}
                     aria-current={isActive ? "step" : undefined}
                   >
                     <Icon
                       className={`${
                         isActive
-                          ? "text-[#1F2937]"
+                          ? "text-[#6f5518]"
                           : isDone
-                            ? "text-blue-600"
+                            ? "text-[#9a7625]"
                             : "text-slate-500"
                       } text-lg`}
                       aria-hidden
@@ -84,6 +84,12 @@ export default function ProgressBar({ step = 1, completed = {}, labels }) {
             );
           })}
         </ol>
+
+        {labels?.[current - 1] && (
+          <p className="mt-2.5 text-center text-[11px] font-bold text-[#806321] sm:hidden">
+            {labels[current - 1]}
+          </p>
+        )}
       </div>
     </div>
   );
