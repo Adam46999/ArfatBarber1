@@ -62,9 +62,12 @@ export default function Login() {
           <p className="text-red-600 text-sm mb-4 text-center">{error}</p>
         )}
 
-        <form onSubmit={handleLogin} className="space-y-4">
+        <form onSubmit={handleLogin} autoComplete="on" className="space-y-4">
           <input
+            id="barber-username"
+            name="username"
             type="text"
+            autoComplete="username"
             placeholder={t("username") || "اسم المستخدم"}
             value={username}
             onChange={(e) => setUsername(e.target.value)}
@@ -78,7 +81,10 @@ export default function Login() {
           />
 
           <input
+            id="barber-password"
+            name="password"
             type="password"
+            autoComplete="current-password"
             placeholder={t("enter_password") || "كلمة المرور"}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
