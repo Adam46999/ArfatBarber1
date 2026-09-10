@@ -54,9 +54,11 @@ export default function useSlotExtrasLive({
   }) => {
     if (!selectedDate) return;
 
-    const value = safeInt(nextValue, 0);
-    if (value < -10 || value > 10) {
-      alert("⚠️ مسموح من -10 إلى +10 فقط (كل رقم = 30 دقيقة).");
+    let value = safeInt(nextValue, 0);
+
+    // نحافظ على حد التنقيص القديم كما هو.
+    if (value < -10) {
+      alert("⚠️ أقصى تنقيص مسموح هو 10 أدوار.");
       return;
     }
 
@@ -64,6 +66,51 @@ export default function useSlotExtrasLive({
     if (!targets) {
       alert("⚠️ اختَر تاريخ نهاية صحيح (لازم يكون بعد/يساوي تاريخ البداية).");
       return;
+    }
+
+    // الزيادة تعتمد على نهاية دوام الأيام المختارة.
+    // نستخدم applyExtraSlots نفسه حتى يكون الحد مطابقًا
+    // تمامًا لما يظهر للزبون وما يقبله الحجز النهائي.
+    if (value > 0) {
+      let maxSafeExtraSlots = null;
+
+      for (const ymd of targets) {
+        const weekday = getWeekdayNameEN(ymd);
+        const hours = workingHours?.[weekday] || null;
+
+        if (!hours?.from || !hours?.to) {
+          continue;
+        }
+
+        const base = generateSlots30Min(hours.from, hours.to);
+
+        if (!base.length) {
+          continue;
+        }
+
+        const maximumSafeSlots = applyExtraSlots(base, 1000);
+
+        const maxForThisDay = Math.max(
+          0,
+          maximumSafeSlots.length - base.length,
+        );
+
+        maxSafeExtraSlots =
+          maxSafeExtraSlots === null
+            ? maxForThisDay
+            : Math.min(maxSafeExtraSlots, maxForThisDay);
+      }
+
+      if (
+        maxSafeExtraSlots !== null &&
+        value > maxSafeExtraSlots
+      ) {
+        value = maxSafeExtraSlots;
+
+        alert(
+          `⚠️ آخر دور ممكن هو 23:30. أقصى زيادة آمنة للتاريخ المختار هي +${maxSafeExtraSlots} أدوار.`,
+        );
+      }
     }
 
     // منع تقليل أدوار إذا رح ينحذف دور عليه حجز

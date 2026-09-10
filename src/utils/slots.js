@@ -75,9 +75,27 @@ export function applyExtraSlots(baseSlots, extraSlots) {
 
   if (count > 0) {
     const lastSlot = safeBaseSlots[safeBaseSlots.length - 1];
+    const lastSlotMinutes = parseHHMM(lastSlot);
+
+    if (lastSlotMinutes === null) {
+      return safeBaseSlots;
+    }
+
+    // الأدوار الإضافية يجب أن تبقى ضمن نفس التاريخ.
+    // آخر دور آمن في اليوم الحالي هو 23:30.
+    const latestSameDaySlotMinutes = 23 * 60 + 30;
+
+    const maxExtraSlots = Math.max(
+      0,
+      Math.floor(
+        (latestSameDaySlotMinutes - lastSlotMinutes) / 30,
+      ),
+    );
+
+    const effectiveCount = Math.min(count, maxExtraSlots);
     const extras = [];
 
-    for (let index = 1; index <= count; index += 1) {
+    for (let index = 1; index <= effectiveCount; index += 1) {
       extras.push(addMinutesToHHMM(lastSlot, index * 30));
     }
 
