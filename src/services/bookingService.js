@@ -19,6 +19,7 @@ import defaultWorkingHours from "../constants/workingHours";
 import {
   applyExtraSlots,
   generateSlots30Min,
+  resolveShiftSlot,
   safeInt,
 } from "../utils/slots";
 import { cancelBookingWithStats } from "./completedStats";
@@ -192,24 +193,11 @@ export async function createBooking(payload) {
     throw new Error("INVALID_BOOKING_DATE_TIME");
   }
 
-  const targetTimestamp = new Date(
-    `${safeSelectedDate}T${safeSelectedTime}:00`,
-  ).getTime();
-
-  if (!Number.isFinite(targetTimestamp)) {
-    throw new Error("INVALID_BOOKING_DATE_TIME");
-  }
 
   const bookingRef = safeRequestId
     ? doc(db, "bookings", safeRequestId)
     : doc(collection(db, "bookings"));
 
-  const slotId = makeSlotId(
-    safeSelectedDate,
-    safeSelectedTime,
-  );
-
-  const slotRef = doc(db, "bookedSlots", slotId);
 
   const blockedDayRef = doc(
     db,
@@ -241,14 +229,12 @@ export async function createBooking(payload) {
      */
     const [
       bookingSnapshot,
-      slotSnapshot,
       blockedDaySnapshot,
       blockedTimesSnapshot,
       slotExtrasSnapshot,
       weeklyHoursSnapshot,
     ] = await Promise.all([
       transaction.get(bookingRef),
-      transaction.get(slotRef),
       transaction.get(blockedDayRef),
       transaction.get(blockedTimesRef),
       transaction.get(slotExtrasRef),
@@ -281,9 +267,6 @@ export async function createBooking(payload) {
      * نعيد فحص صلاحية اليوم والساعة داخل نفس Transaction،
      * حتى لا يمر الحجز إذا تغيّر جدول الحلاق أثناء التأكيد.
      */
-    if (targetTimestamp <= Date.now()) {
-      throw new Error("BOOKING_TIME_PASSED");
-    }
 
     if (blockedDaySnapshot.exists()) {
       throw new Error("BOOKING_DAY_BLOCKED");
@@ -323,17 +306,35 @@ export async function createBooking(payload) {
         )
       : 0;
 
-    const validSlots = applyExtraSlots(
-      generateSlots30Min(
-        dayHours.from,
-        dayHours.to,
-      ),
+    const resolvedSlot = resolveShiftSlot(
+      safeSelectedDate,
+      safeSelectedTime,
+      dayHours.from,
+      dayHours.to,
       extraSlots,
     );
 
-    if (!validSlots.includes(safeSelectedTime)) {
+    if (!resolvedSlot) {
       throw new Error("BOOKING_TIME_NOT_AVAILABLE");
     }
+
+    const targetTimestamp = resolvedSlot.timestamp;
+
+    if (!Number.isFinite(targetTimestamp)) {
+      throw new Error("INVALID_BOOKING_DATE_TIME");
+    }
+
+    if (targetTimestamp <= Date.now()) {
+      throw new Error("BOOKING_TIME_PASSED");
+    }
+
+    const slotId = makeSlotId(
+      resolvedSlot.slotDate,
+      safeSelectedTime,
+    );
+
+    const slotRef = doc(db, "bookedSlots", slotId);
+    const slotSnapshot = await transaction.get(slotRef);
 
     if (slotSnapshot.exists() && slotSnapshot.data()?.active === true) {
       const oldBookingId = slotSnapshot.data()?.bookingId;
@@ -374,6 +375,15 @@ export async function createBooking(payload) {
 
       createdAtMs,
 
+      selectedDate: safeSelectedDate,
+      selectedTime: safeSelectedTime,
+
+      slotDate: resolvedSlot.slotDate,
+      slotDayOffset: resolvedSlot.dayOffset,
+
+      timestamp: targetTimestamp,
+      startAt: new Date(targetTimestamp),
+
       cancelledAt: payload?.cancelledAt ?? null,
 
       /*
@@ -403,8 +413,10 @@ export async function createBooking(payload) {
       slotRef,
       {
         bookingId: bookingRef.id,
-        selectedDate: payload.selectedDate,
-        selectedTime: payload.selectedTime,
+        selectedDate: safeSelectedDate,
+        selectedTime: safeSelectedTime,
+        slotDate: resolvedSlot.slotDate,
+        slotDayOffset: resolvedSlot.dayOffset,
         active: true,
         updatedAt: serverTimestamp(),
       },
@@ -772,19 +784,12 @@ export async function rescheduleBooking({
         );
       }
 
+      const oldSlotDate = /^\d{4}-\d{2}-\d{2}$/.test(String(booking.slotDate || "").trim()) ? String(booking.slotDate).trim() : oldDate;
+
       const oldSlotRef = doc(
         db,
         "bookedSlots",
-        makeSlotId(oldDate, oldTime),
-      );
-
-      const newSlotRef = doc(
-        db,
-        "bookedSlots",
-        makeSlotId(
-          safeSelectedDate,
-          safeSelectedTime,
-        ),
+        makeSlotId(oldSlotDate, oldTime),
       );
 
       const blockedDayRef = doc(
@@ -812,16 +817,12 @@ export async function rescheduleBooking({
       );
 
       const [
-        oldSlotSnapshot,
-        newSlotSnapshot,
-        blockedDaySnapshot,
+        oldSlotSnapshot,        blockedDaySnapshot,
         blockedTimesSnapshot,
         slotExtrasSnapshot,
         weeklyHoursSnapshot,
       ] = await Promise.all([
-        transaction.get(oldSlotRef),
-        transaction.get(newSlotRef),
-        transaction.get(blockedDayRef),
+        transaction.get(oldSlotRef),        transaction.get(blockedDayRef),
         transaction.get(blockedTimesRef),
         transaction.get(slotExtrasRef),
         transaction.get(weeklyHoursRef),
@@ -890,24 +891,16 @@ export async function rescheduleBooking({
             )
           : 0;
 
-      const validTargetSlots =
-        applyExtraSlots(
-          generateSlots30Min(
-            dayHours.from,
-            dayHours.to,
-          ),
-          extraSlots,
-        );
+      const resolvedTargetSlot = resolveShiftSlot(safeSelectedDate, safeSelectedTime, dayHours.from, dayHours.to, extraSlots);
 
-      if (
-        !validTargetSlots.includes(
-          safeSelectedTime,
-        )
-      ) {
-        throw new Error(
-          "TARGET_TIME_NOT_AVAILABLE",
-        );
-      }
+      if (!resolvedTargetSlot) { throw new Error("TARGET_TIME_NOT_AVAILABLE"); }
+
+      const targetTimestamp = resolvedTargetSlot.timestamp;
+      if (!Number.isFinite(targetTimestamp)) { throw new Error("INVALID_TARGET_DATE_TIME"); }
+      if (targetTimestamp <= currentMs) { throw new Error("TARGET_TIME_IN_PAST"); }
+
+      const newSlotRef = doc(db, "bookedSlots", makeSlotId(resolvedTargetSlot.slotDate, safeSelectedTime));
+      const newSlotSnapshot = await transaction.get(newSlotRef);
 
       if (
         oldSlotSnapshot.exists() &&
@@ -983,8 +976,10 @@ export async function rescheduleBooking({
           selectedTime:
             safeSelectedTime,
 
-          timestamp:
-            targetTimestamp,
+          slotDate: resolvedTargetSlot.slotDate,
+          slotDayOffset: resolvedTargetSlot.dayOffset,
+
+          timestamp: targetTimestamp,
 
           startAt: new Date(
             targetTimestamp,
@@ -1037,8 +1032,10 @@ export async function rescheduleBooking({
           selectedDate:
             safeSelectedDate,
 
-          selectedTime:
-            safeSelectedTime,
+          selectedTime: safeSelectedTime,
+
+          slotDate: resolvedTargetSlot.slotDate,
+          slotDayOffset: resolvedTargetSlot.dayOffset,
 
           active: true,
 
@@ -1069,8 +1066,10 @@ export async function rescheduleBooking({
             selectedDate:
               oldDate,
 
-            selectedTime:
-              oldTime,
+            selectedTime: oldTime,
+
+            slotDate: oldSlotDate,
+            slotDayOffset: Number(booking.slotDayOffset) === 1 ? 1 : 0,
 
             active: false,
 

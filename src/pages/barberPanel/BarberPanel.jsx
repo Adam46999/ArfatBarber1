@@ -11,8 +11,9 @@ import HeroNoteCard from "./components/HeroNoteCard";
 import useWeeklyWorkingHours from "../../hooks/useWeeklyWorkingHours";
 
 // utils slots
-import { generateSlots30Min, applyExtraSlots } from "../../utils/slots";
+import { generateShiftSlots30Min, resolveShiftSlot } from "../../utils/slots";
 import { createBooking } from "../../services/bookingService";
+import { getBookingStartDate } from "../../services/completedStats";
 import { isILPhoneE164, toILPhoneE164 } from "../../utils/phone";
 import { todayYMD, getWeekdayNameEN } from "./utils/dates";
 
@@ -322,9 +323,11 @@ export default function BarberPanel() {
       return [];
     }
 
-    const base = generateSlots30Min(hours.from, hours.to);
-
-    return applyExtraSlots(base, extraSlots);
+    return generateShiftSlots30Min(
+      hours.from,
+      hours.to,
+      extraSlots,
+    ).map((slot) => slot.time);
   }, [selectedDate, extraSlots, workingHours, weeklyHoursReady]);
 
   const isToday = selectedDate === todayYMD();
@@ -384,16 +387,32 @@ export default function BarberPanel() {
       return [];
     }
 
-    if (!isToday) {
-      return timesForBarberGrid;
+    const weekday = getWeekdayNameEN(selectedDate);
+    const hours = workingHours?.[weekday] || null;
+
+    if (!hours?.from || !hours?.to) {
+      return [];
     }
 
-    const now = new Date();
+    const nowMs = Date.now();
 
-    return timesForBarberGrid.filter(
-      (time) => new Date(`${selectedDate}T${time}:00`) > now,
-    );
-  }, [timesForBarberGrid, isToday, selectedDate]);
+    return timesForBarberGrid.filter((time) => {
+      const slot = resolveShiftSlot(
+        selectedDate,
+        time,
+        hours.from,
+        hours.to,
+        extraSlots,
+      );
+
+      return Boolean(slot && slot.timestamp > nowMs);
+    });
+  }, [
+    timesForBarberGrid,
+    selectedDate,
+    workingHours,
+    extraSlots,
+  ]);
 
   const dayIsClosedByHours = useMemo(() => {
     if (!selectedDate || !weeklyHoursReady) {
@@ -424,11 +443,9 @@ export default function BarberPanel() {
         return false;
       }
 
-      const bookingDate = new Date(
-        `${booking.selectedDate}T${booking.selectedTime}:00`,
-      );
+      const bookingDate = getBookingStartDate(booking);
 
-      return bookingDate < now;
+      return Boolean(bookingDate && bookingDate < now);
     }).length;
   }, [selectedDayBookings]);
 
@@ -548,17 +565,16 @@ export default function BarberPanel() {
           return false;
         }
 
-        return (
-          new Date(`${booking.selectedDate}T${booking.selectedTime}:00`) >=
-          new Date()
-        );
+        const bookingDate = getBookingStartDate(booking);
+
+        return Boolean(bookingDate && bookingDate >= new Date());
       })
       .slice()
-      .sort(
-        (a, b) =>
-          (timeToMinutes(a.selectedTime) || 0) -
-          (timeToMinutes(b.selectedTime) || 0),
-      );
+      .sort((a, b) => {
+        const aDate = getBookingStartDate(a);
+        const bDate = getBookingStartDate(b);
+        return (aDate?.getTime?.() || 0) - (bDate?.getTime?.() || 0);
+      });
 
     const longGaps = [];
 

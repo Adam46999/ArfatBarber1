@@ -171,8 +171,13 @@ function DateField({
   const isRTL = language === "ar" || language === "he";
   const selectedDate = parseYMD(valueYMD);
 
-  const today = new Date();
+  const now = new Date();
+  const today = new Date(now);
   today.setHours(0, 0, 0, 0);
+  const earliestShiftDate = new Date(today);
+  if (now.getHours() * 60 + now.getMinutes() < 4 * 60) {
+    earliestShiftDate.setDate(earliestShiftDate.getDate() - 1);
+  }
 
   /**
    * لا نظهر أي preview إلا بعد اكتمال كل مصادر الشهر
@@ -232,7 +237,7 @@ function DateField({
     normalizedDate.setHours(0, 0, 0, 0);
 
     const isToday = normalizedDate.getTime() === today.getTime();
-    const isPast = normalizedDate < today;
+    const isPast = normalizedDate < earliestShiftDate;
     const isClosed = isClosedDate(date);
 
     const classes = [];
@@ -356,7 +361,7 @@ function DateField({
             </div>
           );
         }}
-        minDate={today}
+        minDate={earliestShiftDate}
         filterDate={(date) => !isClosedDate(date)}
         locale={language}
         calendarStartDay={language === "en" ? 0 : 1}

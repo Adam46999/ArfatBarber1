@@ -1,4 +1,4 @@
-import { applyExtraSlots, generateSlots30Min } from "./slots.js";
+import { addDaysToYMD, generateShiftSlots30Min } from "./slots.js";
 
 function localYMD(date) {
   const year = date.getFullYear();
@@ -112,37 +112,44 @@ export function computeDayAvailability({
    * نستخدم نفس الدوال التي يستخدمها useAvailableTimes.
    * لا نعيد كتابة منطق توليد الأدوار هنا.
    */
-  const scheduledSlots = normalizeTimes(
-    applyExtraSlots(
-      generateSlots30Min(dayHours.from, dayHours.to),
-      extraSlots,
-    ),
+  const scheduledSlots = generateShiftSlots30Min(
+    dayHours.from,
+    dayHours.to,
+    extraSlots,
   );
 
-  /**
-   * في اليوم الحالي نحسب فقط الأدوار التي ما زالت بالمستقبل.
-   * الساعات التي مرت لا تجعل اليوم يبدو "ممتلئًا".
-   */
-  const relevantSlots =
-    dateYMD === todayYMD
-      ? scheduledSlots.filter((time) => {
-          const appointmentDate = toDateAt(dateYMD, time);
+  const relevantSlots = scheduledSlots.filter((slot) => {
+    const physicalDate = addDaysToYMD(dateYMD, slot.dayOffset);
 
-          return Boolean(
-            appointmentDate &&
-            appointmentDate > now
-          );
-        })
-      : scheduledSlots;
+    if (!physicalDate) {
+      return false;
+    }
+
+    const appointmentDate = toDateAt(physicalDate, slot.time);
+
+    return Boolean(appointmentDate && appointmentDate > now);
+  });
 
   const blockedSet = new Set(normalizeTimes(blockedTimes));
-  const bookedSet = new Set(normalizeTimes(bookedTimes));
+  const bookedSet =
+    bookedTimes instanceof Set
+      ? bookedTimes
+      : new Set(normalizeTimes(bookedTimes));
 
-  const availableTimes = relevantSlots.filter(
-    (time) =>
-      !blockedSet.has(time) &&
-      !bookedSet.has(time),
-  );
+  const availableTimes = relevantSlots
+    .filter((slot) => {
+      const physicalDate = addDaysToYMD(dateYMD, slot.dayOffset);
+
+      if (!physicalDate || blockedSet.has(slot.time)) {
+        return false;
+      }
+
+      return (
+        !bookedSet.has(`${physicalDate}|${slot.time}`) &&
+        !bookedSet.has(slot.time)
+      );
+    })
+    .map((slot) => slot.time);
 
   const totalSlots = relevantSlots.length;
   const availableSlots = availableTimes.length;

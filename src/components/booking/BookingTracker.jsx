@@ -47,10 +47,26 @@ function getStartAtDate(booking) {
     return date instanceof Date && !Number.isNaN(date.getTime()) ? date : null;
   }
 
-  if (booking?.selectedDate && booking?.selectedTime) {
-    const date = new Date(`${booking.selectedDate}T${booking.selectedTime}:00`);
+  if (booking?.startAt instanceof Date && !Number.isNaN(booking.startAt.getTime())) {
+    return booking.startAt;
+  }
 
-    return date instanceof Date && !Number.isNaN(date.getTime()) ? date : null;
+  const numericTimestamp = Number(booking?.timestamp);
+  if (Number.isFinite(numericTimestamp) && numericTimestamp > 0) {
+    const date = new Date(numericTimestamp);
+    if (!Number.isNaN(date.getTime())) return date;
+  }
+
+  if (booking?.selectedTime) {
+    const dateYMD =
+      typeof booking?.slotDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(booking.slotDate)
+        ? booking.slotDate
+        : booking?.selectedDate;
+
+    if (dateYMD) {
+      const date = new Date(`${dateYMD}T${booking.selectedTime}:00`);
+      return date instanceof Date && !Number.isNaN(date.getTime()) ? date : null;
+    }
   }
 
   return null;

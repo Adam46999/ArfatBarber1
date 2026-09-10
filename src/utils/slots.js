@@ -109,3 +109,155 @@ export function applyExtraSlots(baseSlots, extraSlots) {
     Math.max(0, safeBaseSlots.length - removeCount),
   );
 }
+// =========================================================
+// Overnight shift helpers
+// يوم الدوام يبقى ثابتًا للواجهة.
+// الأدوار بعد منتصف الليل تحمل dayOffset = 1.
+// آخر دور مسموح للشفت الممتد هو 04:00.
+// =========================================================
+
+export const OVERNIGHT_SHIFT_CUTOFF_TIME = "04:00";
+
+export function addDaysToYMD(dateYMD, daysToAdd = 0) {
+  const match = String(dateYMD || "").match(
+    /^(\d{4})-(\d{2})-(\d{2})$/,
+  );
+
+  if (!match) return "";
+
+  const [, year, month, day] = match;
+
+  const date = new Date(
+    Date.UTC(
+      Number(year),
+      Number(month) - 1,
+      Number(day),
+    ),
+  );
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  date.setUTCDate(
+    date.getUTCDate() + safeInt(daysToAdd, 0),
+  );
+
+  return [
+    date.getUTCFullYear(),
+    String(date.getUTCMonth() + 1).padStart(2, "0"),
+    String(date.getUTCDate()).padStart(2, "0"),
+  ].join("-");
+}
+
+export function generateShiftSlots30Min(
+  from,
+  to,
+  extraSlots = 0,
+) {
+  const baseSlots = generateSlots30Min(from, to);
+
+  if (!baseSlots.length) {
+    return [];
+  }
+
+  const count = safeInt(extraSlots, 0);
+
+  let slots = baseSlots.map((time) => ({
+    time,
+    dayOffset: 0,
+    timelineMinutes: parseHHMM(time),
+  }));
+
+  if (count < 0) {
+    return slots.slice(
+      0,
+      Math.max(0, slots.length - Math.abs(count)),
+    );
+  }
+
+  if (count === 0) {
+    return slots;
+  }
+
+  const lastBaseMinutes =
+    slots[slots.length - 1].timelineMinutes;
+
+  const latestTimelineMinutes =
+    24 * 60 + 4 * 60;
+
+  const maxExtraSlots = Math.max(
+    0,
+    Math.floor(
+      (latestTimelineMinutes - lastBaseMinutes) / 30,
+    ),
+  );
+
+  const effectiveCount =
+    Math.min(count, maxExtraSlots);
+
+  for (
+    let index = 1;
+    index <= effectiveCount;
+    index += 1
+  ) {
+    const timelineMinutes =
+      lastBaseMinutes + index * 30;
+
+    slots.push({
+      time: minutesToHHMM(timelineMinutes),
+      dayOffset:
+        timelineMinutes >= 24 * 60 ? 1 : 0,
+      timelineMinutes,
+    });
+  }
+
+  return slots;
+}
+
+export function resolveShiftSlot(
+  shiftDateYMD,
+  timeHHMM,
+  from,
+  to,
+  extraSlots = 0,
+) {
+  const slot = generateShiftSlots30Min(
+    from,
+    to,
+    extraSlots,
+  ).find(
+    (currentSlot) =>
+      currentSlot.time === String(timeHHMM || ""),
+  );
+
+  if (!slot) {
+    return null;
+  }
+
+  const slotDate = addDaysToYMD(
+    shiftDateYMD,
+    slot.dayOffset,
+  );
+
+  if (!slotDate) {
+    return null;
+  }
+
+  const date = new Date(
+    `${slotDate}T${slot.time}:00`,
+  );
+
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return {
+    shiftDate: shiftDateYMD,
+    selectedDate: shiftDateYMD,
+    selectedTime: slot.time,
+    slotDate,
+    dayOffset: slot.dayOffset,
+    timestamp: date.getTime(),
+  };
+}

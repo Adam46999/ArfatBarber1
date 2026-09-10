@@ -5,7 +5,7 @@ import { db } from "../../../firebase";
 import {
   safeInt,
   generateSlots30Min,
-  applyExtraSlots,
+  generateShiftSlots30Min,
 } from "../../../utils/slots";
 import { getWeekdayNameEN } from "../utils/dates";
 import { buildTargets } from "../utils/targets";
@@ -88,7 +88,11 @@ export default function useSlotExtrasLive({
           continue;
         }
 
-        const maximumSafeSlots = applyExtraSlots(base, 1000);
+        const maximumSafeSlots = generateShiftSlots30Min(
+          hours.from,
+          hours.to,
+          1000,
+        ).map((slot) => slot.time);
 
         const maxForThisDay = Math.max(
           0,
@@ -108,7 +112,7 @@ export default function useSlotExtrasLive({
         value = maxSafeExtraSlots;
 
         alert(
-          `⚠️ آخر دور ممكن هو 23:30. أقصى زيادة آمنة للتاريخ المختار هي +${maxSafeExtraSlots} أدوار.`,
+          `⚠️ آخر دور ممكن هو 04:00. أقصى زيادة آمنة للتاريخ المختار هي +${maxSafeExtraSlots} أدوار.`,
         );
       }
     }
@@ -127,8 +131,16 @@ export default function useSlotExtrasLive({
           ? safeInt(currentExtraSnap.data()?.extraSlots, 0)
           : 0;
 
-        const currentSlots = applyExtraSlots(base, currentExtra);
-        const nextSlots = applyExtraSlots(base, value);
+        const currentSlots = generateShiftSlots30Min(
+          hours.from,
+          hours.to,
+          currentExtra,
+        ).map((slot) => slot.time);
+        const nextSlots = generateShiftSlots30Min(
+          hours.from,
+          hours.to,
+          value,
+        ).map((slot) => slot.time);
 
         const removed = currentSlots.filter((s) => !nextSlots.includes(s));
         if (removed.length) {

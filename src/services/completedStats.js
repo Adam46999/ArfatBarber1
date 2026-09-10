@@ -9,16 +9,29 @@ function makeSlotId(dateYMD, hhmm) {
   return `${dateYMD}_${String(hhmm || "").replace(":", "-")}`;
 }
 
+function getBookingSlotDate(booking) {
+  const slotDate = String(booking?.slotDate || "");
+  if (/^\d{4}-\d{2}-\d{2}$/.test(slotDate)) return slotDate;
+  const selectedDate = String(booking?.selectedDate || "");
+  return /^\d{4}-\d{2}-\d{2}$/.test(selectedDate) ? selectedDate : "";
+}
+
 export function getBookingStartDate(booking) {
-  const date = String(booking?.selectedDate || "");
-  const time = String(booking?.selectedTime || "");
-
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(time)) {
-    return null;
+  const startAt = booking?.startAt;
+  if (startAt?.toDate) {
+    const value = startAt.toDate();
+    if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
   }
-
-  const parsed = new Date(`${date}T${time}:00`);
-
+  if (startAt instanceof Date && !Number.isNaN(startAt.getTime())) return startAt;
+  const timestamp = Number(booking?.timestamp);
+  if (Number.isFinite(timestamp) && timestamp > 0) {
+    const value = new Date(timestamp);
+    if (!Number.isNaN(value.getTime())) return value;
+  }
+  const date = getBookingSlotDate(booking);
+  const time = String(booking?.selectedTime || "");
+  if (!date || !/^\d{2}:\d{2}$/.test(time)) return null;
+  const parsed = new Date(date + "T" + time + ":00");
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
@@ -195,7 +208,7 @@ export async function archiveExpiredBooking(bookingId, nowMs = Date.now()) {
       const slotRef = doc(
         db,
         "bookedSlots",
-        makeSlotId(booking.selectedDate, booking.selectedTime),
+        makeSlotId(getBookingSlotDate(booking), booking.selectedTime),
       );
 
       transaction.delete(slotRef);
@@ -251,7 +264,7 @@ export async function deletePastBookingWithStats(
       const slotRef = doc(
         db,
         "bookedSlots",
-        makeSlotId(booking.selectedDate, booking.selectedTime),
+        makeSlotId(getBookingSlotDate(booking), booking.selectedTime),
       );
 
       transaction.delete(slotRef);
@@ -302,7 +315,7 @@ export async function cancelBookingWithStats(bookingId, cancelledBy = null) {
       const slotRef = doc(
         db,
         "bookedSlots",
-        makeSlotId(booking.selectedDate, booking.selectedTime),
+        makeSlotId(getBookingSlotDate(booking), booking.selectedTime),
       );
 
       transaction.set(

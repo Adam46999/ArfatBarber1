@@ -9,6 +9,7 @@ import {
 
 import { db } from "../firebase";
 import { computeDayAvailability } from "../utils/calendarAvailability.js";
+import { addDaysToYMD } from "../utils/slots.js";
 
 const SOURCE_KEYS = [
   "bookedSlots",
@@ -111,7 +112,7 @@ export default function useMonthAvailability({
 
     let active = true;
 
-    let bookedSlotsByDate = {};
+    let bookedSlotKeys = new Set();
     let blockedDays = new Set();
     let blockedTimesByDate = {};
     let slotExtrasByDate = {};
@@ -174,7 +175,7 @@ export default function useMonthAvailability({
           isDayBlocked: blockedDays.has(dateYMD),
           blockedTimes: blockedTimesByDate[dateYMD] || [],
           extraSlots: slotExtrasByDate[dateYMD] || 0,
-          bookedTimes: bookedSlotsByDate[dateYMD] || [],
+          bookedTimes: bookedSlotKeys,
           now: new Date(),
         });
       }
@@ -203,10 +204,13 @@ export default function useMonthAvailability({
       recompute();
     };
 
+    const bookedSlotsPhysicalEnd =
+      addDaysToYMD(monthRange.endYMD, 1) || monthRange.endYMD;
+
     const bookedSlotsQuery = query(
       collection(db, "bookedSlots"),
-      where("selectedDate", ">=", monthRange.startYMD),
-      where("selectedDate", "<=", monthRange.endYMD),
+      where(documentId(), ">=", `${monthRange.startYMD}_00-00`),
+      where(documentId(), "<=", `${bookedSlotsPhysicalEnd}_04-00`),
     );
 
     const blockedDaysQuery = query(
@@ -230,7 +234,7 @@ export default function useMonthAvailability({
     const unsubscribeBookedSlots = onSnapshot(
       bookedSlotsQuery,
       (snapshot) => {
-        const nextBookedSlotsByDate = {};
+        const nextBookedSlotKeys = new Set();
 
         snapshot.docs.forEach((snapshotDocument) => {
           const slot = snapshotDocument.data();
@@ -239,26 +243,26 @@ export default function useMonthAvailability({
             return;
           }
 
-          const dateYMD = slot?.selectedDate;
           const selectedTime = slot?.selectedTime;
+          const idDate = String(snapshotDocument.id || "").slice(0, 10);
+          const physicalDate =
+            typeof slot?.slotDate === "string" &&
+            /^\d{4}-\d{2}-\d{2}$/.test(slot.slotDate)
+              ? slot.slotDate
+              : idDate;
 
           if (
-            typeof dateYMD !== "string" ||
-            !/^\d{4}-\d{2}-\d{2}$/.test(dateYMD) ||
+            !/^\d{4}-\d{2}-\d{2}$/.test(physicalDate) ||
             typeof selectedTime !== "string" ||
             !/^\d{2}:\d{2}$/.test(selectedTime)
           ) {
             return;
           }
 
-          if (!nextBookedSlotsByDate[dateYMD]) {
-            nextBookedSlotsByDate[dateYMD] = [];
-          }
-
-          nextBookedSlotsByDate[dateYMD].push(selectedTime);
+          nextBookedSlotKeys.add(`${physicalDate}|${selectedTime}`);
         });
 
-        bookedSlotsByDate = nextBookedSlotsByDate;
+        bookedSlotKeys = nextBookedSlotKeys;
 
         markSuccess("bookedSlots");
       },

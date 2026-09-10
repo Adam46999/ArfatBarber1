@@ -6,7 +6,11 @@ import { collection, doc, onSnapshot, query, where } from "firebase/firestore";
 
 import { db } from "../firebase";
 
-import { generateSlots30Min, applyExtraSlots, safeInt } from "../utils/slots";
+import {
+  addDaysToYMD,
+  generateShiftSlots30Min,
+  safeInt,
+} from "../utils/slots";
 
 /**
  * تحويل التاريخ والساعة إلى Date صالح.
@@ -171,7 +175,7 @@ export default function useAvailableTimes(selectedDate, workingHours) {
     let dayBlocked = false;
     let blockedTimes = [];
     let extraSlots = 0;
-    let bookedTimes = new Set();
+    let bookedSlotKeys = new Set();
 
     /**
      * جاهزية كل مصدر.
@@ -279,50 +283,36 @@ export default function useAvailableTimes(selectedDate, workingHours) {
         /**
          * إنشاء المواعيد الأساسية.
          */
-        const baseSlots = generateSlots30Min(dayHours.from, dayHours.to);
-
-        /**
-         * إضافة أو إنقاص المواعيد
-         * حسب إعداد slotExtras.
-         */
-        const slotsWithExtras = applyExtraSlots(baseSlots, extraSlots);
+        const shiftSlots = generateShiftSlots30Min(
+          dayHours.from,
+          dayHours.to,
+          extraSlots,
+        );
 
         const blockedSet = new Set(normalizeTimes(blockedTimes));
-
         const now = new Date();
 
-        const isToday = selectedDate === getTodayYMD();
+        const finalSlots = shiftSlots
+          .filter((slot) => {
+            if (blockedSet.has(slot.time)) {
+              return false;
+            }
 
-        /**
-         * تنظيف وترتيب جميع المواعيد
-         * قبل الفلترة.
-         */
-        const normalizedSlots = normalizeTimes(slotsWithExtras);
+            const physicalDate = addDaysToYMD(selectedDate, slot.dayOffset);
 
-        /**
-         * استبعاد:
-         *
-         * - الساعات المغلقة.
-         * - الساعات المحجوزة.
-         * - الساعات التي انتهت إذا كان اليوم هو اليوم.
-         */
-        const finalSlots = normalizedSlots.filter((time) => {
-          if (blockedSet.has(time)) {
-            return false;
-          }
+            if (!physicalDate) {
+              return false;
+            }
 
-          if (bookedTimes.has(time)) {
-            return false;
-          }
+            if (bookedSlotKeys.has(`${physicalDate}|${slot.time}`)) {
+              return false;
+            }
 
-          if (!isToday) {
-            return true;
-          }
+            const appointmentDate = toDateAt(physicalDate, slot.time);
 
-          const appointmentDate = toDateAt(selectedDate, time);
-
-          return Boolean(appointmentDate && appointmentDate > now);
-        });
+            return Boolean(appointmentDate && appointmentDate > now);
+          })
+          .map((slot) => slot.time);
 
         setIsDayBlocked(false);
         setAvailableTimes(finalSlots);
@@ -421,10 +411,17 @@ export default function useAvailableTimes(selectedDate, workingHours) {
     /**
      * جلب حجوزات اليوم المختار.
      */
+    const neighboringShiftDates = Array.from(
+      new Set([
+        addDaysToYMD(selectedDate, -1),
+        selectedDate,
+        addDaysToYMD(selectedDate, 1),
+      ].filter(Boolean)),
+    );
+
     const bookingsQuery = query(
       collection(db, "bookings"),
-
-      where("selectedDate", "==", selectedDate),
+      where("selectedDate", "in", neighboringShiftDates),
     );
 
     /**
@@ -438,7 +435,7 @@ export default function useAvailableTimes(selectedDate, workingHours) {
       bookingsQuery,
 
       (snapshot) => {
-        const nextBookedTimes = new Set();
+        const nextBookedSlotKeys = new Set();
 
         snapshot.docs.forEach((bookingDocument) => {
           const booking = bookingDocument.data();
@@ -459,10 +456,25 @@ export default function useAvailableTimes(selectedDate, workingHours) {
             return;
           }
 
-          nextBookedTimes.add(selectedTime);
+          const shiftDate =
+            typeof booking?.selectedDate === "string"
+              ? booking.selectedDate
+              : "";
+
+          const physicalDate =
+            typeof booking?.slotDate === "string" &&
+            /^\d{4}-\d{2}-\d{2}$/.test(booking.slotDate)
+              ? booking.slotDate
+              : shiftDate;
+
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(physicalDate)) {
+            return;
+          }
+
+          nextBookedSlotKeys.add(`${physicalDate}|${selectedTime}`);
         });
 
-        bookedTimes = nextBookedTimes;
+        bookedSlotKeys = nextBookedSlotKeys;
 
         markSuccess("bookings");
       },

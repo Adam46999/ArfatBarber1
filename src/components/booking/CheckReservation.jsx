@@ -23,12 +23,31 @@ import {
 } from "../../utils/phone";
 
 function createBookingDate(booking) {
-  if (!booking?.selectedDate || !booking?.selectedTime) {
-    return null;
+  if (booking?.startAt?.toDate) {
+    const date = booking.startAt.toDate();
+    if (date instanceof Date && !Number.isNaN(date.getTime())) return date;
   }
 
-  const date = new Date(`${booking.selectedDate}T${booking.selectedTime}`);
+  if (booking?.startAt instanceof Date && !Number.isNaN(booking.startAt.getTime())) {
+    return booking.startAt;
+  }
 
+  const numericTimestamp = Number(booking?.timestamp);
+  if (Number.isFinite(numericTimestamp) && numericTimestamp > 0) {
+    const date = new Date(numericTimestamp);
+    if (!Number.isNaN(date.getTime())) return date;
+  }
+
+  if (!booking?.selectedTime) return null;
+
+  const dateYMD =
+    typeof booking?.slotDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(booking.slotDate)
+      ? booking.slotDate
+      : booking?.selectedDate;
+
+  if (!dateYMD) return null;
+
+  const date = new Date(`${dateYMD}T${booking.selectedTime}:00`);
   return Number.isNaN(date.getTime()) ? null : date;
 }
 

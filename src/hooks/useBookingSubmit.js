@@ -883,13 +883,6 @@ export default function useBookingSubmit(form, setForm, t) {
           return;
         }
 
-        const bookingDateTime = new Date(`${selectedDate}T${selectedTime}:00`);
-
-        const timestamp = bookingDateTime.getTime();
-
-        if (Number.isNaN(timestamp)) {
-          throw new Error("INVALID_BOOKING_DATE_TIME");
-        }
 
         const bookingPayload = {
           ...normalizedValues,
@@ -900,7 +893,6 @@ export default function useBookingSubmit(form, setForm, t) {
 
           createdAtMs,
 
-          timestamp,
 
           reminderSent_60: false,
 

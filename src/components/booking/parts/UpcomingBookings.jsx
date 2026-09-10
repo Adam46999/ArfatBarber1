@@ -2,6 +2,33 @@
 import { format } from "date-fns";
 import { ar, enUS } from "date-fns/locale";
 
+function getBookingStartDate(booking) {
+  if (booking?.startAt?.toDate) {
+    const date = booking.startAt.toDate();
+    if (date instanceof Date && !Number.isNaN(date.getTime())) return date;
+  }
+
+  if (booking?.startAt instanceof Date && !Number.isNaN(booking.startAt.getTime())) {
+    return booking.startAt;
+  }
+
+  const numericTimestamp = Number(booking?.timestamp);
+  if (Number.isFinite(numericTimestamp) && numericTimestamp > 0) {
+    const date = new Date(numericTimestamp);
+    if (!Number.isNaN(date.getTime())) return date;
+  }
+
+  const dateYMD =
+    typeof booking?.slotDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(booking.slotDate)
+      ? booking.slotDate
+      : booking?.selectedDate;
+
+  if (!dateYMD || !booking?.selectedTime) return null;
+
+  const date = new Date(`${dateYMD}T${booking.selectedTime}:00`);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
 function UpcomingBookings({ bookings, phoneNumber, t, language }) {
   if (!phoneNumber || bookings.length === 0) return null;
 
@@ -10,19 +37,16 @@ function UpcomingBookings({ bookings, phoneNumber, t, language }) {
     .filter((b) => b.phoneNumber === phoneNumber) // ← أضفنا هذا السطر
     .filter((b) => !b.cancelledAt)
     .filter((b) => {
-      const normalized = `${b.selectedDate}T${b.selectedTime}`;
-      const bookingDateTime = new Date(normalized);
-
-      // بداية اليوم (00:00)
+      const bookingDateTime = getBookingStartDate(b);
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      return !isNaN(bookingDateTime.getTime()) && bookingDateTime >= today;
+      return Boolean(bookingDateTime && bookingDateTime >= today);
     })
     .sort((a, b) => {
-      const aTime = new Date(`${a.selectedDate}T${a.selectedTime}`);
-      const bTime = new Date(`${b.selectedDate}T${b.selectedTime}`);
-      return aTime - bTime;
+      const aTime = getBookingStartDate(a);
+      const bTime = getBookingStartDate(b);
+      return (aTime?.getTime() || 0) - (bTime?.getTime() || 0);
     });
 
   if (upcoming.length === 0) return null;
@@ -35,7 +59,7 @@ function UpcomingBookings({ bookings, phoneNumber, t, language }) {
 
       <ul className="space-y-3">
         {upcoming.map((b, idx) => {
-          const bookingDate = new Date(`${b.selectedDate}T${b.selectedTime}`);
+          const bookingDate = new Date(`${b.selectedDate}T${b.selectedTime}:00`);
           const locale = language === "ar" ? ar : enUS;
 
           const formattedDate = format(
