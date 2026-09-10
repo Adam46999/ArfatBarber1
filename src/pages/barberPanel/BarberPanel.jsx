@@ -52,6 +52,15 @@ export default function BarberPanel() {
 
   // نبدأ على اليوم مباشرة لتكون الصفحة مفيدة من أول لحظة
   const [selectedDate, setSelectedDate] = useState(() => todayYMD());
+  const [clockNowMs, setClockNowMs] = useState(() => Date.now());
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setClockNowMs(Date.now());
+    }, 30 * 1000);
+
+    return () => window.clearInterval(intervalId);
+  }, []);
   const [statusMessage, setStatusMessage] = useState("");
   const [manualBookingSaving, setManualBookingSaving] = useState(false);
   const [manualBookingDraft, setManualBookingDraft] = useState(null);
@@ -165,9 +174,24 @@ export default function BarberPanel() {
 
     const selectedTime = selectedTimes[0];
 
+    const weekday = getWeekdayNameEN(selectedDate);
+    const hours = workingHours?.[weekday] || null;
+    const resolvedSelectedSlot =
+      hours?.from && hours?.to
+        ? resolveShiftSlot(
+            selectedDate,
+            selectedTime,
+            hours.from,
+            hours.to,
+            extraSlots,
+          )
+        : null;
+
+    const selectedSlotDate = resolvedSelectedSlot?.slotDate || selectedDate;
+
     const alreadyBooked = bookings.some(
       (booking) =>
-        booking.selectedDate === selectedDate &&
+        (booking.slotDate || booking.selectedDate) === selectedSlotDate &&
         booking.selectedTime === selectedTime &&
         !booking.cancelledAt,
     );
@@ -332,6 +356,23 @@ export default function BarberPanel() {
 
   const isToday = selectedDate === todayYMD();
 
+  const earliestBarberShiftYMD = useMemo(() => {
+    const now = new Date(clockNowMs);
+    const earliest = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+    );
+
+    if (now.getHours() * 60 + now.getMinutes() < 4 * 60) {
+      earliest.setDate(earliest.getDate() - 1);
+    }
+
+    return `${earliest.getFullYear()}-${String(earliest.getMonth() + 1).padStart(2, "0")}-${String(earliest.getDate()).padStart(2, "0")}`;
+  }, [clockNowMs]);
+
+  const isEarliestBarberShift = selectedDate <= earliestBarberShiftYMD;
+
   const selectedDateHeaderLabel = useMemo(() => {
     if (!selectedDate) return "";
 
@@ -378,7 +419,7 @@ export default function BarberPanel() {
 
     const nextYmd = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, "0")}-${String(nextDate.getDate()).padStart(2, "0")}`;
 
-    if (nextYmd < todayYMD()) return;
+    if (nextYmd < earliestBarberShiftYMD) return;
     setSelectedDate(nextYmd);
   }
 
@@ -394,7 +435,7 @@ export default function BarberPanel() {
       return [];
     }
 
-    const nowMs = Date.now();
+    const nowMs = clockNowMs;
 
     return timesForBarberGrid.filter((time) => {
       const slot = resolveShiftSlot(
@@ -411,6 +452,40 @@ export default function BarberPanel() {
     timesForBarberGrid,
     selectedDate,
     workingHours,
+    extraSlots,
+    clockNowMs,
+  ]);
+
+  const slotDateByTime = useMemo(() => {
+    const result = {};
+
+    if (!selectedDate || !weeklyHoursReady) return result;
+
+    const weekday = getWeekdayNameEN(selectedDate);
+    const hours = workingHours?.[weekday] || null;
+
+    if (!hours?.from || !hours?.to) return result;
+
+    for (const time of timesForBarberGrid) {
+      const slot = resolveShiftSlot(
+        selectedDate,
+        time,
+        hours.from,
+        hours.to,
+        extraSlots,
+      );
+
+      if (slot?.slotDate) {
+        result[time] = slot.slotDate;
+      }
+    }
+
+    return result;
+  }, [
+    selectedDate,
+    weeklyHoursReady,
+    workingHours,
+    timesForBarberGrid,
     extraSlots,
   ]);
 
@@ -465,9 +540,11 @@ export default function BarberPanel() {
     }
 
     return gridTimesFiltered.filter((time) => {
+      const physicalSlotDate = slotDateByTime[time] || selectedDate;
+
       const booked = activeBookings.some(
         (booking) =>
-          booking.selectedDate === selectedDate &&
+          (booking.slotDate || booking.selectedDate) === physicalSlotDate &&
           booking.selectedTime === time,
       );
 
@@ -483,6 +560,7 @@ export default function BarberPanel() {
     gridTimesFiltered,
     activeBookings,
     blockedTimes,
+    slotDateByTime,
   ]);
 
   // =========================================================
@@ -954,7 +1032,7 @@ export default function BarberPanel() {
                 value={selectedDate}
                 onChange={(event) => setSelectedDate(event.target.value)}
                 className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-800 outline-none transition focus:border-emerald-300 focus:bg-white focus:ring-2 focus:ring-emerald-100"
-                min={todayYMD()}
+                min={earliestBarberShiftYMD}
               />
             </div>
 
@@ -964,7 +1042,7 @@ export default function BarberPanel() {
                   <button
                     type="button"
                     onClick={() => moveSelectedDate(-1)}
-                    disabled={isToday}
+                    disabled={isEarliestBarberShift}
                     className="h-12 w-[68px] touch-manipulation select-none rounded-xl border border-slate-200 bg-white text-xs font-black text-slate-700 transition disabled:cursor-not-allowed disabled:opacity-40"
                     aria-label="اليوم السابق"
                   >
@@ -1132,6 +1210,7 @@ export default function BarberPanel() {
                 <TimesGrid
                   times={gridTimesFiltered}
                   selectedDate={selectedDate}
+                  slotDateByTime={slotDateByTime}
                   bookings={bookings}
                   blockedTimes={blockedTimes}
                   selectedTimes={selectedTimes}

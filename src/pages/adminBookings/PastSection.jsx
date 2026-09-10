@@ -25,7 +25,7 @@ import {
  */
 function bookingStarted(booking) {
   const date = new Date(
-    `${booking?.selectedDate || ""}T${booking?.selectedTime || "00:00"}:00`,
+    `${booking?.slotDate || booking?.selectedDate || ""}T${booking?.selectedTime || "00:00"}:00`,
   );
 
   return !Number.isNaN(date.getTime()) && date.getTime() <= Date.now();

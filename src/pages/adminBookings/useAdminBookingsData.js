@@ -8,6 +8,7 @@ import {
   doc,
   getDocs,
   query,
+  runTransaction,
   serverTimestamp,
   setDoc,
   updateDoc,
@@ -20,6 +21,7 @@ import {
   archiveExpiredBooking,
   cancelBookingWithStats,
   deletePastBookingWithStats,
+  getBookingStartDate,
   syncPassedBookingsForCompletedStats,
 } from "../../services/completedStats";
 
@@ -39,13 +41,7 @@ function makeSlotId(dateYMD, hhmm) {
  * تحويل تاريخ ووقت الحجز إلى Date.
  */
 function bookingDateTime(booking) {
-  const selectedDate = String(booking?.selectedDate || "");
-
-  const selectedTime = String(booking?.selectedTime || "00:00");
-
-  const date = new Date(`${selectedDate}T${selectedTime}:00`);
-
-  return Number.isNaN(date.getTime()) ? null : date;
+  return getBookingStartDate(booking);
 }
 
 export function useAdminBookingsData() {
@@ -224,85 +220,77 @@ export function useAdminBookingsData() {
        * استرجاع حجز ملغي.
        */
       async restoreBooking(booking, upcomingList) {
-        /*
-         * فحص سريع من القائمة الموجودة بالواجهة.
-         */
-        const localConflict = upcomingList.some(
-          (currentBooking) =>
-            currentBooking.selectedDate === booking.selectedDate &&
-            currentBooking.selectedTime === booking.selectedTime,
-        );
+        const slotDate =
+          /^\d{4}-\d{2}-\d{2}$/.test(String(booking?.slotDate || "").trim())
+            ? String(booking.slotDate).trim()
+            : String(booking?.selectedDate || "").trim();
 
-        if (localConflict) {
-          window.alert("لا يمكن استرجاع هذا الحجز؛ الموعد محجوز حاليًا.");
+        const selectedTime = String(booking?.selectedTime || "").trim();
 
+        if (
+          !/^\d{4}-\d{2}-\d{2}$/.test(slotDate) ||
+          !/^\d{2}:\d{2}$/.test(selectedTime)
+        ) {
+          window.alert("لا يمكن استرجاع هذا الحجز؛ بيانات الموعد غير مكتملة.");
           return;
         }
 
-        /*
-         * فحص نهائي من Firestore حتى لا يحصل
-         * تعارض لو تغيرت البيانات من جهاز آخر.
-         */
-        const conflictQuery = query(
-          collection(db, "bookings"),
-
-          where("selectedDate", "==", booking.selectedDate),
-
-          where("selectedTime", "==", booking.selectedTime),
+        const bookingRef = doc(db, "bookings", booking.id);
+        const slotRef = doc(
+          db,
+          "bookedSlots",
+          makeSlotId(slotDate, selectedTime),
         );
 
-        const conflictSnapshot = await getDocs(conflictQuery);
+        try {
+          await runTransaction(db, async (transaction) => {
+            /*
+             * bookedSlots هو المصدر الفيزيائي للحظة نفسها.
+             * القراءة تتم قبل أي كتابة حتى يبقى الاسترجاع ذريًا.
+             */
+            const slotSnapshot = await transaction.get(slotRef);
 
-        const activeConflicts = conflictSnapshot.docs
-          .filter((bookingDocument) => bookingDocument.id !== booking.id)
-          .map((bookingDocument) => bookingDocument.data())
-          .filter((bookingData) => !bookingData.cancelledAt);
+            if (
+              slotSnapshot.exists() &&
+              slotSnapshot.data()?.active === true &&
+              slotSnapshot.data()?.bookingId !== booking.id
+            ) {
+              throw new Error("TIME_ALREADY_BOOKED");
+            }
 
-        if (activeConflicts.length > 0) {
-          window.alert("لا يمكن استرجاع هذا الحجز؛ تم حجز الموعد من قبل.");
+            transaction.update(bookingRef, {
+              cancelledAt: deleteField(),
+              cancelledBy: deleteField(),
+              completedStatsCounted: false,
+              completedStatsCountedAt: null,
+            });
 
-          return;
+            transaction.set(
+              slotRef,
+              {
+                bookingId: booking.id,
+                selectedDate: booking.selectedDate,
+                selectedTime,
+                slotDate,
+                slotDayOffset:
+                  Number(booking?.slotDayOffset) === 1 ||
+                  slotDate !== booking.selectedDate
+                    ? 1
+                    : 0,
+                active: true,
+                updatedAt: serverTimestamp(),
+              },
+              { merge: true },
+            );
+          });
+        } catch (error) {
+          if (error?.message === "TIME_ALREADY_BOOKED") {
+            window.alert("لا يمكن استرجاع هذا الحجز؛ تم حجز الموعد من قبل.");
+            return;
+          }
+
+          throw error;
         }
-
-        /*
-         * إزالة حالة الإلغاء.
-         *
-         * نعيد completedStatsCounted إلى false
-         * حتى يعاد تقييم الدور بشكل صحيح.
-         */
-        await updateDoc(doc(db, "bookings", booking.id), {
-          cancelledAt: deleteField(),
-          cancelledBy: deleteField(),
-
-          completedStatsCounted: false,
-          completedStatsCountedAt: null,
-        });
-
-        /*
-         * إعادة تفعيل الموعد داخل bookedSlots.
-         */
-        await setDoc(
-          doc(
-            db,
-            "bookedSlots",
-            makeSlotId(booking.selectedDate, booking.selectedTime),
-          ),
-
-          {
-            bookingId: booking.id,
-
-            selectedDate: booking.selectedDate,
-            selectedTime: booking.selectedTime,
-
-            active: true,
-
-            updatedAt: serverTimestamp(),
-          },
-
-          {
-            merge: true,
-          },
-        );
 
         /*
          * إزالة الحجز من السجل المؤقت.

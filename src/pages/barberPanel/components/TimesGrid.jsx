@@ -3,6 +3,7 @@ import { useState } from "react";
 export default function TimesGrid({
   times,
   selectedDate,
+  slotDateByTime = {},
   bookings,
   blockedTimes,
   selectedTimes,
@@ -13,7 +14,8 @@ export default function TimesGrid({
 
   const selectedBookedBooking = bookings.find(
     (booking) =>
-      booking.selectedDate === selectedDate &&
+      (booking.slotDate || booking.selectedDate) ===
+        (slotDateByTime[selectedBookedTime] || selectedDate) &&
       booking.selectedTime === selectedBookedTime &&
       !booking.cancelledAt,
   );
@@ -24,7 +26,8 @@ export default function TimesGrid({
         {times.map((time) => {
           const bookedBooking = bookings.find(
             (booking) =>
-              booking.selectedDate === selectedDate &&
+              (booking.slotDate || booking.selectedDate) ===
+                (slotDateByTime[time] || selectedDate) &&
               booking.selectedTime === time &&
               !booking.cancelledAt,
           );

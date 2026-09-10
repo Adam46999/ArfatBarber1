@@ -1,7 +1,16 @@
 // src/components/booking/parts/OpeningStatusCard.jsx
 
 import { FaClock, FaDoorClosed, FaDoorOpen } from "react-icons/fa";
+import { useEffect, useState } from "react";
+import { doc, onSnapshot } from "firebase/firestore";
 import { useTranslation } from "react-i18next";
+
+import { db } from "../../../firebase";
+import {
+  addDaysToYMD,
+  generateShiftSlots30Min,
+  safeInt,
+} from "../../../utils/slots";
 
 const DAY_KEYS = [
   "Sunday",
@@ -26,6 +35,20 @@ const FALLBACK_DAY_LABELS = {
     "Saturday",
   ],
 };
+
+// OVERNIGHT_OPENING_STATUS_V1
+function localDateYMD(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function getHoursForShiftDate(workingHours, dateYMD) {
+  const date = new Date(`${dateYMD}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return null;
+  return workingHours?.[DAY_KEYS[date.getDay()]] || null;
+}
 
 function timeToToday(time) {
   const [hours, minutes] = String(time || "00:00")
@@ -78,24 +101,102 @@ export default function OpeningStatusCard({ status, workingHours = {} }) {
   const isRTL = language === "ar" || language === "he";
   const dayLabels = getDayLabels(t, language);
 
-  const now = new Date();
+  const [clockNow, setClockNow] = useState(() => new Date());
+  const [slotExtrasByDate, setSlotExtrasByDate] = useState({});
+
+  const now = clockNow;
   const todayIndex = now.getDay();
   const todayKey = DAY_KEYS[todayIndex];
   const todayHours = workingHours?.[todayKey] || null;
+  const todayYMD = localDateYMD(now);
+  const previousShiftYMD = addDaysToYMD(todayYMD, -1);
 
-  const calculatedIsOpen = (() => {
-    if (!todayHours?.from || !todayHours?.to) {
-      return false;
+  useEffect(() => {
+    const timer = window.setInterval(() => setClockNow(new Date()), 30 * 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    const dates = [todayYMD, previousShiftYMD].filter(Boolean);
+    const unsubscribers = dates.map((dateYMD) =>
+      onSnapshot(
+        doc(db, "slotExtras", dateYMD),
+        (snapshot) => {
+          const nextValue = snapshot.exists()
+            ? safeInt(snapshot.data()?.extraSlots, 0)
+            : 0;
+
+          setSlotExtrasByDate((current) => ({
+            ...current,
+            [dateYMD]: nextValue,
+          }));
+        },
+        (error) => {
+          console.error("opening status slotExtras error:", error);
+          setSlotExtrasByDate((current) => ({
+            ...current,
+            [dateYMD]: 0,
+          }));
+        },
+      ),
+    );
+
+    return () => unsubscribers.forEach((unsubscribe) => unsubscribe());
+  }, [todayYMD, previousShiftYMD]);
+
+  function buildShiftWindow(shiftDateYMD) {
+    if (!shiftDateYMD) return null;
+
+    const hours = getHoursForShiftDate(workingHours, shiftDateYMD);
+    if (!hours?.from || !hours?.to) return null;
+
+    const shiftSlots = generateShiftSlots30Min(
+      hours.from,
+      hours.to,
+      safeInt(slotExtrasByDate[shiftDateYMD], 0),
+    );
+
+    if (!shiftSlots.length) return null;
+
+    const firstSlot = shiftSlots[0];
+    const lastSlot = shiftSlots[shiftSlots.length - 1];
+    const lastSlotDate = addDaysToYMD(
+      shiftDateYMD,
+      safeInt(lastSlot.dayOffset, 0),
+    );
+
+    if (!lastSlotDate) return null;
+
+    const opensAt = new Date(`${shiftDateYMD}T${firstSlot.time}:00`);
+    const closesAt = new Date(`${lastSlotDate}T${lastSlot.time}:00`);
+
+    if (
+      Number.isNaN(opensAt.getTime()) ||
+      Number.isNaN(closesAt.getTime())
+    ) {
+      return null;
     }
 
-    const opensAt = timeToToday(todayHours.from);
-    const closesAt = timeToToday(todayHours.to);
+    return {
+      shiftDateYMD,
+      opensAt,
+      closesAt,
+      closeTime: lastSlot.time,
+      isOpen: now >= opensAt && now <= closesAt,
+    };
+  }
 
-    return now >= opensAt && now < closesAt;
-  })();
+  const previousShiftWindow = buildShiftWindow(previousShiftYMD);
+  const todayShiftWindow = buildShiftWindow(todayYMD);
 
-  const isOpenNow =
-    typeof status?.isOpen === "boolean" ? status.isOpen : calculatedIsOpen;
+  const activeShiftWindow = previousShiftWindow?.isOpen
+    ? previousShiftWindow
+    : todayShiftWindow?.isOpen
+      ? todayShiftWindow
+      : null;
+
+  const calculatedIsOpen = Boolean(activeShiftWindow);
+  const isOpenNow = calculatedIsOpen;
 
   const nextOpening = (() => {
     if (status?.nextOpen instanceof Date) {
@@ -138,10 +239,10 @@ export default function OpeningStatusCard({ status, workingHours = {} }) {
   })();
 
   const statusDescription = (() => {
-    if (isOpenNow && todayHours?.to) {
+    if (isOpenNow && activeShiftWindow?.closeTime) {
       return t("open_until", {
-        time: todayHours.to,
-        defaultValue: `مفتوح حتى ${todayHours.to}`,
+        time: activeShiftWindow.closeTime,
+        defaultValue: `مفتوح حتى ${activeShiftWindow.closeTime}`,
       });
     }
 

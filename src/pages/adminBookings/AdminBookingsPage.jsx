@@ -95,11 +95,11 @@ export default function AdminBookingsPage() {
     } else {
       list.sort((firstBooking, secondBooking) => {
         const firstDate = new Date(
-          `${firstBooking.selectedDate}T${firstBooking.selectedTime}:00`,
+          `${firstBooking.slotDate || firstBooking.selectedDate}T${firstBooking.selectedTime}:00`,
         );
 
         const secondDate = new Date(
-          `${secondBooking.selectedDate}T${secondBooking.selectedTime}:00`,
+          `${secondBooking.slotDate || secondBooking.selectedDate}T${secondBooking.selectedTime}:00`,
         );
 
         return firstDate - secondDate;
@@ -154,12 +154,12 @@ export default function AdminBookingsPage() {
 
       const firstDate = toDate(
         firstBooking.cancelledAt,
-        `${firstBooking.selectedDate}T${firstBooking.selectedTime}:00`,
+        `${firstBooking.slotDate || firstBooking.selectedDate}T${firstBooking.selectedTime}:00`,
       );
 
       const secondDate = toDate(
         secondBooking.cancelledAt,
-        `${secondBooking.selectedDate}T${secondBooking.selectedTime}:00`,
+        `${secondBooking.slotDate || secondBooking.selectedDate}T${secondBooking.selectedTime}:00`,
       );
 
       return secondDate - firstDate;
