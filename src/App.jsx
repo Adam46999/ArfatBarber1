@@ -5,8 +5,9 @@ import "./i18n";
 import { useTranslation } from "react-i18next";
 import FloatingWhatsappButton from "./components/layout/FloatingWhatsappButton";
 import { useEffect } from "react";
-import { getMessaging, getToken, onMessage } from "firebase/messaging";
+import { getMessaging, onMessage } from "firebase/messaging";
 import { app } from "./firebase";
+import { showForegroundNotification } from "./services/foregroundNotification";
 
 function App() {
   const { i18n } = useTranslation();
@@ -23,7 +24,7 @@ function App() {
 
       // ✅ استقبال الإشعار في حال كان المستخدم يفتح الموقع
       onMessage(messaging, (payload) => {
-        alert(`${payload.notification.title}\n${payload.notification.body}`);
+        showForegroundNotification(payload);
       });
     } catch (e) {
       console.warn("🔴 FCM Init error", e);

@@ -294,7 +294,7 @@ async function processReminders() {
  */
 async function main() {
   try {
-    await processOnCreate();
+    // Immediate customer booking notification is handled by Cloud Functions.
 
     /*
      * إشعار الحلاق مستقل تمامًا عن إشعارات الزبون.
@@ -305,7 +305,7 @@ async function main() {
      * - بقية تشغيل النظام.
      */
     try {
-      await processBarberOnCreate();
+      // Immediate barber booking notification is handled by Cloud Functions.
     } catch (barberNotificationError) {
       console.error(
         "❌ barber notification processing failed:",

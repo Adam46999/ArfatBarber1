@@ -1,3 +1,4 @@
+self.addEventListener("notificationclick",e=>{e.stopImmediatePropagation();e.notification.close();const d=e.notification?.data?.FCM_MSG?.data||e.notification?.data||{};const p=typeof d.url==="string"&&d.url.startsWith("/")&&!d.url.startsWith("//")?d.url:"/";const u=new URL(p,self.location.origin).href;e.waitUntil(clients.matchAll({type:"window",includeUncontrolled:true}).then(async ws=>{for(const w of ws){try{if(new URL(w.url).origin===self.location.origin){if("navigate"in w)await w.navigate(u);return w.focus();}}catch{}}return clients.openWindow(u);}));});
 /* global importScripts, firebase */
 importScripts('https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.11.0/firebase-messaging-compat.js');
