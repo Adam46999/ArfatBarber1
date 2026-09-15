@@ -1,4 +1,4 @@
-// src/pages/barberPanel/BarberMobileApp.jsx
+﻿// src/pages/barberPanel/BarberMobileApp.jsx
 
 import { createElement, useCallback, useEffect, useRef, useState } from "react";
 
@@ -18,12 +18,14 @@ import {
   FaChartBar,
   FaClock,
   FaStar,
+  FaBoxOpen,
 } from "react-icons/fa";
 
 import BarberPanel from "./BarberPanel";
 import AdminBookings from "../AdminBookings";
 import WeeklyHoursPage from "./WeeklyHoursPage";
 import ReviewsManagerPage from "./reviews/ReviewsManagerPage";
+import ProductsManagerPage from "./products/ProductsManagerPage";
 import BlockedPhones from "../BlockedPhones";
 import Dashboard from "../Dashboard";
 
@@ -64,6 +66,14 @@ const TABS = [
     fullLabel: "إدارة التقييمات",
     icon: FaStar,
     component: ReviewsManagerPage,
+  },
+  {
+    id: "products",
+    path: "/barber/products",
+    shortLabel: "منتجات",
+    fullLabel: "إدارة المنتجات",
+    icon: FaBoxOpen,
+    component: ProductsManagerPage,
   },
   {
     id: "blocked",
@@ -390,3 +400,6 @@ export default function BarberMobileApp() {
     </div>
   );
 }
+
+
+

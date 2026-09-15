@@ -1,4 +1,4 @@
-// ✅ src/components/layout/Header.jsx — Polish بصري (2+3+4+5+6) بدون كسر المنطق
+﻿// ✅ src/components/layout/Header.jsx — Polish بصري (2+3+4+5+6) بدون كسر المنطق
 import { useTranslation } from "react-i18next";
 import LanguageSwitcher from "./LanguageSwitcher";
 import { Link, useLocation } from "react-router-dom";
@@ -119,6 +119,10 @@ function Header() {
             {t("home")}
           </Link>
 
+          <Link to="/products" className={linkClass("/products")}>
+            {t("products.title")}
+          </Link>
+
           <Link to="/contact" className={linkClass("/contact")}>
             {t("contact")}
           </Link>
@@ -212,6 +216,14 @@ function Header() {
 
 
         <Link
+          to="/products"
+          className="block py-2 hover:text-gold focus:outline-none focus-visible:ring-2 focus-visible:ring-gold rounded"
+          onClick={() => setMenuOpen(false)}
+          aria-current={location.pathname === "/products" ? "page" : undefined}
+        >
+          {t("products.title")}
+        </Link>
+        <Link
           to="/contact"
           className="block py-2 hover:text-gold focus:outline-none focus-visible:ring-2 focus-visible:ring-gold rounded"
           onClick={() => setMenuOpen(false)}
@@ -233,3 +245,5 @@ function Header() {
 }
 
 export default Header;
+
+

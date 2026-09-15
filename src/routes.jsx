@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from "react-router-dom";
+﻿import { Routes, Route, Navigate } from "react-router-dom";
 
 import React, { useEffect, useState } from "react";
 
@@ -7,6 +7,7 @@ import BookingIntro from "./pages/BookingIntro";
 import NotFound from "./pages/NotFound";
 import Contact from "./pages/Contact";
 import BookingForm from "./pages/BookingForm";
+import ProductsPage from "./pages/products/ProductsPage";
 import Login from "./pages/Login";
 
 import BarberMobileApp from "./pages/barberPanel/BarberMobileApp";
@@ -53,6 +54,8 @@ export default function AppRoutes() {
 
       <Route path="/contact" element={<Contact />} />
 
+      <Route path="/products" element={<ProductsPage />} />
+
       <Route path="/login" element={<Login />} />
 
       <Route path="/barber" element={<ProtectedBarberApp />} />
@@ -62,6 +65,8 @@ export default function AppRoutes() {
       <Route path="/barber/weekly-hours" element={<ProtectedBarberApp />} />
 
       <Route path="/barber/reviews" element={<ProtectedBarberApp />} />
+
+      <Route path="/barber/products" element={<ProtectedBarberApp />} />
 
       <Route path="/barber/blocked" element={<ProtectedBarberApp />} />
 
@@ -107,3 +112,5 @@ export default function AppRoutes() {
     </Routes>
   );
 }
+
+
