@@ -119,7 +119,7 @@ export default function ProductsPage({ barberPreview = false }) {
     <main
       id="main"
       dir={dir}
-      className={`min-h-screen bg-[#0b0c0c] text-white ${barberPreview ? "pb-[92px] pt-0" : "pb-[76px] pt-[var(--app-header-h,64px)] md:pb-0"}`}
+      className={`min-h-screen bg-[#0b0c0c] text-white ${barberPreview ? "pb-[92px] pt-[var(--app-header-h,64px)]" : "pb-[76px] pt-[var(--app-header-h,64px)] md:pb-0"}`}
     >
       {/* HERO */}
       <section className="relative min-h-[190px] overflow-hidden border-b border-[#d6b15e]/10 sm:min-h-[230px] lg:min-h-[250px]">
@@ -327,6 +327,7 @@ export default function ProductsPage({ barberPreview = false }) {
     </main>
   );
 }
+
 
 
 
