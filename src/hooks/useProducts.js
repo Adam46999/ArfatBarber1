@@ -172,7 +172,7 @@ const DEV_DEMO_PRODUCTS = [
   },
 ];
 
-export default function useProducts() {
+export default function useProducts({ allowDemoFallback = false } = {}) {
   const [products, setProducts] = useState([]);
   const [status, setStatus] = useState("loading");
   const [error, setError] = useState(null);
@@ -185,7 +185,7 @@ export default function useProducts() {
       const data = await getPublicProducts();
 
       const finalProducts =
-        data.length === 0 && import.meta.env.DEV
+        data.length === 0 && (import.meta.env.DEV || allowDemoFallback)
           ? DEV_DEMO_PRODUCTS
           : data;
 
@@ -194,7 +194,7 @@ export default function useProducts() {
     } catch (err) {
       console.error("Products load failed:", err);
 
-      if (import.meta.env.DEV) {
+      if (import.meta.env.DEV || allowDemoFallback) {
         setProducts(DEV_DEMO_PRODUCTS);
         setStatus("success");
         return;
@@ -204,7 +204,7 @@ export default function useProducts() {
       setError(err);
       setStatus("error");
     }
-  }, []);
+  }, [allowDemoFallback]);
 
   useEffect(() => {
     loadProducts();
@@ -217,3 +217,4 @@ export default function useProducts() {
     reloadProducts: loadProducts,
   };
 }
+

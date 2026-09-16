@@ -45,7 +45,7 @@ export default function ProductsPage({ barberPreview = false }) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
 
-  const { products: rawProducts, status, reloadProducts } = useProducts();
+  const { products: rawProducts, status, reloadProducts } = useProducts({ allowDemoFallback: barberPreview });
 
   const products = useMemo(
     () =>
@@ -327,6 +327,7 @@ export default function ProductsPage({ barberPreview = false }) {
     </main>
   );
 }
+
 
 
 
