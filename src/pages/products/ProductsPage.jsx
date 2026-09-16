@@ -31,7 +31,7 @@ const CATEGORY_ICONS = {
   bundles: FaBoxOpen,
 };
 
-export default function ProductsPage() {
+export default function ProductsPage({ barberPreview = false }) {
   const { t, i18n } = useTranslation();
 
   const lang = ["ar", "he", "en"].includes(i18n.language)
@@ -119,7 +119,7 @@ export default function ProductsPage() {
     <main
       id="main"
       dir={dir}
-      className="min-h-screen bg-[#0b0c0c] pb-[76px] pt-[var(--app-header-h,64px)] text-white md:pb-0"
+      className={`min-h-screen bg-[#0b0c0c] text-white ${barberPreview ? "pb-[92px] pt-0" : "pb-[76px] pt-[var(--app-header-h,64px)] md:pb-0"}`}
     >
       {/* HERO */}
       <section className="relative min-h-[190px] overflow-hidden border-b border-[#d6b15e]/10 sm:min-h-[230px] lg:min-h-[250px]">
@@ -283,7 +283,8 @@ export default function ProductsPage() {
       </section>
 
       {/* MOBILE BOTTOM NAV */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 grid h-[72px] grid-cols-4 border-t border-white/10 bg-[#0a0b0b]/95 px-1 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden">
+      {!barberPreview && (
+<nav className="fixed inset-x-0 bottom-0 z-40 grid h-[72px] grid-cols-4 border-t border-white/10 bg-[#0a0b0b]/95 px-1 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden">
         <Link
           to="/"
           className="flex flex-col items-center justify-center gap-1 text-[10px] font-bold text-white/55"
@@ -316,7 +317,7 @@ export default function ProductsPage() {
           <span>{t("contact")}</span>
         </Link>
       </nav>
-
+      )}
       <ProductDetailsModal
         product={selectedProduct}
         labels={productUiLabels}
@@ -326,6 +327,7 @@ export default function ProductsPage() {
     </main>
   );
 }
+
 
 
 

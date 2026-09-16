@@ -54,7 +54,14 @@ export default function AppRoutes() {
 
       <Route path="/contact" element={<Contact />} />
 
-      <Route path="/products" element={<ProductsPage />} />
+      <Route
+        path="/products"
+        element={
+          <PrivateRoute>
+            <ProductsPage />
+          </PrivateRoute>
+        }
+      />
 
       <Route path="/login" element={<Login />} />
 
@@ -112,5 +119,6 @@ export default function AppRoutes() {
     </Routes>
   );
 }
+
 
 

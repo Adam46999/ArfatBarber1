@@ -25,7 +25,7 @@ import BarberPanel from "./BarberPanel";
 import AdminBookings from "../AdminBookings";
 import WeeklyHoursPage from "./WeeklyHoursPage";
 import ReviewsManagerPage from "./reviews/ReviewsManagerPage";
-import ProductsManagerPage from "./products/ProductsManagerPage";
+import ProductsPreviewOnly from "./products/ProductsPreviewOnly";
 import BlockedPhones from "../BlockedPhones";
 import Dashboard from "../Dashboard";
 
@@ -73,7 +73,7 @@ const TABS = [
     shortLabel: "منتجات",
     fullLabel: "إدارة المنتجات",
     icon: FaBoxOpen,
-    component: ProductsManagerPage,
+    component: ProductsPreviewOnly,
   },
   {
     id: "blocked",
@@ -400,6 +400,7 @@ export default function BarberMobileApp() {
     </div>
   );
 }
+
 
 
 
