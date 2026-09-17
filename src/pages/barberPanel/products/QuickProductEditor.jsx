@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { FaTimes, FaImage, FaChevronDown, FaImages, FaCheck } from "react-icons/fa";
 import { getLocalProductImages } from "../../../services/productImageService";
 
@@ -35,7 +35,57 @@ export default function QuickProductEditor({
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [language, setLanguage] = useState("ar");
   const [imagePickerOpen, setImagePickerOpen] = useState(false);
+  const [rendered, setRendered] = useState(open);
+  const [sheetVisible, setSheetVisible] = useState(false);
+  const contentRef = useRef(null);
+  const advancedRef = useRef(null);
+  const [viewportHeight, setViewportHeight] = useState(null);
   const localImages = useMemo(() => getLocalProductImages(), []);
+
+  // VISUAL VIEWPORT TRACKING
+  useEffect(() => {
+    if (!open) return;
+
+    const viewport = window.visualViewport;
+
+    function syncViewport() {
+      setViewportHeight(
+        viewport?.height || window.innerHeight
+      );
+    }
+
+    syncViewport();
+
+    viewport?.addEventListener("resize", syncViewport);
+    viewport?.addEventListener("scroll", syncViewport);
+    window.addEventListener("resize", syncViewport);
+
+    return () => {
+      viewport?.removeEventListener("resize", syncViewport);
+      viewport?.removeEventListener("scroll", syncViewport);
+      window.removeEventListener("resize", syncViewport);
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (open) {
+      setRendered(true);
+
+      const frame = requestAnimationFrame(() => {
+        setSheetVisible(true);
+      });
+
+      return () => cancelAnimationFrame(frame);
+    }
+
+    setSheetVisible(false);
+
+    const timer = window.setTimeout(() => {
+      setRendered(false);
+    }, 180);
+
+    return () => window.clearTimeout(timer);
+  }, [open]);
 
   const editing = Boolean(product?.id);
 
@@ -79,7 +129,27 @@ export default function QuickProductEditor({
     };
   }, [open]);
 
-  if (!open) return null;
+
+  // EDITOR OPEN SCROLL RESET
+  useEffect(() => {
+    if (!open) return;
+
+    const firstFrame = requestAnimationFrame(() => {
+      const secondFrame = requestAnimationFrame(() => {
+        if (contentRef.current) {
+          contentRef.current.scrollTo({
+            top: 0,
+            behavior: "auto",
+          });
+        }
+      });
+
+      return () => cancelAnimationFrame(secondFrame);
+    });
+
+    return () => cancelAnimationFrame(firstFrame);
+  }, [open, product?.id]);
+  if (!rendered) return null;
 
   function setField(field, value) {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -113,7 +183,11 @@ export default function QuickProductEditor({
 
   return (
     <div
-      className="fixed inset-0 z-[120] flex items-end justify-center bg-black/55 backdrop-blur-[2px] sm:items-center sm:p-5"
+      className={`fixed inset-0 z-[120] flex items-center justify-center p-3 transition-all duration-200 ease-out sm:p-5 ${
+        sheetVisible
+          ? "bg-black/40 opacity-100 backdrop-blur-[1.5px]"
+          : "bg-black/0 opacity-0 backdrop-blur-0"
+      }`}
       onMouseDown={(event) => {
         if (event.target === event.currentTarget && !saving) onClose();
       }}
@@ -121,9 +195,13 @@ export default function QuickProductEditor({
       <form
         onSubmit={submit}
         dir="rtl"
-        className="flex max-h-[88dvh] w-full flex-col overflow-hidden rounded-t-[26px] bg-[#f6f3ed] shadow-[0_-12px_45px_rgba(0,0,0,0.28)] sm:max-h-[82dvh] sm:max-w-[540px] sm:rounded-[24px]"
-      >
-        <div className="shrink-0 border-b border-black/5 bg-[#f6f3ed]/95 px-4 pb-3 pt-2 backdrop-blur">
+      className={`flex max-h-[calc(var(--editor-vh,100dvh)-32px)] w-full flex-col overflow-hidden rounded-[24px] border border-white/70 bg-[#f8f5ef] shadow-[0_22px_70px_rgba(0,0,0,0.24)] transition-all duration-200 ease-out sm:max-h-[76dvh] sm:max-w-[510px] ${
+        sheetVisible
+          ? "translate-y-0 scale-100 opacity-100"
+          : "translate-y-1.5 scale-[0.995] opacity-0"
+      }`}
+    >
+        <div className="shrink-0 border-b border-black/5 bg-[#f6f3ed]/95 px-4 pb-2.5 pt-2 backdrop-blur">
           <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-black/15 sm:hidden" />
 
           <div className="flex items-center justify-between gap-3">
@@ -131,10 +209,10 @@ export default function QuickProductEditor({
               <p className="text-[10px] font-black tracking-[0.18em] text-[#a47a2c]">
                 PRODUCT
               </p>
-              <h2 className="text-xl font-black text-[#171717]">
+              <h2 className="text-[19px] font-black leading-tight text-[#171717]">
                 {editing ? "تعديل المنتج" : "إضافة منتج"}
               </h2>
-              <p className="mt-0.5 text-[10px] font-medium text-black/40">
+              <p className="mt-1 text-[11px] font-medium leading-4 text-black/45">
                 التغييرات تظهر مباشرة على الكرت قبل الحفظ.
               </p>
             </div>
@@ -143,7 +221,7 @@ export default function QuickProductEditor({
               type="button"
               disabled={saving}
               onClick={onClose}
-              className="grid h-11 w-11 place-items-center rounded-full bg-black/5 text-black/55 active:scale-95"
+              className="grid h-10 w-10 place-items-center rounded-full border border-black/5 bg-white/80 text-black/55 transition duration-150 hover:bg-white active:scale-95"
               aria-label="إغلاق"
             >
               <FaTimes />
@@ -151,7 +229,8 @@ export default function QuickProductEditor({
           </div>
         </div>
 
-        <div className="flex-1 space-y-4 overflow-y-auto overscroll-contain p-4 pb-4">
+        <div ref={contentRef}
+        className="flex-1 space-y-3.5 overflow-y-auto overscroll-contain px-4 py-3.5">
           {/* IMAGE */}
           <div>
             <div className="mb-1.5 flex items-center justify-between gap-2">
@@ -216,7 +295,7 @@ export default function QuickProductEditor({
                 }
               }}
             >
-              <div className="max-h-[76dvh] w-full overflow-y-auto rounded-t-[26px] bg-[#f6f3ed] p-4 pb-[calc(18px+env(safe-area-inset-bottom))] shadow-2xl sm:max-h-[72dvh] sm:max-w-[520px] sm:rounded-[24px]">
+              <div className="max-h-[76dvh] w-full overflow-y-auto rounded-t-[26px] bg-[#f6f3ed] p-4 pb-[calc(18px+env(safe-area-inset-bottom))] shadow-2xl sm:max-h-[calc(var(--editor-vh,100dvh)-32px)] sm:max-w-[520px] sm:rounded-[24px]">
                 <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-black/15 sm:hidden" />
 
                 <div className="flex items-center justify-between gap-3">
@@ -232,7 +311,7 @@ export default function QuickProductEditor({
                   <button
                     type="button"
                     onClick={() => setImagePickerOpen(false)}
-                    className="grid h-11 w-11 place-items-center rounded-full bg-black/5 text-black/55 active:scale-95"
+                    className="grid h-10 w-10 place-items-center rounded-full border border-black/5 bg-white/80 text-black/55 transition duration-150 hover:bg-white active:scale-95"
                   >
                     <FaTimes />
                   </button>
@@ -300,7 +379,6 @@ export default function QuickProductEditor({
               اسم المنتج
             </span>
             <input
-              autoFocus={!editing}
               value={form.name.ar}
               onChange={(event) =>
                 setLocalized("name", "ar", event.target.value)
@@ -390,10 +468,10 @@ export default function QuickProductEditor({
           {/* ADVANCED */}
           <button
             type="button"
-            onClick={() => setAdvancedOpen((value) => !value)}
-            className="flex min-h-[48px] w-full items-center justify-between rounded-xl border border-black/8 bg-white px-3 text-sm font-black text-black/60"
+            onClick={() => { const next = !advancedOpen; setAdvancedOpen(next); if (next) { setTimeout(() => advancedRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 80); } }}
+            className={`flex min-h-[48px] w-full items-center justify-between rounded-xl border px-3 text-sm font-black transition ${advancedOpen ? "border-[#c8a24e]/30 bg-[#f7edcf] text-[#5f4315]" : "border-black/8 bg-white text-black/60"}`}
           >
-            <span>تفاصيل إضافية</span>
+            <span>{advancedOpen ? "إخفاء التفاصيل" : "تفاصيل إضافية"}</span>
             <FaChevronDown
               className={`transition ${
                 advancedOpen ? "rotate-180" : ""
@@ -402,7 +480,7 @@ export default function QuickProductEditor({
           </button>
 
           {advancedOpen && (
-            <div className="space-y-4 rounded-2xl border border-black/5 bg-white p-3">
+            <div ref={advancedRef} className="space-y-4 rounded-2xl border border-[#c8a24e]/20 bg-white p-3 shadow-sm">
               <label className="block">
                 <span className="mb-1 block text-xs font-black text-[#5b5245]">
                   الماركة
@@ -472,11 +550,11 @@ export default function QuickProductEditor({
 
         </div>
 
-        <div className="shrink-0 border-t border-black/5 bg-[#f6f3ed]/95 px-4 pb-[calc(12px+env(safe-area-inset-bottom))] pt-3 backdrop-blur">
+        <div className="shrink-0 border-t border-black/5 bg-[#f8f5ef]/96 px-4 pb-[calc(10px+env(safe-area-inset-bottom))] pt-2.5 backdrop-blur">
           <button
             type="submit"
             disabled={saving}
-            className="min-h-[54px] w-full rounded-2xl bg-[#151616] px-5 text-base font-black text-[#e8c77d] shadow-md transition active:scale-[0.985] disabled:opacity-50"
+            className="min-h-[52px] w-full rounded-[15px] bg-[#171817] px-5 text-[15px] font-black text-[#ebcc82] shadow-[0_8px_20px_rgba(0,0,0,0.15)] transition duration-150 active:scale-[0.992] disabled:opacity-45"
           >
             {saving
               ? "جاري الحفظ..."

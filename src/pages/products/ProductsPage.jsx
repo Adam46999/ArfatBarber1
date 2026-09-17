@@ -56,6 +56,7 @@ export default function ProductsPage({ barberPreview = false }) {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [adminEditorOpen, setAdminEditorOpen] = useState(false);
   const [adminEditingProduct, setAdminEditingProduct] = useState(null);
+  const [adminEditingId, setAdminEditingId] = useState(null);
   const [adminSaving, setAdminSaving] = useState(false);
   const [adminBusyId, setAdminBusyId] = useState("");
   const [adminMessage, setAdminMessage] = useState("");
@@ -106,9 +107,9 @@ export default function ProductsPage({ barberPreview = false }) {
       active: true,
     };
 
-    if (adminEditingProduct?.id) {
+    if (adminEditingId) {
       return localizedProducts.map((product) =>
-        product.id === adminEditingProduct.id
+        product.id === adminEditingId
           ? {
               ...product,
               ...previewDraft,
@@ -137,6 +138,7 @@ export default function ProductsPage({ barberPreview = false }) {
     adminEditorOpen,
     adminDraft,
     adminEditingProduct,
+    adminEditingId,
   ]);
   const categories = [
     { value: "all", label: t("products.all") },
@@ -253,6 +255,7 @@ export default function ProductsPage({ barberPreview = false }) {
   }
   function openAdminAdd() {
     setAdminDraft(null);
+    setAdminEditingId(null);
     setAdminEditingProduct(null);
     setAdminMessage("");
     setAdminEditorOpen(true);
@@ -260,6 +263,7 @@ export default function ProductsPage({ barberPreview = false }) {
 
   function openAdminEdit(product) {
     setAdminDraft(null);
+    setAdminEditingId(product.id);
     setAdminEditingProduct(product?._source || product);
     setAdminMessage("");
     setAdminEditorOpen(true);
@@ -270,8 +274,8 @@ export default function ProductsPage({ barberPreview = false }) {
     setAdminMessage("");
 
     try {
-      if (adminEditingProduct?.id) {
-        await updateProduct(adminEditingProduct.id, form);
+      if (adminEditingId) {
+        await updateProduct(adminEditingId, form);
         setAdminMessage("تم حفظ التعديلات.");
       } else {
         await createProduct(form);
@@ -279,6 +283,7 @@ export default function ProductsPage({ barberPreview = false }) {
       }
 
       setAdminEditorOpen(false);
+      setAdminEditingId(null);
       setAdminEditingProduct(null);
       setAdminDraft(null);
       await reloadProducts();
@@ -722,6 +727,7 @@ export default function ProductsPage({ barberPreview = false }) {
           onClose={() => {
             if (!adminSaving) {
               setAdminEditorOpen(false);
+              setAdminEditingId(null);
               setAdminEditingProduct(null);
               setAdminDraft(null);
             }
