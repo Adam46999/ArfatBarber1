@@ -1,4 +1,4 @@
-﻿import {
+import {
   addDoc,
   collection,
   doc,
@@ -276,4 +276,31 @@ export async function seedDemoProducts() {
     added: demoProducts.length,
     alreadyExists: false,
   };
+}
+
+export async function setProductStock(productId, inStock) {
+  if (!productId) throw new Error("Missing product id");
+
+  await updateDoc(doc(db, "products", productId), {
+    inStock: Boolean(inStock),
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function setProductFeatured(productId, featured) {
+  if (!productId) throw new Error("Missing product id");
+
+  await updateDoc(doc(db, "products", productId), {
+    featured: Boolean(featured),
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function restoreProduct(productId) {
+  if (!productId) throw new Error("Missing product id");
+
+  await updateDoc(doc(db, "products", productId), {
+    active: true,
+    updatedAt: serverTimestamp(),
+  });
 }

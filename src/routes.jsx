@@ -1,4 +1,4 @@
-﻿import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 
 import React, { useEffect, useState } from "react";
 
@@ -119,6 +119,3 @@ export default function AppRoutes() {
     </Routes>
   );
 }
-
-
-

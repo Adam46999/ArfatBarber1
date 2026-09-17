@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
@@ -19,6 +19,16 @@ import useProducts from "../../hooks/useProducts";
 import { getLocalizedProductText } from "../../services/productsService";
 import ProductCard from "../../components/products/ProductCard";
 import ProductDetailsModal from "../../components/products/ProductDetailsModal";
+import {
+  archiveProduct,
+  createProduct,
+  getAdminProducts,
+  restoreProduct,
+  setProductFeatured,
+  setProductStock,
+  updateProduct,
+} from "../../services/productsAdminService";
+import QuickProductEditor from "../barberPanel/products/QuickProductEditor";
 
 const WHATSAPP_NUMBER = "972549896985";
 
@@ -44,19 +54,90 @@ export default function ProductsPage({ barberPreview = false }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [adminEditorOpen, setAdminEditorOpen] = useState(false);
+  const [adminEditingProduct, setAdminEditingProduct] = useState(null);
+  const [adminSaving, setAdminSaving] = useState(false);
+  const [adminBusyId, setAdminBusyId] = useState("");
+  const [adminMessage, setAdminMessage] = useState("");
+  const [adminDraft, setAdminDraft] = useState(null);
+  const [adminHiddenOpen, setAdminHiddenOpen] = useState(false);
+  const [adminHiddenProducts, setAdminHiddenProducts] = useState([]);
+  const [adminHiddenLoading, setAdminHiddenLoading] = useState(false);
 
   const { products: rawProducts, status, reloadProducts } = useProducts({ allowDemoFallback: barberPreview });
 
-  const products = useMemo(
-    () =>
-      rawProducts.map((product) => ({
-        ...product,
-        name: getLocalizedProductText(product.name, lang),
-        description: getLocalizedProductText(product.description, lang),
-      })),
-    [rawProducts, lang]
-  );
+  const products = useMemo(() => {
+    const localizedProducts = rawProducts.map((product) => ({
+      ...product,
+      _source: product,
+      name: getLocalizedProductText(product.name, lang),
+      description: getLocalizedProductText(product.description, lang),
+    }));
 
+    if (
+      !barberPreview ||
+      !adminEditorOpen ||
+      !adminDraft
+    ) {
+      return localizedProducts;
+    }
+
+    const draftName =
+      getLocalizedProductText(adminDraft.name, lang) ||
+      (lang === "he"
+        ? "מוצר חדש"
+        : lang === "en"
+          ? "New Product"
+          : "منتج جديد");
+
+    const draftDescription =
+      getLocalizedProductText(adminDraft.description, lang) || "";
+
+    const previewDraft = {
+      ...adminDraft,
+      name: draftName,
+      description: draftDescription,
+      imageUrl: adminDraft.imageUrl || "",
+      brand: adminDraft.brand || "",
+      price: Number(adminDraft.price || 0),
+      category: adminDraft.category || "styling",
+      inStock: adminDraft.inStock !== false,
+      featured: Boolean(adminDraft.featured),
+      active: true,
+    };
+
+    if (adminEditingProduct?.id) {
+      return localizedProducts.map((product) =>
+        product.id === adminEditingProduct.id
+          ? {
+              ...product,
+              ...previewDraft,
+              id: product.id,
+              _source: product._source,
+              __draft: true,
+            }
+          : product
+      );
+    }
+
+    return [
+      {
+        id: "__admin_new_draft__",
+        ...previewDraft,
+        _source: adminDraft,
+        sortOrder: -1,
+        __draft: true,
+      },
+      ...localizedProducts,
+    ];
+  }, [
+    rawProducts,
+    lang,
+    barberPreview,
+    adminEditorOpen,
+    adminDraft,
+    adminEditingProduct,
+  ]);
   const categories = [
     { value: "all", label: t("products.all") },
     { value: "hair_care", label: t("products.hair_care") },
@@ -70,6 +151,7 @@ export default function ProductsPage({ barberPreview = false }) {
     const query = searchTerm.trim().toLowerCase();
 
     return products.filter((product) => {
+      if (product.__draft) return true;
       const categoryMatch =
         selectedCategory === "all" ||
         product.category === selectedCategory;
@@ -115,6 +197,160 @@ export default function ProductsPage({ barberPreview = false }) {
     );
   }
 
+
+  // LOAD HIDDEN PRODUCTS
+  useEffect(() => {
+    if (!barberPreview) return;
+
+    let mounted = true;
+
+    async function loadHidden() {
+      setAdminHiddenLoading(true);
+
+      try {
+        const allProducts = await getAdminProducts();
+
+        if (mounted) {
+          setAdminHiddenProducts(
+            allProducts.filter((product) => product.active === false)
+          );
+        }
+      } catch (error) {
+        console.error(error);
+      } finally {
+        if (mounted) {
+          setAdminHiddenLoading(false);
+        }
+      }
+    }
+
+    loadHidden();
+
+    return () => {
+      mounted = false;
+    };
+  }, [barberPreview]);
+
+  async function handleAdminRestore(product) {
+    setAdminBusyId(product.id);
+    setAdminMessage("");
+
+    try {
+      await restoreProduct(product.id);
+
+      setAdminHiddenProducts((current) =>
+        current.filter((item) => item.id !== product.id)
+      );
+
+      setAdminMessage("تمت إعادة المنتج للصفحة.");
+      await reloadProducts();
+    } catch (error) {
+      console.error(error);
+      setAdminMessage("تعذر إعادة المنتج.");
+    } finally {
+      setAdminBusyId("");
+    }
+  }
+  function openAdminAdd() {
+    setAdminDraft(null);
+    setAdminEditingProduct(null);
+    setAdminMessage("");
+    setAdminEditorOpen(true);
+  }
+
+  function openAdminEdit(product) {
+    setAdminDraft(null);
+    setAdminEditingProduct(product?._source || product);
+    setAdminMessage("");
+    setAdminEditorOpen(true);
+  }
+
+  async function handleAdminSave(form) {
+    setAdminSaving(true);
+    setAdminMessage("");
+
+    try {
+      if (adminEditingProduct?.id) {
+        await updateProduct(adminEditingProduct.id, form);
+        setAdminMessage("تم حفظ التعديلات.");
+      } else {
+        await createProduct(form);
+        setAdminMessage("تمت إضافة المنتج.");
+      }
+
+      setAdminEditorOpen(false);
+      setAdminEditingProduct(null);
+      setAdminDraft(null);
+      await reloadProducts();
+    } catch (error) {
+      console.error(error);
+      setAdminMessage("تعذر حفظ المنتج.");
+    } finally {
+      setAdminSaving(false);
+    }
+  }
+
+  async function handleAdminStock(product) {
+    setAdminBusyId(product.id);
+
+    try {
+      await setProductStock(product.id, !product.inStock);
+      await reloadProducts();
+    } catch (error) {
+      console.error(error);
+      setAdminMessage("تعذر تغيير حالة المخزون.");
+    } finally {
+      setAdminBusyId("");
+    }
+  }
+
+  async function handleAdminFeatured(product) {
+    setAdminBusyId(product.id);
+
+    try {
+      await setProductFeatured(product.id, !product.featured);
+      await reloadProducts();
+    } catch (error) {
+      console.error(error);
+      setAdminMessage("تعذر تغيير المنتج المميز.");
+    } finally {
+      setAdminBusyId("");
+    }
+  }
+
+  async function handleAdminArchive(product) {
+    const approved = window.confirm(
+      `إخفاء "${product.name}" من صفحة المنتجات؟`
+    );
+
+    if (!approved) return;
+
+    setAdminBusyId(product.id);
+
+    try {
+      await archiveProduct(product.id);
+
+      setAdminHiddenProducts((current) => {
+        const source = {
+          ...(product._source || product),
+          active: false,
+        };
+
+        return [
+          source,
+          ...current.filter((item) => item.id !== product.id),
+        ];
+      });
+
+      setAdminMessage("تم إخفاء المنتج. موجود بقسم المخفية.");
+      await reloadProducts();
+    } catch (error) {
+      console.error(error);
+      setAdminMessage("تعذر إخفاء المنتج.");
+    } finally {
+      setAdminBusyId("");
+    }
+  }
   return (
     <main
       id="main"
@@ -159,6 +395,51 @@ export default function ProductsPage({ barberPreview = false }) {
           </p>
         </div>
       </section>
+      {/* BARBER ADMIN BAR */}
+      {barberPreview && (
+        <section className="sticky top-[var(--app-header-h,64px)] z-30 border-y border-[#d6b15e]/15 bg-[#f5f1e8]/95 px-3 py-2 text-[#171717] shadow-sm backdrop-blur-xl">
+          <div className="mx-auto flex max-w-7xl items-center gap-2">
+            <div className="min-w-0 flex-1">
+              <p className="text-[9px] font-black tracking-[0.14em] text-[#9d7428]">
+                وضع الإدارة
+              </p>
+              <p className="truncate text-xs font-bold text-black/50">
+                عدّل المنتجات وشوف النتيجة بنفس الصفحة
+              </p>
+            </div>
+
+            <div className="flex shrink-0 gap-2">
+              <button
+                type="button"
+                onClick={() => setAdminHiddenOpen(true)}
+                className="relative flex min-h-[46px] items-center justify-center rounded-xl border border-black/10 bg-white px-3 text-[11px] font-black text-black/60 shadow-sm transition active:scale-[0.97]"
+              >
+                المخفية
+
+                {adminHiddenProducts.length > 0 && (
+                  <span className="mr-1.5 rounded-full bg-[#171817] px-1.5 py-0.5 text-[9px] text-[#e8c779]">
+                    {adminHiddenProducts.length}
+                  </span>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={openAdminAdd}
+                className="flex min-h-[46px] items-center justify-center rounded-xl bg-[#171817] px-3 text-[11px] font-black text-[#e8c779] shadow transition active:scale-[0.97] sm:px-4 sm:text-xs"
+              >
+                + إضافة
+              </button>
+            </div>
+          </div>
+
+          {adminMessage && (
+            <div className="mx-auto mt-2 max-w-7xl rounded-lg bg-[#fff7e5] px-3 py-2 text-[10px] font-bold text-[#76551d]">
+              {adminMessage}
+            </div>
+          )}
+        </section>
+      )}
       {/* CATEGORIES */}
       <section className="relative border-b border-[#d6b15e]/10 bg-[#101110] px-3 py-3 sm:py-4">
         <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#d6b15e]/30 to-transparent" />
@@ -275,6 +556,12 @@ export default function ProductsPage({ barberPreview = false }) {
                   labels={productUiLabels}
                   onDetails={setSelectedProduct}
                   onOrder={handleOrder}
+                  adminMode={barberPreview}
+                  adminBusy={adminBusyId === product.id || product.__draft}
+                  onAdminEdit={() => openAdminEdit(product)}
+                  onAdminToggleStock={() => handleAdminStock(product)}
+                  onAdminToggleFeatured={() => handleAdminFeatured(product)}
+                  onAdminArchive={() => handleAdminArchive(product)}
                 />
               ))}
             </div>
@@ -318,6 +605,131 @@ export default function ProductsPage({ barberPreview = false }) {
         </Link>
       </nav>
       )}
+      {/* HIDDEN PRODUCTS SHEET */}
+      {barberPreview && adminHiddenOpen && (
+        <div
+          className="fixed inset-0 z-[125] flex items-end justify-center bg-black/55 backdrop-blur-[2px] sm:items-center sm:p-5"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setAdminHiddenOpen(false);
+            }
+          }}
+        >
+          <section
+            dir="rtl"
+            className="flex max-h-[72dvh] w-full flex-col overflow-hidden rounded-t-[26px] bg-[#f6f3ed] shadow-[0_-12px_45px_rgba(0,0,0,0.28)] sm:max-h-[70dvh] sm:max-w-[520px] sm:rounded-[24px]"
+          >
+            <div className="shrink-0 border-b border-black/5 px-4 pb-3 pt-2">
+              <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-black/15 sm:hidden" />
+
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-[9px] font-black tracking-[0.15em] text-[#a47a2c]">
+                    HIDDEN
+                  </p>
+                  <h2 className="text-lg font-black text-[#171717]">
+                    المنتجات المخفية
+                  </h2>
+                  <p className="mt-0.5 text-[10px] text-black/40">
+                    رجّع أي منتج للصفحة بضغطة.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setAdminHiddenOpen(false)}
+                  className="grid h-11 w-11 place-items-center rounded-full bg-black/5 text-xl text-black/50 active:scale-95"
+                  aria-label="إغلاق"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 space-y-2.5 overflow-y-auto overscroll-contain p-3 pb-[calc(16px+env(safe-area-inset-bottom))]">
+              {adminHiddenLoading ? (
+                Array.from({ length: 3 }).map((_, index) => (
+                  <div
+                    key={index}
+                    className="flex min-h-[82px] animate-pulse gap-3 rounded-2xl bg-white p-2.5"
+                  >
+                    <div className="h-16 w-16 rounded-xl bg-black/8" />
+                    <div className="flex-1 space-y-2 py-2">
+                      <div className="h-3 w-1/2 rounded bg-black/8" />
+                      <div className="h-3 w-1/3 rounded bg-black/8" />
+                    </div>
+                  </div>
+                ))
+              ) : adminHiddenProducts.length === 0 ? (
+                <div className="py-12 text-center">
+                  <p className="text-sm font-black text-black/50">
+                    ما في منتجات مخفية
+                  </p>
+                  <p className="mt-1 text-[10px] text-black/35">
+                    أي منتج بتخفيه رح يظهر هون.
+                  </p>
+                </div>
+              ) : (
+                adminHiddenProducts.map((product) => (
+                  <article
+                    key={product.id}
+                    className="flex items-center gap-3 rounded-2xl border border-black/5 bg-white p-2.5 shadow-sm"
+                  >
+                    <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-black/5">
+                      {product.imageUrl ? (
+                        <img
+                          src={product.imageUrl}
+                          alt=""
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="grid h-full w-full place-items-center text-xs text-black/20">
+                          صورة
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-black text-[#171717]">
+                        {getLocalizedProductText(product.name, lang) || "بدون اسم"}
+                      </p>
+
+                      <p className="mt-1 text-sm font-black text-[#8c6927]">
+                        ₪{Number(product.price || 0)}
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      disabled={adminBusyId === product.id}
+                      onClick={() => handleAdminRestore(product)}
+                      className="min-h-[44px] shrink-0 rounded-xl bg-[#171817] px-3 text-[11px] font-black text-[#e8c779] transition active:scale-[0.97] disabled:opacity-50"
+                    >
+                      إعادة
+                    </button>
+                  </article>
+                ))
+              )}
+            </div>
+          </section>
+        </div>
+      )}
+      {barberPreview && (
+        <QuickProductEditor
+          product={adminEditingProduct}
+          open={adminEditorOpen}
+          saving={adminSaving}
+          onClose={() => {
+            if (!adminSaving) {
+              setAdminEditorOpen(false);
+              setAdminEditingProduct(null);
+              setAdminDraft(null);
+            }
+          }}
+          onSave={handleAdminSave}
+          onDraftChange={setAdminDraft}
+        />
+      )}
       <ProductDetailsModal
         product={selectedProduct}
         labels={productUiLabels}
@@ -327,14 +739,3 @@ export default function ProductsPage({ barberPreview = false }) {
     </main>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
