@@ -35,6 +35,7 @@ const BARBER_ID = "arfat";
 const INITIAL_VISIBLE_REVIEWS = 3;
 const PAGE_LIMIT = 6;
 const FEATURED_POOL_LIMIT = 20;
+const REVIEW_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
 
 /* ================== دوال مساعدة ================== */
 
@@ -732,11 +733,8 @@ export default function BarberRatingSection() {
       return "تعذر إرسال تقييم بهذا الرقم.";
     }
 
-    if (
-      code.includes("REVIEW_ALREADY_SUBMITTED") ||
-      code.includes("REVIEW_PHONE_ALREADY_USED")
-    ) {
-      return "هذا الرقم أرسل تقييمًا من قبل.";
+    if (code.includes("REVIEW_COOLDOWN_ACTIVE")) {
+      return "بتقدر تضيف تقييم جديد بعد مرور 7 أيام على آخر تقييم.";
     }
 
     return "تعذر إكمال العملية الآن، حاول مرة ثانية.";
@@ -770,29 +768,33 @@ export default function BarberRatingSection() {
       throw new Error("REVIEW_PHONE_BLOCKED");
     }
 
-    const reviewReference = doc(
-      reviewsCollection,
-      `phone_${normalizedPhone.replace(/\D/g, "")}`,
+    const previousReviewsSnapshot = await getDocs(
+      query(
+        reviewsCollection,
+        where("phoneKey", "==", normalizedPhone),
+      ),
     );
 
-    const [directReviewSnapshot, previousReviewsSnapshot] =
-      await Promise.all([
-        getDoc(reviewReference),
-        getDocs(
-          query(
-            reviewsCollection,
-            where("phoneKey", "==", normalizedPhone),
-            limit(1),
-          ),
-        ),
-      ]);
+    let latestReviewTime = 0;
+
+    previousReviewsSnapshot.docs.forEach((reviewDocument) => {
+      const reviewData = reviewDocument.data();
+      const reviewDate = toDateSafe(reviewData.createdAt);
+      const reviewTime = reviewDate?.getTime() || 0;
+
+      if (reviewTime > latestReviewTime) {
+        latestReviewTime = reviewTime;
+      }
+    });
 
     if (
-      directReviewSnapshot.exists() ||
-      !previousReviewsSnapshot.empty
+      latestReviewTime &&
+      Date.now() - latestReviewTime < REVIEW_COOLDOWN_MS
     ) {
-      throw new Error("REVIEW_PHONE_ALREADY_USED");
+      throw new Error("REVIEW_COOLDOWN_ACTIVE");
     }
+
+    const reviewReference = doc(reviewsCollection);
 
     return {
       normalizedPhone,
@@ -850,7 +852,7 @@ export default function BarberRatingSection() {
           await transaction.get(reviewReference);
 
         if (reviewSnapshot.exists()) {
-          throw new Error("REVIEW_PHONE_ALREADY_USED");
+          throw new Error("REVIEW_ALREADY_EXISTS");
         }
 
         const summarySnapshot =
@@ -1155,7 +1157,7 @@ export default function BarberRatingSection() {
                 <div className="mt-2.5 flex items-start gap-2 text-right text-xs font-medium leading-5 text-slate-500">
                   <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
                   <span>
-                    رقم الهاتف لا يظهر للعامة؛ نستخدمه فقط لمنع التقييمات المكررة وإدارة الحظر.
+                    رقم الهاتف لا يظهر للعامة؛ نستخدمه لمنع السبام وإدارة الحظر. يمكنك إضافة تقييم جديد بعد 7 أيام.
                   </span>
                 </div>
               </div>
