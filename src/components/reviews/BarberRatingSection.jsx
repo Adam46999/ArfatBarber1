@@ -1,4 +1,3 @@
-/* eslint-disable no-empty */
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import SectionTitle from "../common/SectionTitle";
@@ -246,7 +245,7 @@ function FeaturedReviewContent({ review }) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="inline-flex items-center gap-2 rounded-full border border-gold/25 bg-gold/10 px-3 py-1.5 text-xs font-black text-gold">
           <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-          آخر تجربة مكتوبة
+          من تجارب زبائننا
         </div>
 
         <div className="shrink-0 rounded-xl border border-white/10 bg-white/[0.06] px-2.5 py-1.5">
@@ -288,13 +287,39 @@ function FeaturedReviewContent({ review }) {
 
 /* ================== بطاقة التجربة المميزة ================== */
 
-function FeaturedReview({ review }) {
+function FeaturedReview({ review, index, total, onSelect }) {
+  const touchStartXRef = useRef(null);
+
   if (!review) {
     return null;
   }
 
+  function handleTouchStart(event) {
+    touchStartXRef.current = event.touches?.[0]?.clientX ?? null;
+  }
+
+  function handleTouchEnd(event) {
+    const startX = touchStartXRef.current;
+    const endX = event.changedTouches?.[0]?.clientX ?? null;
+
+    touchStartXRef.current = null;
+
+    if (startX === null || endX === null || Math.abs(endX - startX) < 45) {
+      return;
+    }
+
+    const direction = endX > startX ? -1 : 1;
+    const nextIndex = (index + direction + total) % total;
+
+    onSelect?.(nextIndex);
+  }
+
   return (
-    <article className="relative self-start overflow-hidden rounded-[22px] border border-gold/20 bg-[linear-gradient(145deg,#17202d_0%,#101722_100%)] p-5 text-white shadow-[0_16px_38px_rgba(15,23,42,0.16)] sm:p-6">
+    <article
+      className="relative self-start overflow-hidden rounded-[22px] border border-gold/20 bg-[linear-gradient(145deg,#17202d_0%,#101722_100%)] p-5 text-white shadow-[0_16px_38px_rgba(15,23,42,0.16)] sm:p-6"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
       <div
         className="pointer-events-none absolute -left-16 -top-16 h-40 w-40 rounded-full bg-gold/[0.07] blur-3xl"
         aria-hidden="true"
@@ -302,6 +327,26 @@ function FeaturedReview({ review }) {
 
       <div className="relative">
         <FeaturedReviewContent review={review} />
+
+        {total > 1 && (
+          <div className="mt-5 flex items-center justify-center gap-2 border-t border-white/10 pt-4">
+            {Array.from({ length: total }).map((_, dotIndex) => (
+              <button
+                key={dotIndex}
+                type="button"
+                onClick={() => onSelect?.(dotIndex)}
+                aria-label={`عرض التجربة ${dotIndex + 1}`}
+                aria-current={dotIndex === index ? "true" : undefined}
+                className={[
+                  "h-2.5 rounded-full transition-all duration-300",
+                  dotIndex === index
+                    ? "w-7 bg-gold"
+                    : "w-2.5 bg-white/25 hover:bg-white/45",
+                ].join(" ")}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </article>
   );
@@ -410,9 +455,11 @@ export default function BarberRatingSection() {
   const [hasMore, setHasMore] = useState(false);
   const [expandedList, setExpandedList] = useState(false);
   const [openReviewId, setOpenReviewId] = useState(null);
+  const [featuredIndex, setFeaturedIndex] = useState(0);
 
   const [formOpen, setFormOpen] = useState(false);
   const [rating, setRating] = useState(0);
+  const [customerName, setCustomerName] = useState("");
   const [verifiedBooking, setVerifiedBooking] = useState(null);
   const [verifyingPhone, setVerifyingPhone] = useState(false);
   const [phone, setPhone] = useState("");
@@ -436,25 +483,68 @@ export default function BarberRatingSection() {
   const average = count > 0 ? Number(summary.sum || 0) / count : 0;
 
   const featuredReviews = useMemo(() => {
-    return reviews.filter((review) => {
+    return reviews
+      .filter(
+        (review) =>
+          String(review.comment || "").trim().length >= 12,
+      )
+      .sort((a, b) => {
+        const ratingDifference =
+          Number(b.rating || 0) - Number(a.rating || 0);
 
-      const reviewComment = String(review.comment || "").trim();
+        if (ratingDifference !== 0) {
+          return ratingDifference;
+        }
 
-      return reviewComment.length >= 8;
-    });
+        const aTime = toDateSafe(a.createdAt)?.getTime() || 0;
+        const bTime = toDateSafe(b.createdAt)?.getTime() || 0;
+
+        return bTime - aTime;
+      })
+      .slice(0, 5);
   }, [reviews]);
 
-  const fixedFeaturedReview = useMemo(() => {
-    return featuredReviews[0] || null;
-  }, [featuredReviews]);
+  const featuredReview =
+    featuredReviews[featuredIndex] ||
+    featuredReviews[0] ||
+    null;
 
-  const regularReviews = useMemo(() => {
-    if (!fixedFeaturedReview) {
-      return reviews;
+  const featuredReviewIds = useMemo(
+    () => new Set(featuredReviews.map((review) => review.id)),
+    [featuredReviews],
+  );
+
+  const regularReviews = useMemo(
+    () =>
+      reviews.filter(
+        (review) => !featuredReviewIds.has(review.id),
+      ),
+    [reviews, featuredReviewIds],
+  );
+
+  useEffect(() => {
+    if (featuredReviews.length === 0) {
+      setFeaturedIndex(0);
+      return undefined;
     }
 
-    return reviews.filter((review) => review.id !== fixedFeaturedReview.id);
-  }, [reviews, fixedFeaturedReview]);
+    setFeaturedIndex((current) =>
+      Math.min(current, featuredReviews.length - 1),
+    );
+
+    if (featuredReviews.length === 1) {
+      return undefined;
+    }
+
+    const timer = window.setInterval(() => {
+      setFeaturedIndex(
+        (current) =>
+          (current + 1) % featuredReviews.length,
+      );
+    }, 7000);
+
+    return () => window.clearInterval(timer);
+  }, [featuredReviews.length]);
 
   const visibleReviews = useMemo(() => {
     if (expandedList) {
@@ -620,77 +710,44 @@ export default function BarberRatingSection() {
     setFormOpen(false);
     setVerifiedBooking(null);
     setRating(0);
+    setCustomerName("");
     setPhone("");
     setComment("");
     setFormError("");
   }
-  function getIsraelNowKey() {
-    const parts = new Intl.DateTimeFormat("en-CA", {
-      timeZone: "Asia/Jerusalem",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      hourCycle: "h23",
-    }).formatToParts(new Date());
 
-    const values = Object.fromEntries(
-      parts.map((part) => [part.type, part.value]),
-    );
-
-    return `${values.year}-${values.month}-${values.day}T${values.hour}:${values.minute}`;
-  }
-
-  function getReviewBookingTimeKey(booking) {
-    const date = String(booking?.selectedDate || "").trim();
-    const time = String(booking?.selectedTime || "").trim();
-
-    if (
-      !/^\d{4}-\d{2}-\d{2}$/.test(date) ||
-      !/^\d{2}:\d{2}$/.test(time)
-    ) {
-      return "";
-    }
-
-    return `${date}T${time}`;
-  }
 
   function getReviewErrorMessage(error) {
     const code = String(error?.message || "");
 
     if (code.includes("REVIEW_INVALID_PHONE")) {
-      return "اكتب رقم الهاتف المستخدم وقت الحجز.";
+      return "اكتب رقم هاتف صحيح.";
+    }
+
+    if (code.includes("REVIEW_INVALID_NAME")) {
+      return "اكتب اسمك أولًا.";
     }
 
     if (code.includes("REVIEW_PHONE_BLOCKED")) {
-      return "تعذر متابعة التقييم بهذا الرقم.";
-    }
-
-    if (code.includes("REVIEW_NO_PAST_BOOKING")) {
-      return "ما لقينا حجز سابق بهذا الرقم. تأكد من الرقم المستخدم وقت الحجز.";
+      return "تعذر إرسال تقييم بهذا الرقم.";
     }
 
     if (
       code.includes("REVIEW_ALREADY_SUBMITTED") ||
-      code.includes("REVIEW_BOOKING_ALREADY_USED")
+      code.includes("REVIEW_PHONE_ALREADY_USED")
     ) {
-      return "تم تقييم آخر حجز سابق بهذا الرقم. بعد موعد جديد رح تقدر تضيف تقييم جديد.";
+      return "هذا الرقم أرسل تقييمًا من قبل.";
     }
 
     return "تعذر إكمال العملية الآن، حاول مرة ثانية.";
   }
 
-  async function resolveReviewBooking(inputPhone) {
+  async function resolveReviewIdentity(inputPhone) {
     const normalizedPhone = toILPhoneE164(inputPhone);
 
     if (!normalizedPhone || !isILPhoneE164(normalizedPhone)) {
       throw new Error("REVIEW_INVALID_PHONE");
     }
-
-    const localPhone = normalizedPhone.startsWith("+972")
-      ? `0${normalizedPhone.slice(4)}`
-      : String(inputPhone || "").replace(/\D/g, "");
 
     const [globalBlockedSnapshot, reviewBlockedSnapshot] =
       await Promise.all([
@@ -713,110 +770,48 @@ export default function BarberRatingSection() {
       throw new Error("REVIEW_PHONE_BLOCKED");
     }
 
-    const [e164Snapshot, localSnapshot] = await Promise.all([
-      getDocs(
-        query(
-          collection(db, "bookings"),
-          where("phoneNumber", "==", normalizedPhone),
-        ),
-      ),
-      getDocs(
-        query(
-          collection(db, "bookings"),
-          where("phoneNumber", "==", localPhone),
-        ),
-      ),
-    ]);
-
-    const bookingsById = new Map();
-
-    for (const snapshot of [e164Snapshot, localSnapshot]) {
-      snapshot.forEach((bookingDocument) => {
-        bookingsById.set(bookingDocument.id, {
-          id: bookingDocument.id,
-          ...bookingDocument.data(),
-        });
-      });
-    }
-
-    const nowKey = getIsraelNowKey();
-
-    const pastBookings = [...bookingsById.values()]
-      .map((booking) => ({
-        ...booking,
-        reviewTimeKey: getReviewBookingTimeKey(booking),
-      }))
-      .filter(
-        (booking) =>
-          !booking.cancelledAt &&
-          booking.reviewTimeKey &&
-          booking.reviewTimeKey < nowKey,
-      )
-      .sort((a, b) =>
-        b.reviewTimeKey.localeCompare(a.reviewTimeKey),
-      );
-
-    if (pastBookings.length === 0) {
-      throw new Error("REVIEW_NO_PAST_BOOKING");
-    }
-
-    const latestBooking = pastBookings[0];
-
     const reviewReference = doc(
       reviewsCollection,
-      `booking_${latestBooking.id}`,
+      `phone_${normalizedPhone.replace(/\D/g, "")}`,
     );
 
-    const existingReviewSnapshot =
-      await getDoc(reviewReference);
+    const [directReviewSnapshot, previousReviewsSnapshot] =
+      await Promise.all([
+        getDoc(reviewReference),
+        getDocs(
+          query(
+            reviewsCollection,
+            where("phoneKey", "==", normalizedPhone),
+            limit(1),
+          ),
+        ),
+      ]);
 
-    if (existingReviewSnapshot.exists()) {
-      throw new Error("REVIEW_ALREADY_SUBMITTED");
+    if (
+      directReviewSnapshot.exists() ||
+      !previousReviewsSnapshot.empty
+    ) {
+      throw new Error("REVIEW_PHONE_ALREADY_USED");
     }
 
     return {
-      booking: latestBooking,
       normalizedPhone,
       reviewReference,
     };
   }
-
-  async function verifyReviewPhone() {
-    if (verifyingPhone || submitting) {
-      return;
-    }
-
-    setVerifyingPhone(true);
-    setFormError("");
-
-    try {
-      const { booking } = await resolveReviewBooking(phone);
-
-      setVerifiedBooking(booking);
-      setRating(0);
-      setComment("");
-    } catch (error) {
-      setVerifiedBooking(null);
-      setFormError(getReviewErrorMessage(error));
-    } finally {
-      setVerifyingPhone(false);
-    }
-  }
-
-  function changeReviewPhone() {
-    if (submitting) {
-      return;
-    }
-
-    setVerifiedBooking(null);
-    setRating(0);
-    setComment("");
-    setFormError("");
-  }
-
   function validateForm() {
+    const cleanName = customerName.trim();
+
     if (!verifiedBooking) {
       return "أكد رقم الهاتف أولًا.";
+    }
+
+    if (cleanName.length < 2) {
+      return "اكتب اسمك أولًا.";
+    }
+
+    if (cleanName.length > 60) {
+      return "الاسم طويل جدًا.";
     }
 
     if (!rating) {
@@ -843,25 +838,19 @@ export default function BarberRatingSection() {
 
     try {
       const {
-        booking,
         normalizedPhone,
         reviewReference,
-      } = await resolveReviewBooking(phone);
+      } = await resolveReviewIdentity(phone);
 
-      const customerName = String(
-        booking.fullName ||
-          booking.customerName ||
-          "زبون",
-      )
-        .trim()
-        .slice(0, 60) || "زبون";
+      const cleanCustomerName =
+        customerName.trim().slice(0, 60) || "زبون";
 
       await runTransaction(db, async (transaction) => {
         const reviewSnapshot =
           await transaction.get(reviewReference);
 
         if (reviewSnapshot.exists()) {
-          throw new Error("REVIEW_BOOKING_ALREADY_USED");
+          throw new Error("REVIEW_PHONE_ALREADY_USED");
         }
 
         const summarySnapshot =
@@ -878,11 +867,11 @@ export default function BarberRatingSection() {
         transaction.set(reviewReference, {
           rating,
           comment: comment.trim(),
-          customerName,
+          customerName: cleanCustomerName,
           phoneKey: normalizedPhone,
           phonePrivate: true,
-          bookingId: booking.id,
-          bookingLinked: true,
+          bookingLinked: false,
+          source: "public",
           status: "active",
           isNew: true,
           createdAt: serverTimestamp(),
@@ -909,6 +898,7 @@ export default function BarberRatingSection() {
       });
 
       setRating(0);
+      setCustomerName("");
       setPhone("");
       setComment("");
       setVerifiedBooking(null);
@@ -931,13 +921,6 @@ export default function BarberRatingSection() {
 
       const message = getReviewErrorMessage(error);
 
-      if (
-        message.includes("آخر حجز") ||
-        message.includes("ما لقينا") ||
-        message.includes("تعذر متابعة")
-      ) {
-        setVerifiedBooking(null);
-      }
 
       setFormError(message);
     } finally {
@@ -1041,8 +1024,13 @@ export default function BarberRatingSection() {
             <div className="flex h-[230px] items-center justify-center rounded-[26px] border border-gray-100 bg-white p-5 text-sm font-bold text-gray-500 shadow-sm sm:h-[240px]">
               جارٍ تحميل تجربة الزبائن...
             </div>
-          ) : fixedFeaturedReview ? (
-            <FeaturedReview review={fixedFeaturedReview} />
+          ) : featuredReview ? (
+            <FeaturedReview
+              review={featuredReview}
+              index={featuredIndex}
+              total={featuredReviews.length}
+              onSelect={setFeaturedIndex}
+            />
           ) : (
             <div className="flex h-[230px] flex-col items-center justify-center rounded-[26px] border border-dashed border-gold/30 bg-white p-6 text-center shadow-sm sm:h-[240px]">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gold/10 text-xl text-gold">
@@ -1101,16 +1089,14 @@ export default function BarberRatingSection() {
                 </h3>
 
                 <p className="mt-1 text-sm font-medium leading-6 text-slate-500">
-                  {verifiedBooking
-                    ? "اختار عدد النجوم، وإذا بتحب أضف تعليقًا قصيرًا."
-                    : "أدخل رقم الهاتف الذي استخدمته وقت الحجز."}
+                  التقييم مفتوح للجميع. اكتب اسمك ورقمك، اختار النجوم، وإذا بتحب أضف تعليق.
                 </p>
               </div>
 
               <button
                 type="button"
                 onClick={closeReviewForm}
-                disabled={submitting || verifyingPhone}
+                disabled={submitting}
                 className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 disabled:opacity-50"
                 aria-label="إغلاق نموذج التقييم"
               >
@@ -1118,8 +1104,31 @@ export default function BarberRatingSection() {
               </button>
             </div>
 
-            {!verifiedBooking ? (
-              <div className="mt-5">
+            <div className="mt-5 grid gap-4">
+              <div>
+                <label
+                  htmlFor="review-name"
+                  className="mb-2 block text-right text-sm font-black text-slate-700"
+                >
+                  الاسم
+                </label>
+
+                <input
+                  id="review-name"
+                  type="text"
+                  autoComplete="name"
+                  value={customerName}
+                  onChange={(event) => {
+                    setCustomerName(event.target.value);
+                    setFormError("");
+                  }}
+                  placeholder="اسمك"
+                  maxLength={60}
+                  className="min-h-[52px] w-full rounded-2xl border border-gray-200 bg-[#fafafa] px-4 text-right text-base font-semibold outline-none transition focus:border-gold focus:bg-white focus:ring-2 focus:ring-gold/20"
+                />
+              </div>
+
+              <div>
                 <label
                   htmlFor="review-phone"
                   className="mb-2 block text-right text-sm font-black text-slate-700"
@@ -1132,159 +1141,133 @@ export default function BarberRatingSection() {
                   type="tel"
                   inputMode="tel"
                   autoComplete="tel"
-                  enterKeyHint="next"
                   dir="ltr"
                   value={phone}
                   onChange={(event) => {
                     setPhone(event.target.value);
+                    setVerifiedBooking(null);
                     setFormError("");
-                  }}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      event.preventDefault();
-                      void verifyReviewPhone();
-                    }
                   }}
                   placeholder="05XXXXXXXX"
                   className="min-h-[52px] w-full rounded-2xl border border-gray-200 bg-[#fafafa] px-4 text-left text-base font-semibold outline-none transition focus:border-gold focus:bg-white focus:ring-2 focus:ring-gold/20"
-                  aria-describedby="review-phone-help"
                 />
 
-                <div
-                  id="review-phone-help"
-                  className="mt-2.5 flex items-start gap-2 text-right text-xs font-medium leading-5 text-slate-500"
-                >
+                <div className="mt-2.5 flex items-start gap-2 text-right text-xs font-medium leading-5 text-slate-500">
                   <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
                   <span>
-                    بنستخدم الرقم فقط للتأكد من وجود حجز سابق، ولن يظهر في التقييم.
+                    رقم الهاتف لا يظهر للعامة؛ نستخدمه فقط لمنع التقييمات المكررة وإدارة الحظر.
+                  </span>
+                </div>
+              </div>
+
+              <div className="rounded-[20px] border border-amber-100 bg-amber-50/60 p-4 sm:p-5">
+                <div className="text-center text-sm font-black text-slate-700">
+                  كيف كانت تجربتك؟
+                </div>
+
+                <div className="mt-3">
+                  <StarRow
+                    value={rating}
+                    onChange={(value) => {
+                      setRating(value);
+                      setFormError("");
+                    }}
+                    size={38}
+                  />
+                </div>
+
+                <div className="mt-2 text-center text-sm font-black text-slate-600">
+                  {rating ? `${rating} من 5` : "اختار عدد النجوم"}
+                </div>
+              </div>
+
+              <div>
+                <div className="mb-2 flex items-center justify-between">
+                  <label
+                    htmlFor="review-comment"
+                    className="text-right text-sm font-black text-slate-700"
+                  >
+                    تعليقك
+                  </label>
+
+                  <span className="text-xs font-medium text-gray-400">
+                    اختياري
                   </span>
                 </div>
 
-                {formError && (
-                  <div
-                    className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-right text-sm font-bold leading-6 text-red-700"
-                    role="alert"
-                  >
-                    {formError}
-                  </div>
-                )}
+                <textarea
+                  id="review-comment"
+                  value={comment}
+                  onChange={(event) => {
+                    setComment(event.target.value);
+                    setFormError("");
+                  }}
+                  placeholder="احكيلنا عن تجربتك..."
+                  maxLength={500}
+                  className="min-h-[105px] w-full resize-y rounded-2xl border border-gray-200 bg-[#fafafa] px-4 py-3.5 text-right leading-7 outline-none transition focus:border-gold focus:bg-white focus:ring-2 focus:ring-gold/20"
+                />
 
-                <button
-                  type="button"
-                  onClick={verifyReviewPhone}
-                  disabled={verifyingPhone}
-                  className="mt-5 flex min-h-[52px] w-full items-center justify-center rounded-2xl bg-primary px-5 font-black text-white shadow-md transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 md:hover:bg-gray-900"
-                >
-                  {verifyingPhone
-                    ? "جارٍ التحقق..."
-                    : "متابعة"}
-                </button>
+                <div className="mt-1.5 flex items-center justify-between gap-3 text-xs font-medium text-gray-400">
+                  <span className="text-right">
+                    اسمك سيظهر بشكل مختصر حفاظًا على الخصوصية.
+                  </span>
+
+                  <span dir="ltr">{comment.length}/500</span>
+                </div>
               </div>
-            ) : (
-              <div className="mt-5 grid gap-4">
-                <div className="flex items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-emerald-50/80 px-4 py-3">
-                  <div className="flex min-w-0 items-center gap-2.5 text-right">
-                    <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600" />
 
-                    <div>
-                      <div className="text-sm font-black text-emerald-800">
-                        تم العثور على حجز سابق
-                      </div>
-
-                      <div className="mt-0.5 text-xs font-medium text-emerald-700/80">
-                        رقم الهاتف لن يظهر بالتقييم.
-                      </div>
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={changeReviewPhone}
-                    disabled={submitting}
-                    className="min-h-11 shrink-0 rounded-xl px-3 text-xs font-black text-emerald-800 transition hover:bg-emerald-100 disabled:opacity-50"
-                  >
-                    تغيير الرقم
-                  </button>
+              {formError && (
+                <div
+                  className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-right text-sm font-bold leading-6 text-red-700"
+                  role="alert"
+                >
+                  {formError}
                 </div>
+              )}
 
-                <div className="rounded-[20px] border border-amber-100 bg-amber-50/60 p-4 sm:p-5">
-                  <div className="text-center text-sm font-black text-slate-700">
-                    كيف كانت تجربتك؟
-                  </div>
-
-                  <div className="mt-3">
-                    <StarRow
-                      value={rating}
-                      onChange={setRating}
-                      size={38}
-                    />
-                  </div>
-
-                  <div className="mt-2 text-center text-sm font-black text-slate-600">
-                    {rating
-                      ? `${rating} من 5`
-                      : "اختار عدد النجوم"}
-                  </div>
-                </div>
-
-                <div>
-                  <div className="mb-2 flex items-center justify-between">
-                    <label
-                      htmlFor="review-comment"
-                      className="text-right text-sm font-black text-slate-700"
-                    >
-                      تعليقك
-                    </label>
-
-                    <span className="text-xs font-medium text-gray-400">
-                      اختياري
-                    </span>
-                  </div>
-
-                  <textarea
-                    id="review-comment"
-                    value={comment}
-                    onChange={(event) => {
-                      setComment(event.target.value);
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!verifiedBooking) {
+                    try {
+                      setVerifyingPhone(true);
                       setFormError("");
-                    }}
-                    placeholder="احكيلنا عن تجربتك..."
-                    maxLength={500}
-                    className="min-h-[105px] w-full resize-y rounded-2xl border border-gray-200 bg-[#fafafa] px-4 py-3.5 text-right leading-7 outline-none transition focus:border-gold focus:bg-white focus:ring-2 focus:ring-gold/20"
-                  />
 
-                  <div className="mt-1.5 flex items-center justify-between gap-3 text-xs font-medium text-gray-400">
-                    <span className="text-right">
-                      اسمك سيظهر بشكل مختصر حفاظًا على الخصوصية.
-                    </span>
+                      const { normalizedPhone } =
+                        await resolveReviewIdentity(phone);
 
-                    <span dir="ltr">
-                      {comment.length}/500
-                    </span>
-                  </div>
-                </div>
+                      setVerifiedBooking({
+                        phoneKey: normalizedPhone,
+                      });
 
-                {formError && (
-                  <div
-                    className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-right text-sm font-bold leading-6 text-red-700"
-                    role="alert"
-                  >
-                    {formError}
-                  </div>
-                )}
+                      await submitReview();
+                    } catch (error) {
+                      setVerifiedBooking(null);
+                      setFormError(
+                        getReviewErrorMessage(error),
+                      );
+                    } finally {
+                      setVerifyingPhone(false);
+                    }
 
-                <button
-                  type="button"
-                  onClick={submitReview}
-                  disabled={submitting || !rating}
-                  className="flex min-h-[52px] w-full items-center justify-center rounded-2xl bg-gold px-5 font-black text-primary shadow-md transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 md:hover:brightness-95"
-                >
-                  {submitting
-                    ? "جارٍ إرسال التقييم..."
-                    : "إرسال التقييم"}
-                </button>
-              </div>
-            )}
+                    return;
+                  }
+
+                  await submitReview();
+                }}
+                disabled={
+                  submitting ||
+                  verifyingPhone ||
+                  !rating ||
+                  customerName.trim().length < 2
+                }
+                className="flex min-h-[52px] w-full items-center justify-center rounded-2xl bg-gold px-5 font-black text-primary shadow-md transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 md:hover:brightness-95"
+              >
+                {submitting || verifyingPhone
+                  ? "جارٍ إرسال التقييم..."
+                  : "إرسال التقييم"}
+              </button>
+            </div>
           </div>
         )}
         <div ref={listTopRef} className="scroll-mt-24" />
@@ -1293,7 +1276,7 @@ export default function BarberRatingSection() {
           <div className="mt-8 rounded-3xl border border-gray-100 bg-white p-8 text-center text-sm font-bold text-gray-500 shadow-sm">
             جارٍ تحميل التقييمات...
           </div>
-        ) : visibleReviews.length === 0 && fixedFeaturedReview ? (
+        ) : visibleReviews.length === 0 && featuredReview ? (
           <div className="mt-8 rounded-3xl border border-dashed border-gray-200 bg-white p-7 text-center text-sm font-medium text-gray-500">
             لا توجد تقييمات إضافية حاليًا.
           </div>
