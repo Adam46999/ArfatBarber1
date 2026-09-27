@@ -19,6 +19,7 @@ import {
   FaClock,
   FaStar,
   FaBoxOpen,
+  FaEllipsisH,
 } from "react-icons/fa";
 
 import BarberPanel from "./BarberPanel";
@@ -52,12 +53,12 @@ const TABS = [
     component: AdminBookings,
   },
   {
-    id: "weekly-hours",
-    path: "/barber/weekly-hours",
-    shortLabel: "أسبوعي",
-    fullLabel: "ساعات العمل الأسبوعية",
-    icon: FaCalendarAlt,
-    component: WeeklyHoursPage,
+    id: "stats",
+    path: "/barber/stats",
+    shortLabel: "إحصائيات",
+    fullLabel: "الإحصائيات",
+    icon: FaChartBar,
+    component: Dashboard,
   },
   {
     id: "reviews",
@@ -68,12 +69,12 @@ const TABS = [
     component: ReviewsManagerPage,
   },
   {
-    id: "products",
-    path: "/barber/products",
-    shortLabel: "منتجات",
-    fullLabel: "إدارة المنتجات",
-    icon: FaBoxOpen,
-    component: ProductsPreviewOnly,
+    id: "weekly-hours",
+    path: "/barber/weekly-hours",
+    shortLabel: "أسبوعي",
+    fullLabel: "ساعات العمل الأسبوعية",
+    icon: FaCalendarAlt,
+    component: WeeklyHoursPage,
   },
   {
     id: "blocked",
@@ -84,12 +85,12 @@ const TABS = [
     component: BlockedPhones,
   },
   {
-    id: "stats",
-    path: "/barber/stats",
-    shortLabel: "إحصائيات",
-    fullLabel: "الإحصائيات",
-    icon: FaChartBar,
-    component: Dashboard,
+    id: "products",
+    path: "/barber/products",
+    shortLabel: "منتجات",
+    fullLabel: "إدارة المنتجات",
+    icon: FaBoxOpen,
+    component: ProductsPreviewOnly,
   },
 ];
 
@@ -154,6 +155,7 @@ export default function BarberMobileApp() {
 
   const initialIndex = getTabIndexFromPath(location.pathname);
 
+  const [moreNavOpen, setMoreNavOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(initialIndex);
 
   const [containerWidth, setContainerWidth] = useState(() => window.innerWidth);
@@ -366,40 +368,148 @@ export default function BarberMobileApp() {
         </MotionDiv>
       </div>
 
+      {moreNavOpen && (
+        <button
+          type="button"
+          className="barber-nav-backdrop"
+          aria-label="إغلاق قائمة المزيد"
+          onClick={() => setMoreNavOpen(false)}
+          data-no-page-swipe
+        />
+      )}
+
+      {moreNavOpen && (
+        <div
+          className="barber-more-menu"
+          role="menu"
+          aria-label="المزيد من صفحات لوحة الحلاق"
+          data-no-page-swipe
+        >
+          {[
+            {
+              id: "weekly-hours",
+              label: "الساعات الأسبوعية",
+              icon: FaCalendarAlt,
+            },
+            {
+              id: "blocked",
+              label: "المحظورون",
+              icon: FaBan,
+            },
+            {
+              id: "products",
+              label: "المنتجات",
+              icon: FaBoxOpen,
+            },
+          ].map((item) => {
+            const tabIndex = TABS.findIndex(
+              (tab) => tab.id === item.id,
+            );
+
+            const ItemIcon = item.icon;
+
+            return (
+              <button
+                key={item.id}
+                type="button"
+                role="menuitem"
+                className="barber-more-menu-item"
+                onClick={() => {
+                  setMoreNavOpen(false);
+                  goToTab(tabIndex);
+                }}
+                data-no-page-swipe
+              >
+                <span className="barber-more-menu-icon">
+                  <ItemIcon />
+                </span>
+
+                <span>{item.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       <nav
         className="barber-floating-nav"
         aria-label="التنقل في لوحة الحلاق"
         data-no-page-swipe
       >
-        {TABS.map((tab, index) => {
-          const Icon = tab.icon;
+        {[{ id: "manage", label: "الساعات", icon: FaClock }, { id: "bookings", label: "الحجوزات", icon: FaCalendarCheck }, { id: "stats", label: "الإحصائيات", icon: FaChartBar }, { id: "reviews", label: "التقييمات", icon: FaStar }].map((item) => {
+          const tabIndex = TABS.findIndex(
+            (tab) => tab.id === item.id,
+          );
 
-          const active = activeIndex === index;
+          const Icon = item.icon;
+          const active = activeIndex === tabIndex;
 
           return (
             <button
-              key={tab.id}
+              key={item.id}
               type="button"
-              className={`barber-nav-item ${active ? "is-active" : ""}`}
-              onClick={() => goToTab(index)}
+              className={`barber-nav-item ${
+                active ? "is-active" : ""
+              }`}
+              onClick={() => {
+                setMoreNavOpen(false);
+                goToTab(tabIndex);
+              }}
               aria-current={active ? "page" : undefined}
-              aria-label={tab.fullLabel}
+              aria-label={item.label}
               data-no-page-swipe
             >
-              <span className="barber-nav-icon" aria-hidden="true">
+              <span
+                className="barber-nav-icon"
+                aria-hidden="true"
+              >
                 <Icon />
               </span>
 
               <span className="barber-nav-label">
-                {active ? tab.fullLabel : tab.shortLabel}
+                {item.label}
               </span>
             </button>
           );
         })}
+
+        <button
+          type="button"
+          className={`barber-nav-item ${
+            moreNavOpen || ["weekly-hours", "blocked", "products"].includes(
+              TABS[activeIndex]?.id,
+            )
+              ? "is-active"
+              : ""
+          }`}
+          onClick={() =>
+            setMoreNavOpen((current) => !current)
+          }
+          aria-expanded={moreNavOpen}
+          aria-label="المزيد"
+          data-no-page-swipe
+        >
+          <span
+            className="barber-nav-icon"
+            aria-hidden="true"
+          >
+            <FaEllipsisH />
+          </span>
+
+          <span className="barber-nav-label">
+            المزيد
+          </span>
+        </button>
       </nav>
     </div>
   );
 }
+
+
+
+
+
+
 
 
 
