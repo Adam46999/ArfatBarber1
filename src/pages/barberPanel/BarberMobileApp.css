@@ -487,3 +487,53 @@
   }
 }
 
+
+/* =========================================================
+   PREMIUM QUIET TAB TRANSITION
+   Tab taps = calm content settle
+   Swipe gesture = physical spring track movement
+   ========================================================= */
+
+@keyframes barberTabContentSettle {
+  0% {
+    opacity: 0.72;
+    transform: translateY(5px) scale(0.995);
+  }
+
+  55% {
+    opacity: 0.96;
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.barber-page-slide.is-active > * {
+  animation:
+    barberTabContentSettle
+    190ms
+    cubic-bezier(0.22, 1, 0.36, 1)
+    both;
+}
+
+/* Active navigation feedback should finish before the eye
+   starts following the page content. */
+.barber-nav-item {
+  transition:
+    color 130ms ease,
+    background-color 140ms ease,
+    transform 100ms ease,
+    box-shadow 140ms ease;
+}
+
+.barber-nav-item:active {
+  transform: scale(0.965);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .barber-page-slide.is-active > * {
+    animation: none !important;
+  }
+}

@@ -112,8 +112,8 @@ const BLOCK_SWIPE_SELECTOR = [
 
 const SPRING_TRANSITION = {
   type: "spring",
-  stiffness: 380,
-  damping: 38,
+  stiffness: 340,
+  damping: 42,
   mass: 0.82,
   restDelta: 0.5,
   restSpeed: 8,
@@ -226,7 +226,7 @@ export default function BarberMobileApp() {
     setActiveIndex(pathIndex);
     setIsDragging(false);
 
-    animateToIndex(pathIndex);
+    animateToIndex(pathIndex, undefined, true);
   }, [animateToIndex, location.pathname]);
 
   useEffect(() => {
@@ -358,7 +358,7 @@ export default function BarberMobileApp() {
             return (
               <section
                 key={tab.id}
-                className={`barber-page-slide ${tab.slideClassName || ""}`}
+                className={`barber-page-slide ${activeIndex === originalIndex ? "is-active" : ""} ${tab.slideClassName || ""}`}
                 aria-hidden={activeIndex !== originalIndex}
               >
                 {createElement(tab.component)}
@@ -416,7 +416,7 @@ export default function BarberMobileApp() {
                 className="barber-more-menu-item"
                 onClick={() => {
                   setMoreNavOpen(false);
-                  goToTab(tabIndex);
+                  goToTab(tabIndex, { immediate: true });
                 }}
                 data-no-page-swipe
               >
@@ -453,7 +453,7 @@ export default function BarberMobileApp() {
               }`}
               onClick={() => {
                 setMoreNavOpen(false);
-                goToTab(tabIndex);
+                goToTab(tabIndex, { immediate: true });
               }}
               aria-current={active ? "page" : undefined}
               aria-label={item.label}
@@ -504,6 +504,7 @@ export default function BarberMobileApp() {
     </div>
   );
 }
+
 
 
 
