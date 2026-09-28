@@ -1,9 +1,9 @@
-// src/pages/barberPanel/BarberPanel.jsx
+﻿// src/pages/barberPanel/BarberPanel.jsx
 
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { useNavigate, Link, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import HeroNoteCard from "./components/HeroNoteCard";
 
@@ -45,7 +45,6 @@ function timeToMinutes(time) {
 export default function BarberPanel() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
-  const { pathname } = useLocation();
 
   const isArabic = i18n.language === "ar";
   const fontClass = isArabic ? "font-ar" : "font-body";
@@ -706,129 +705,101 @@ export default function BarberPanel() {
     selectedDayBookings,
   ]);
 
-  // ====== Header Buttons ======
-  const isActive = (to) =>
-    pathname === to || (to !== "/" && pathname.startsWith(`${to}/`));
-
-  const navBtnClass = (active, tone = "normal") => {
-    const base =
-      "px-4 py-2 rounded-full text-sm font-black transition border whitespace-nowrap";
-
-    if (tone === "danger") {
-      return [
-        base,
-        active
-          ? "bg-rose-600 text-white border-rose-600 shadow"
-          : "bg-white text-rose-700 border-rose-200 hover:bg-rose-50",
-      ].join(" ");
-    }
-
-    return [
-      base,
-      active
-        ? "bg-emerald-600 text-white border-emerald-600 shadow"
-        : "bg-white text-slate-800 border-slate-200 hover:bg-slate-50",
-    ].join(" ");
-  };
-
-  const handleLogout = () => {
-    if (window.confirm("هل أنت متأكد أنك تريد تسجيل الخروج؟")) {
-      localStorage.removeItem("barberUser");
-      navigate("/login");
-    }
-  };
 
   return (
     <div
       className={`min-h-screen bg-slate-100 p-3 sm:p-6 ${fontClass}`}
       dir="rtl"
     >
-      <div className="h-12 sm:h-16" />
 
       {/* =====================================================
           الجزء الرئيسي
       ====================================================== */}
 
-      <div className="max-w-3xl mx-auto overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl">
-        {/* Header */}
-        <div className="border-b border-slate-100 bg-white px-4 py-4 sm:px-7 sm:py-5">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h1 className="text-2xl font-black text-slate-900 sm:text-3xl">
-                إدارة الساعات
-              </h1>
+      <div className="max-w-3xl mx-auto overflow-visible rounded-3xl border border-slate-200 bg-white shadow-xl">
+        {/* ملخص اليوم التشغيلي */}
+        <section className="border-b border-slate-100 bg-slate-50/70 p-3 sm:p-4">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <div className="text-[10px] font-black text-slate-400">
+                اليوم المحدد
+              </div>
 
-              <p className="mt-1 text-xs font-semibold text-slate-500 sm:text-sm">
-                إدارة يومك بسرعة ووضوح.
-              </p>
+              <div className="mt-0.5 truncate text-sm font-black text-slate-900 sm:text-base">
+                {selectedDateHeaderLabel || selectedDate}
+              </div>
             </div>
 
-            <div className="pt-1 text-left text-[11px] font-bold">
-              {loadingWeekly && !weeklyHoursReady ? (
-                <span className="text-sky-600">
-                  جاري مزامنة ساعات الأسبوع...
-                </span>
-              ) : weeklyHoursError ? (
-                <span
-                  className={
-                    weeklyHoursReady ? "text-amber-600" : "text-rose-600"
-                  }
-                >
-                  المزامنة تحتاج مراجعة
-                </span>
-              ) : (
-                <span className="text-emerald-600">تمت المزامنة</span>
-              )}
+            <div
+              className={[
+                "shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-black",
+                isDayBlocked || dayIsClosedByHours
+                  ? "border-rose-200 bg-rose-50 text-rose-700"
+                  : "border-emerald-200 bg-emerald-50 text-emerald-700",
+              ].join(" ")}
+            >
+              {isDayBlocked || dayIsClosedByHours ? "مغلق" : "مفتوح"}
             </div>
           </div>
 
-          {/* أزرار الإدارة */}
-          <div className="mt-4 -mx-1 px-1">
-            <div className="flex items-center gap-2 overflow-x-auto pb-1">
-              <button
-                onClick={() => navigate("/admin-bookings")}
-                className={navBtnClass(isActive("/admin-bookings"))}
-              >
-                لوحة الحجوزات
-              </button>
+          <div className="grid grid-cols-3 gap-2">
+            <div className="rounded-2xl border border-slate-200 bg-white px-3 py-3 text-center shadow-[0_3px_12px_rgba(15,23,42,0.035)]">
+              <div className="text-[10px] font-black text-slate-400">
+                الحجوزات
+              </div>
 
-              <button
-                onClick={() => navigate("/barber/weekly-hours")}
-                className={navBtnClass(isActive("/barber/weekly-hours"))}
-              >
-                ساعات العمل الأسبوعية
-              </button>
+              <div className="mt-1 text-xl font-black leading-none text-slate-950">
+                {remainingBookingsCount}
+              </div>
+            </div>
 
-              <button
-                onClick={() => navigate("/barber/reviews")}
-                className={navBtnClass(isActive("/barber/reviews"))}
-              >
-                إدارة التقييمات
-              </button>
+            <div className="rounded-2xl border border-emerald-100 bg-white px-3 py-3 text-center shadow-[0_3px_12px_rgba(15,23,42,0.035)]">
+              <div className="text-[10px] font-black text-emerald-600">
+                المتاح
+              </div>
 
-              <Link
-                to="/blocked-phones"
-                className={navBtnClass(isActive("/blocked-phones"))}
-              >
-                الأرقام المحظورة
-              </Link>
+              <div className="mt-1 text-xl font-black leading-none text-slate-950">
+                {freeSlotsCount}
+              </div>
+            </div>
 
-              <button
-                onClick={() => navigate("/dashboard")}
-                className={navBtnClass(isActive("/dashboard"))}
-              >
-                الإحصائيات
-              </button>
+            <div className="rounded-2xl border border-rose-100 bg-white px-3 py-3 text-center shadow-[0_3px_12px_rgba(15,23,42,0.035)]">
+              <div className="text-[10px] font-black text-rose-500">
+                مسكّر
+              </div>
 
-              <button
-                onClick={handleLogout}
-                className={navBtnClass(false, "danger")}
-              >
-                تسجيل الخروج
-              </button>
+              <div className="mt-1 text-xl font-black leading-none text-slate-950">
+                {blockedTimes.length}
+              </div>
             </div>
           </div>
-        </div>
+
+          <div className="mt-2 flex items-center justify-between gap-2 px-1 text-[10px] font-bold">
+            <span
+              className={
+                weeklyHoursError
+                  ? "text-amber-600"
+                  : loadingWeekly && !weeklyHoursReady
+                    ? "text-sky-600"
+                    : "text-emerald-600"
+              }
+            >
+              {weeklyHoursError
+                ? "المزامنة تحتاج مراجعة"
+                : loadingWeekly && !weeklyHoursReady
+                  ? "جاري المزامنة..."
+                  : "● متصل ومزامن"}
+            </span>
+
+            {extraSlots ? (
+              <span className="text-slate-500">
+                تعديل الأدوار: {extraSlots > 0 ? "+" : ""}
+                {extraSlots}
+              </span>
+            ) : null}
+          </div>
+        </section>
+
 
         {/* حالة مزامنة ساعات الأسبوع */}
         {loadingWeekly && !weeklyHoursReady && (
@@ -900,71 +871,9 @@ export default function BarberPanel() {
         {/* =====================================================
             1. ملخص اليوم
         ====================================================== */}
-
-        <section className="border-b border-slate-100 bg-slate-50/70 px-4 py-4 sm:px-7">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <div>
-              <h2 className="text-sm font-black text-slate-900">
-                {isToday ? "ملخص اليوم" : "ملخص التاريخ المحدد"}
-              </h2>
-
-              <p className="mt-0.5 text-[11px] font-semibold text-slate-500">
-                {selectedDate}
-              </p>
-            </div>
-
-            {smartAlerts.length > 0 && (
-              <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-black text-amber-800">
-                {smartAlerts.length} تنبيه
-              </span>
-            )}
-          </div>
-
-          {/* الأربع مربعات */}
-          <div className="grid grid-cols-4 gap-2">
-            <div className="rounded-xl border border-slate-200 bg-white px-1.5 py-2 text-center shadow-sm">
-              <div className="text-lg font-black leading-none text-slate-900">
-                {selectedDayBookings.length}
-              </div>
-
-              <div className="mt-1 text-[9px] font-bold leading-tight text-slate-500 sm:text-[10px]">
-                كل الحجوزات
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-amber-200 bg-amber-50/60 px-1.5 py-2 text-center">
-              <div className="text-lg font-black leading-none text-amber-800">
-                {remainingBookingsCount}
-              </div>
-
-              <div className="mt-1 text-[9px] font-bold leading-tight text-amber-700 sm:text-[10px]">
-                المتبقي
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-slate-200 bg-white px-1.5 py-2 text-center">
-              <div className="text-lg font-black leading-none text-slate-700">
-                {completedBookingsCount}
-              </div>
-
-              <div className="mt-1 text-[9px] font-bold leading-tight text-slate-500 sm:text-[10px]">
-                المنتهي
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 px-1.5 py-2 text-center">
-              <div className="text-lg font-black leading-none text-emerald-700">
-                {weeklyHoursReady ? freeSlotsCount : "—"}
-              </div>
-
-              <div className="mt-1 text-[9px] font-bold leading-tight text-emerald-700 sm:text-[10px]">
-                أوقات فاضية
-              </div>
-            </div>
-          </div>
-
-          {/* حجز واحد لكل رقم / يوم */}
-          <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5">
+        <section className="border-b border-slate-100 bg-slate-50/70 px-4 py-3 sm:px-7">
+          {/* إعداد الحجز اليومي */}
+          <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5">
             <div className="min-w-0">
               <div className="text-xs font-black text-slate-800">
                 حجز واحد لكل رقم / يوم
@@ -1037,7 +946,7 @@ export default function BarberPanel() {
             </div>
 
             {selectedDate ? (
-              <div className="sticky top-[64px] z-40 -mx-4 mt-4 border-y border-slate-100 bg-white/95 px-4 py-2 shadow-sm backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:px-0 sm:py-0 sm:shadow-none sm:backdrop-blur-none">
+              <div className="sticky top-0 z-40 -mx-4 border-y border-slate-200 bg-white/98 px-4 py-2 backdrop-blur-xl sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:px-0 sm:py-0 sm:backdrop-blur-none">
                 <div className="grid w-full grid-cols-[68px_minmax(0,1fr)_68px] items-center gap-2">
                   <button
                     type="button"
@@ -1546,3 +1455,12 @@ export default function BarberPanel() {
     </div>
   );
 }
+
+
+
+
+
+
+
+
+

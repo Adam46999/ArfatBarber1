@@ -1,4 +1,4 @@
-// src/pages/Dashboard.jsx
+﻿// src/pages/Dashboard.jsx
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   collection,
@@ -1645,37 +1645,6 @@ export default function Dashboard() {
       "
     >
       <div className="mx-auto max-w-4xl">
-        <header className="mb-5 flex items-start justify-between gap-4">
-          <div>
-            <p className="text-xs font-black text-amber-600">لوحة الحلاق</p>
-
-            <h1 className="mt-1 text-3xl font-black text-slate-950">
-              الإحصائيات
-            </h1>
-
-            <p className="mt-1 text-sm font-bold text-slate-500">
-              أهم شيء للشغل، بدون أرقام مكررة أو تشتيت.
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            className="
-              shrink-0
-              rounded-2xl
-              border border-slate-200
-              bg-white
-              px-4 py-2.5
-              text-sm font-black
-              text-slate-700
-              shadow-sm
-              active:scale-95
-            "
-          >
-            رجوع
-          </button>
-        </header>
 
         <div className="space-y-5">
           <NextBookingCard booking={nextBooking} currentTime={currentTime} />
@@ -1773,3 +1742,4 @@ export default function Dashboard() {
     </main>
   );
 }
+

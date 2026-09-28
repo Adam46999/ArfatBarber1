@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
@@ -360,7 +360,7 @@ export default function ProductsPage({ barberPreview = false }) {
     <main
       id="main"
       dir={dir}
-      className={`min-h-screen bg-[#0b0c0c] text-white ${barberPreview ? "pb-[92px] pt-[var(--app-header-h,64px)]" : "pb-[76px] pt-[var(--app-header-h,64px)] md:pb-0"}`}
+      className={`min-h-screen bg-[#0b0c0c] text-white ${barberPreview ? "pb-[92px]" : "pb-[76px] pt-[var(--app-header-h,64px)] md:pb-0"}`}
     >
       {/* HERO */}
       <section className="relative min-h-[190px] overflow-hidden border-b border-[#d6b15e]/10 sm:min-h-[230px] lg:min-h-[250px]">
@@ -402,7 +402,7 @@ export default function ProductsPage({ barberPreview = false }) {
       </section>
       {/* BARBER ADMIN BAR */}
       {barberPreview && (
-        <section className="sticky top-[var(--app-header-h,64px)] z-30 border-y border-[#d6b15e]/15 bg-[#f5f1e8]/95 px-3 py-2 text-[#171717] shadow-sm backdrop-blur-xl">
+        <section className="sticky top-0 z-30 border-y border-[#d6b15e]/15 bg-[#f5f1e8]/95 px-3 py-2 text-[#171717] shadow-sm backdrop-blur-xl">
           <div className="mx-auto flex max-w-7xl items-center gap-2">
             <div className="min-w-0 flex-1">
               <p className="text-[9px] font-black tracking-[0.14em] text-[#9d7428]">
@@ -745,3 +745,4 @@ export default function ProductsPage({ barberPreview = false }) {
     </main>
   );
 }
+

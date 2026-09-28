@@ -1,4 +1,4 @@
-// src/pages/barberPanel/WeeklyHoursPage.jsx
+﻿// src/pages/barberPanel/WeeklyHoursPage.jsx
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -462,7 +462,7 @@ export default function WeeklyHoursPage() {
       dir={rtl ? "rtl" : "ltr"}
       className="min-h-screen bg-[#f8f8f8] px-4 pt-4 pb-6"
     >
-      <div className="max-w-xl mx-auto pt-24">
+      <div className="max-w-xl mx-auto">
         {/* الشريط العلوي */}
         <div className="rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
           <div className="flex items-center gap-3">
@@ -653,3 +653,4 @@ export default function WeeklyHoursPage() {
     </div>
   );
 }
+

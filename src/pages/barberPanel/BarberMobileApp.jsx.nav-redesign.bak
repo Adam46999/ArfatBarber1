@@ -19,8 +19,6 @@ import {
   FaClock,
   FaStar,
   FaBoxOpen,
-  FaEllipsisH,
-  FaSignOutAlt,
 } from "react-icons/fa";
 
 import BarberPanel from "./BarberPanel";
@@ -30,8 +28,6 @@ import ReviewsManagerPage from "./reviews/ReviewsManagerPage";
 import ProductsPreviewOnly from "./products/ProductsPreviewOnly";
 import BlockedPhones from "../BlockedPhones";
 import Dashboard from "../Dashboard";
-
-import barberLogo from "../../assets/arfatblacklogo.png";
 
 import "./BarberMobileApp.css";
 
@@ -56,12 +52,12 @@ const TABS = [
     component: AdminBookings,
   },
   {
-    id: "stats",
-    path: "/barber/stats",
-    shortLabel: "إحصائيات",
-    fullLabel: "الإحصائيات",
-    icon: FaChartBar,
-    component: Dashboard,
+    id: "weekly-hours",
+    path: "/barber/weekly-hours",
+    shortLabel: "أسبوعي",
+    fullLabel: "ساعات العمل الأسبوعية",
+    icon: FaCalendarAlt,
+    component: WeeklyHoursPage,
   },
   {
     id: "reviews",
@@ -72,12 +68,12 @@ const TABS = [
     component: ReviewsManagerPage,
   },
   {
-    id: "weekly-hours",
-    path: "/barber/weekly-hours",
-    shortLabel: "أسبوعي",
-    fullLabel: "ساعات العمل الأسبوعية",
-    icon: FaCalendarAlt,
-    component: WeeklyHoursPage,
+    id: "products",
+    path: "/barber/products",
+    shortLabel: "منتجات",
+    fullLabel: "إدارة المنتجات",
+    icon: FaBoxOpen,
+    component: ProductsPreviewOnly,
   },
   {
     id: "blocked",
@@ -88,12 +84,12 @@ const TABS = [
     component: BlockedPhones,
   },
   {
-    id: "products",
-    path: "/barber/products",
-    shortLabel: "منتجات",
-    fullLabel: "إدارة المنتجات",
-    icon: FaBoxOpen,
-    component: ProductsPreviewOnly,
+    id: "stats",
+    path: "/barber/stats",
+    shortLabel: "إحصائيات",
+    fullLabel: "الإحصائيات",
+    icon: FaChartBar,
+    component: Dashboard,
   },
 ];
 
@@ -115,8 +111,8 @@ const BLOCK_SWIPE_SELECTOR = [
 
 const SPRING_TRANSITION = {
   type: "spring",
-  stiffness: 340,
-  damping: 42,
+  stiffness: 380,
+  damping: 38,
   mass: 0.82,
   restDelta: 0.5,
   restSpeed: 8,
@@ -158,7 +154,6 @@ export default function BarberMobileApp() {
 
   const initialIndex = getTabIndexFromPath(location.pathname);
 
-  const [moreNavOpen, setMoreNavOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(initialIndex);
 
   const [containerWidth, setContainerWidth] = useState(() => window.innerWidth);
@@ -229,7 +224,7 @@ export default function BarberMobileApp() {
     setActiveIndex(pathIndex);
     setIsDragging(false);
 
-    animateToIndex(pathIndex, undefined, true);
+    animateToIndex(pathIndex);
   }, [animateToIndex, location.pathname]);
 
   useEffect(() => {
@@ -274,18 +269,6 @@ export default function BarberMobileApp() {
     if (TABS[activeIndex]?.id !== "bookings") return;
     window.dispatchEvent(new Event("barber-bookings-refresh"));
   }, [activeIndex]);
-
-  const handleBarberLogout = () => {
-    const confirmed = window.confirm("هل تريد تسجيل الخروج من لوحة الحلاق؟");
-
-    if (!confirmed) {
-      return;
-    }
-
-    localStorage.removeItem("barberUser");
-    setMoreNavOpen(false);
-    navigate("/login", { replace: true });
-  };
 
   const handlePointerDown = (event) => {
     if (event.pointerType === "mouse" && event.button !== 0) {
@@ -346,42 +329,6 @@ export default function BarberMobileApp() {
 
   return (
     <div className="barber-mobile-app" dir="rtl">
-      <header className="barber-app-header" data-no-page-swipe>
-        <div className="barber-app-header-content">
-          <button
-            type="button"
-            className="barber-app-home-button"
-            onClick={() => navigate("/")}
-            aria-label="العودة إلى الصفحة الرئيسية"
-            title="الرئيسية"
-            data-no-page-swipe
-          >
-            <span className="barber-app-logo-shell">
-              <img
-                src={barberLogo}
-                alt="Arfat Barber"
-                className="barber-app-logo"
-                draggable="false"
-              />
-            </span>
-          </button>
-
-          <div className="barber-app-page-heading">
-            <span className="barber-app-header-kicker">
-              لوحة الحلاق
-            </span>
-
-            <h1 className="barber-app-header-title">
-              {TABS[activeIndex]?.fullLabel}
-            </h1>
-          </div>
-
-          <span
-            className="barber-app-header-balance"
-            aria-hidden="true"
-          />
-        </div>
-      </header>
       <div
         ref={viewportRef}
         className={`barber-pages-viewport ${isDragging ? "is-dragging" : ""}`}
@@ -409,7 +356,7 @@ export default function BarberMobileApp() {
             return (
               <section
                 key={tab.id}
-                className={`barber-page-slide ${activeIndex === originalIndex ? "is-active" : ""} ${tab.slideClassName || ""}`}
+                className={`barber-page-slide ${tab.slideClassName || ""}`}
                 aria-hidden={activeIndex !== originalIndex}
               >
                 {createElement(tab.component)}
@@ -419,168 +366,40 @@ export default function BarberMobileApp() {
         </MotionDiv>
       </div>
 
-      {moreNavOpen && (
-        <button
-          type="button"
-          className="barber-nav-backdrop"
-          aria-label="إغلاق قائمة المزيد"
-          onClick={() => setMoreNavOpen(false)}
-          data-no-page-swipe
-        />
-      )}
-
-      {moreNavOpen && (
-        <div
-          className="barber-more-menu"
-          role="menu"
-          aria-label="المزيد من صفحات لوحة الحلاق"
-          data-no-page-swipe
-        >
-          {[
-            {
-              id: "weekly-hours",
-              label: "الساعات الأسبوعية",
-              icon: FaCalendarAlt,
-            },
-            {
-              id: "blocked",
-              label: "المحظورون",
-              icon: FaBan,
-            },
-            {
-              id: "products",
-              label: "المنتجات",
-              icon: FaBoxOpen,
-            },
-          ].map((item) => {
-            const tabIndex = TABS.findIndex(
-              (tab) => tab.id === item.id,
-            );
-
-            const ItemIcon = item.icon;
-
-            return (
-              <button
-                key={item.id}
-                type="button"
-                role="menuitem"
-                className="barber-more-menu-item"
-                onClick={() => {
-                  setMoreNavOpen(false);
-                  goToTab(tabIndex, { immediate: true });
-                }}
-                data-no-page-swipe
-              >
-                <span className="barber-more-menu-icon">
-                  <ItemIcon />
-                </span>
-
-                <span>{item.label}</span>
-              </button>
-            );
-          })}
-          <div className="barber-more-menu-divider" />
-
-          <button
-            type="button"
-            role="menuitem"
-            className="barber-more-menu-item barber-more-menu-logout"
-            onClick={handleBarberLogout}
-            data-no-page-swipe
-          >
-            <span className="barber-more-menu-icon">
-              <FaSignOutAlt />
-            </span>
-
-            <span>تسجيل الخروج</span>
-          </button>
-        </div>
-      )}
-
       <nav
         className="barber-floating-nav"
         aria-label="التنقل في لوحة الحلاق"
         data-no-page-swipe
       >
-        {[{ id: "manage", label: "الساعات", icon: FaClock }, { id: "bookings", label: "الحجوزات", icon: FaCalendarCheck }, { id: "stats", label: "الإحصائيات", icon: FaChartBar }, { id: "reviews", label: "التقييمات", icon: FaStar }].map((item) => {
-          const tabIndex = TABS.findIndex(
-            (tab) => tab.id === item.id,
-          );
+        {TABS.map((tab, index) => {
+          const Icon = tab.icon;
 
-          const Icon = item.icon;
-          const active = activeIndex === tabIndex;
+          const active = activeIndex === index;
 
           return (
             <button
-              key={item.id}
+              key={tab.id}
               type="button"
-              className={`barber-nav-item ${
-                active ? "is-active" : ""
-              }`}
-              onClick={() => {
-                setMoreNavOpen(false);
-                goToTab(tabIndex, { immediate: true });
-              }}
+              className={`barber-nav-item ${active ? "is-active" : ""}`}
+              onClick={() => goToTab(index)}
               aria-current={active ? "page" : undefined}
-              aria-label={item.label}
+              aria-label={tab.fullLabel}
               data-no-page-swipe
             >
-              <span
-                className="barber-nav-icon"
-                aria-hidden="true"
-              >
+              <span className="barber-nav-icon" aria-hidden="true">
                 <Icon />
               </span>
 
               <span className="barber-nav-label">
-                {item.label}
+                {active ? tab.fullLabel : tab.shortLabel}
               </span>
             </button>
           );
         })}
-
-        <button
-          type="button"
-          className={`barber-nav-item ${
-            moreNavOpen || ["weekly-hours", "blocked", "products"].includes(
-              TABS[activeIndex]?.id,
-            )
-              ? "is-active"
-              : ""
-          }`}
-          onClick={() =>
-            setMoreNavOpen((current) => !current)
-          }
-          aria-expanded={moreNavOpen}
-          aria-label="المزيد"
-          data-no-page-swipe
-        >
-          <span
-            className="barber-nav-icon"
-            aria-hidden="true"
-          >
-            <FaEllipsisH />
-          </span>
-
-          <span className="barber-nav-label">
-            المزيد
-          </span>
-        </button>
       </nav>
     </div>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
 
 
 

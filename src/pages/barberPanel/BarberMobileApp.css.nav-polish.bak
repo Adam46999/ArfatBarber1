@@ -1,0 +1,460 @@
+/* src/pages/barberPanel/BarberMobileApp.css */
+
+.barber-mobile-app {
+  position: relative;
+
+  width: 100%;
+  height: 100dvh;
+
+  overflow: hidden;
+
+  background: #f1f5f9;
+
+  /*
+    منع تحديد النصوص أثناء
+    السحب الأفقي بالخطأ.
+  */
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* الحاوية الخارجية للصفحات */
+.barber-pages-viewport {
+  position: absolute;
+  inset: 0;
+
+  overflow: hidden;
+
+  /*
+    نسمح بالتمرير العمودي الطبيعي،
+    لكن الحركة الأفقية يديرها
+    Framer Motion.
+  */
+  touch-action: pan-y pinch-zoom;
+
+  overscroll-behavior-x: none;
+  overscroll-behavior-y: none;
+
+  cursor: grab;
+}
+
+.barber-pages-viewport.is-dragging {
+  cursor: grabbing;
+
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* المسار الذي يحتوي جميع الصفحات */
+.barber-pages-track {
+  display: flex;
+  flex-direction: row;
+
+  width: 100%;
+  height: 100%;
+
+  direction: ltr;
+
+  will-change: transform;
+
+  transform: translateZ(0);
+
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+
+  perspective: 1000px;
+}
+
+/* كل صفحة */
+.barber-page-slide {
+  position: relative;
+
+  flex: 0 0 100%;
+
+  width: 100%;
+  min-width: 100%;
+  max-width: 100%;
+
+  height: 100%;
+
+  overflow-x: hidden;
+  overflow-y: auto;
+
+  direction: rtl;
+
+  overscroll-behavior-y: contain;
+
+  padding-bottom: calc(112px + env(safe-area-inset-bottom));
+
+  -webkit-overflow-scrolling: touch;
+
+  /*
+    يساعد المتصفح على عزل رسم
+    كل صفحة وتحسين السحب.
+  */
+  contain: layout paint style;
+
+  transform: translateZ(0);
+
+  backface-visibility: hidden;
+
+  -webkit-backface-visibility: hidden;
+}
+
+.barber-page-slide > * {
+  width: 100%;
+  min-height: 100%;
+}
+
+/*
+  إخفاء شريط التنقل القديم
+  داخل صفحة إدارة الساعات فقط.
+*/
+.barber-manage-slide > div > div:nth-child(2) > div:first-child > div.mt-4 {
+  display: none !important;
+}
+
+/* =========================================================
+   PREMIUM BARBER BOTTOM NAV
+   ========================================================= */
+
+.barber-floating-nav {
+  position: fixed;
+  z-index: 110;
+
+  right: 10px;
+  left: 10px;
+  bottom: calc(9px + env(safe-area-inset-bottom));
+
+  height: 78px;
+
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  align-items: stretch;
+
+  padding: 6px;
+
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 24px;
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(23, 24, 24, 0.985) 0%,
+      rgba(10, 11, 11, 0.99) 100%
+    );
+
+  box-shadow:
+    0 18px 48px rgba(0, 0, 0, 0.32),
+    0 5px 16px rgba(0, 0, 0, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+
+  isolation: isolate;
+  transform: translateZ(0);
+}
+
+.barber-nav-item {
+  position: relative;
+
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  gap: 5px;
+
+  padding: 7px 2px 8px;
+
+  border: 0;
+  border-radius: 18px;
+
+  outline: none;
+
+  background: transparent;
+  color: rgba(255, 255, 255, 0.5);
+
+  cursor: pointer;
+
+  transition:
+    color 180ms ease,
+    background-color 180ms ease,
+    transform 160ms ease,
+    box-shadow 180ms ease;
+
+  -webkit-tap-highlight-color: transparent;
+}
+
+.barber-nav-item::after {
+  content: "";
+
+  position: absolute;
+
+  right: 27%;
+  left: 27%;
+  bottom: 3px;
+
+  height: 3px;
+
+  border-radius: 999px;
+
+  background: transparent;
+
+  transform: scaleX(0.4);
+
+  transition:
+    background-color 180ms ease,
+    transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.barber-nav-item:hover {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.barber-nav-item:active {
+  transform: scale(0.95);
+}
+
+.barber-nav-item:focus-visible {
+  box-shadow: inset 0 0 0 2px rgba(220, 185, 111, 0.75);
+}
+
+.barber-nav-item.is-active {
+  color: #e4c47e;
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(222, 189, 117, 0.14) 0%,
+      rgba(222, 189, 117, 0.055) 100%
+    );
+
+  box-shadow:
+    inset 0 0 0 1px rgba(224, 192, 121, 0.13),
+    0 4px 16px rgba(0, 0, 0, 0.16);
+}
+
+.barber-nav-item.is-active::after {
+  background: #dfbd72;
+  transform: scaleX(1);
+}
+
+.barber-nav-icon {
+  display: grid;
+  place-items: center;
+
+  width: 24px;
+  height: 24px;
+
+  flex-shrink: 0;
+
+  font-size: 20px;
+  line-height: 1;
+
+  transition:
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    color 180ms ease;
+}
+
+.barber-nav-icon svg {
+  display: block;
+
+  width: 1em;
+  height: 1em;
+}
+
+.barber-nav-item.is-active .barber-nav-icon {
+  transform: translateY(-1px);
+}
+
+.barber-nav-label {
+  display: block;
+
+  width: 100%;
+  min-width: 0;
+
+  overflow: hidden;
+
+  color: currentColor;
+
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.1;
+
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.barber-nav-item.is-active .barber-nav-label {
+  font-weight: 900;
+}
+
+/* More backdrop */
+.barber-nav-backdrop {
+  position: fixed;
+  z-index: 101;
+
+  inset: 0;
+
+  border: 0;
+
+  background: rgba(15, 17, 18, 0.18);
+
+  backdrop-filter: blur(1px);
+  -webkit-backdrop-filter: blur(1px);
+}
+
+/* More popup */
+.barber-more-menu {
+  position: fixed;
+  z-index: 109;
+
+  left: 12px;
+  bottom: calc(96px + env(safe-area-inset-bottom));
+
+  width: min(220px, calc(100vw - 24px));
+
+  display: grid;
+  gap: 5px;
+
+  padding: 7px;
+
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(28, 29, 29, 0.99),
+      rgba(12, 13, 13, 0.99)
+    );
+
+  box-shadow:
+    0 18px 48px rgba(0, 0, 0, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+
+  color: white;
+
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.barber-more-menu-item {
+  min-height: 48px;
+
+  display: flex;
+  align-items: center;
+
+  gap: 10px;
+
+  padding: 9px 12px;
+
+  border: 0;
+  border-radius: 14px;
+
+  background: transparent;
+  color: rgba(255, 255, 255, 0.82);
+
+  font-size: 13px;
+  font-weight: 800;
+
+  text-align: right;
+
+  transition:
+    background-color 160ms ease,
+    color 160ms ease,
+    transform 140ms ease;
+}
+
+.barber-more-menu-item:active {
+  transform: scale(0.98);
+}
+
+.barber-more-menu-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #e4c47e;
+}
+
+.barber-more-menu-icon {
+  display: grid;
+  place-items: center;
+
+  width: 28px;
+  height: 28px;
+
+  flex-shrink: 0;
+
+  border-radius: 9px;
+
+  background: rgba(223, 189, 114, 0.1);
+  color: #dfbd72;
+
+  font-size: 15px;
+}
+
+/* content room for bottom nav */
+.barber-page-slide {
+  padding-bottom:
+    calc(112px + env(safe-area-inset-bottom));
+}
+
+/* small phones */
+@media (max-width: 380px) {
+  .barber-floating-nav {
+    right: 6px;
+    left: 6px;
+
+    height: 74px;
+
+    padding: 5px;
+
+    border-radius: 21px;
+  }
+
+  .barber-nav-item {
+    gap: 4px;
+
+    padding-inline: 1px;
+
+    border-radius: 15px;
+  }
+
+  .barber-nav-icon {
+    width: 22px;
+    height: 22px;
+
+    font-size: 18px;
+  }
+
+  .barber-nav-label {
+    font-size: 9px;
+  }
+}
+
+/* desktop / tablet */
+@media (min-width: 900px) {
+  .barber-floating-nav {
+    right: 50%;
+    left: auto;
+
+    width: min(620px, calc(100vw - 40px));
+
+    transform: translateX(50%) translateZ(0);
+  }
+
+  .barber-more-menu {
+    left: calc(50% - 310px);
+  }
+}
+/* احترام إعداد تقليل الحركة */
+@media (prefers-reduced-motion: reduce) {
+  .barber-nav-item,
+  .barber-nav-icon,
+  .barber-nav-label {
+    transition-duration: 1ms !important;
+  }
+}

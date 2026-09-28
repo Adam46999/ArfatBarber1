@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+﻿import { useMemo, useState } from "react";
 
 import TabsBar from "./TabsBar";
 import FiltersBar from "./FiltersBar";
@@ -193,16 +193,55 @@ export default function ReviewsManagerPage() {
       }}
     >
       <div className="mx-auto w-full max-w-4xl space-y-3">
-        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="flex items-center justify-between gap-3 p-3">
-            <div className="flex min-w-0 items-center gap-2">
-              <h1 className="shrink-0 text-lg font-black text-slate-950">
-                التقييمات
-              </h1>
+        <section
+          className="
+            overflow-hidden rounded-[22px]
+            border border-slate-200
+            bg-white
+            shadow-[0_4px_16px_rgba(15,23,42,0.05)]
+          "
+        >
+          <div className="grid grid-cols-2 gap-2 p-2.5 sm:grid-cols-[1fr_1fr_auto]">
+            <div
+              className="
+                rounded-2xl border border-amber-100
+                bg-amber-50/50 px-3 py-3
+              "
+            >
+              <div className="text-[10px] font-black text-amber-600">
+                المعدّل
+              </div>
 
-              <span className="truncate text-xs font-bold text-slate-500">
-                {count ? `${Number(avg || 0).toFixed(1)} ★ · ${count} تقييم` : "لا يوجد تقييمات"}
-              </span>
+              <div className="mt-1 flex items-end gap-1.5">
+                <span className="text-2xl font-black leading-none text-slate-950">
+                  {count ? Number(avg || 0).toFixed(1) : "—"}
+                </span>
+
+                <span className="pb-0.5 text-xs font-black text-amber-500">
+                  ★
+                </span>
+              </div>
+            </div>
+
+            <div
+              className="
+                rounded-2xl border border-slate-200
+                bg-slate-50 px-3 py-3
+              "
+            >
+              <div className="text-[10px] font-black text-slate-500">
+                التقييمات
+              </div>
+
+              <div className="mt-1 flex items-end gap-1.5">
+                <span className="text-2xl font-black leading-none text-slate-950">
+                  {count || 0}
+                </span>
+
+                <span className="pb-0.5 text-[10px] font-bold text-slate-400">
+                  تقييم
+                </span>
+              </div>
             </div>
 
             <button
@@ -210,14 +249,20 @@ export default function ReviewsManagerPage() {
               onClick={onRefresh}
               disabled={anyLoading}
               className="
-                shrink-0 rounded-xl border border-slate-200
-                bg-slate-50 px-3 py-2
+                col-span-2 flex min-h-[58px]
+                items-center justify-center
+                rounded-2xl border border-slate-200
+                bg-white px-4
                 text-xs font-black text-slate-700
-                transition hover:bg-slate-100
-                disabled:cursor-not-allowed disabled:opacity-50
+                transition
+                hover:bg-slate-50
+                active:scale-[0.98]
+                disabled:cursor-not-allowed
+                disabled:opacity-50
+                sm:col-span-1 sm:min-w-[110px]
               "
             >
-              {refreshing ? "..." : "↻ تحديث"}
+              {refreshing ? "جارٍ التحديث..." : "↻ تحديث"}
             </button>
           </div>
 
@@ -305,3 +350,5 @@ export default function ReviewsManagerPage() {
     </div>
   );
 }
+
+

@@ -1,4 +1,4 @@
-// src/pages/adminBookings/AdminBookingsPage.jsx
+﻿// src/pages/adminBookings/AdminBookingsPage.jsx
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaSyncAlt } from "react-icons/fa";
@@ -211,80 +211,88 @@ export default function AdminBookingsPage() {
           sm:p-6
         "
       >
-        {/* الشريط العلوي */}
-        <div className="flex items-center justify-between gap-3">
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
+        {/* ملخص الحجوزات */}
+        <section
+          className="
+            grid grid-cols-2 gap-2
+            rounded-[22px] border border-slate-200
+            bg-slate-50 p-2.5
+            sm:grid-cols-[1fr_1fr_auto]
+            sm:items-stretch
+          "
+        >
+          <div
             className="
-              text-sm font-semibold
-              text-blue-700
-              transition
-              hover:text-blue-900
+              rounded-2xl border border-emerald-100
+              bg-white px-3 py-3
+              shadow-[0_3px_12px_rgba(15,23,42,0.04)]
             "
           >
-            ← الرجوع
-          </button>
+            <div className="text-[10px] font-black text-emerald-600">
+              القادمة
+            </div>
 
-          <div className="flex-1">
-            <div className="flex flex-wrap items-center justify-center gap-2">
-              <h1
-                className="
-                  text-lg font-extrabold
-                  text-gold
-                  sm:text-xl
-                "
-              >
-                لوحة الحجوزات
-              </h1>
-
-              <span
-                className="
-                  rounded-full
-                  border border-emerald-200
-                  bg-emerald-50
-                  px-3 py-1
-                  text-[11px] font-bold
-                  text-emerald-800
-                "
-              >
-                القادمة: {filteredUpcoming.length}
+            <div className="mt-1 flex items-end gap-1.5">
+              <span className="text-2xl font-black leading-none text-slate-950">
+                {filteredUpcoming.length}
               </span>
 
-              <span
-                className="
-                  rounded-full
-                  border border-yellow-200
-                  bg-yellow-50
-                  px-3 py-1
-                  text-[11px] font-bold
-                  text-yellow-900
-                "
-              >
-                السجل: {filteredPast.length}
+              <span className="pb-0.5 text-[10px] font-bold text-slate-400">
+                حجز
               </span>
             </div>
           </div>
 
           <div
             className="
-              hidden items-center gap-2
-              text-[11px] text-gray-400
-              sm:flex
+              rounded-2xl border border-amber-100
+              bg-white px-3 py-3
+              shadow-[0_3px_12px_rgba(15,23,42,0.04)]
             "
           >
-            <FaSyncAlt className="opacity-70" />
+            <div className="text-[10px] font-black text-amber-600">
+              السجل
+            </div>
 
-            <span>
-              {lastUpdated
-                ? `آخر تحديث: ${String(lastUpdated.getHours()).padStart(
-                    2,
-                    "0",
-                  )}:${String(lastUpdated.getMinutes()).padStart(2, "0")}`
-                : "آخر تحديث: —"}
-            </span>
+            <div className="mt-1 flex items-end gap-1.5">
+              <span className="text-2xl font-black leading-none text-slate-950">
+                {filteredPast.length}
+              </span>
+
+              <span className="pb-0.5 text-[10px] font-bold text-slate-400">
+                حجز
+              </span>
+            </div>
           </div>
-        </div>
+
+          <div
+            className="
+              col-span-2 flex min-h-[58px]
+              items-center justify-between gap-3
+              rounded-2xl border border-slate-200
+              bg-white px-3
+              sm:col-span-1 sm:min-w-[150px]
+            "
+          >
+            <div>
+              <div className="text-[10px] font-black text-slate-400">
+                آخر تحديث
+              </div>
+
+              <div className="mt-1 text-sm font-black text-slate-700">
+                {lastUpdated
+                  ? `${String(lastUpdated.getHours()).padStart(
+                      2,
+                      "0",
+                    )}:${String(lastUpdated.getMinutes()).padStart(2, "0")}`
+                  : "—"}
+              </div>
+            </div>
+
+            <FaSyncAlt className="text-slate-300" aria-hidden="true" />
+          </div>
+        </section>
+
 
         {/* أدوات البحث والفلترة */}
         <Toolbar
@@ -421,3 +429,6 @@ export default function AdminBookingsPage() {
     </section>
   );
 }
+
+
+

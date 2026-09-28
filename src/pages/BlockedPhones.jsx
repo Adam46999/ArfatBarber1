@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import {
   Ban,
   Check,
@@ -171,52 +171,47 @@ export default function BlockedPhones() {
       <div className="mx-auto w-full max-w-4xl space-y-4">
         <section
           className="
-            overflow-hidden rounded-[26px] border border-black/5
-            bg-gradient-to-br from-[#171717] via-[#24211c] to-[#332a1b]
-            px-4 py-5 text-white
-            shadow-[0_12px_30px_rgba(15,23,42,0.12)]
-            sm:px-6 sm:py-6
+            flex items-center justify-between gap-3
+            rounded-[22px] border border-slate-200
+            bg-white px-4 py-3.5
+            shadow-[0_4px_16px_rgba(15,23,42,0.05)]
+            sm:px-5
           "
         >
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex min-w-0 items-start gap-3">
-              <div
-                className="
-                  flex h-12 w-12 shrink-0 items-center justify-center
-                  rounded-2xl border border-white/10 bg-white/10
-                  text-[#e5c36a]
-                "
-              >
-                <ShieldAlert className="h-6 w-6" aria-hidden="true" />
-              </div>
-
-              <div className="min-w-0">
-                <div className="text-[11px] font-black tracking-wide text-[#d6b45c]">
-                  إدارة الحماية
-                </div>
-
-                <h1 className="mt-1 text-xl font-black sm:text-2xl">
-                  الأرقام المحظورة
-                </h1>
-
-                <p className="mt-1 max-w-md text-xs font-semibold leading-5 text-white/60">
-                  إدارة الزبائن الممنوعين من الحجز بطريقة واضحة وآمنة.
-                </p>
-              </div>
-            </div>
-
+          <div className="flex min-w-0 items-center gap-3">
             <div
               className="
-                min-w-[64px] shrink-0 rounded-2xl border border-[#d6b45c]/25
-                bg-[#d6b45c]/10 px-3 py-2.5 text-center
+                flex h-10 w-10 shrink-0 items-center justify-center
+                rounded-xl bg-rose-50 text-rose-600
               "
             >
-              <div className="text-xl font-black text-[#f0ce76]">
-                {blockedPhones.length}
+              <ShieldAlert className="h-5 w-5" aria-hidden="true" />
+            </div>
+
+            <div className="min-w-0">
+              <div className="text-sm font-black text-slate-900">
+                إدارة الحماية
               </div>
-              <div className="mt-0.5 text-[10px] font-black text-white/55">
-                محظور
-              </div>
+
+              <p className="mt-0.5 truncate text-xs font-semibold text-slate-500">
+                إدارة الأرقام الممنوعة من الحجز
+              </p>
+            </div>
+          </div>
+
+          <div
+            className="
+              min-w-[58px] shrink-0 rounded-xl
+              border border-rose-100 bg-rose-50
+              px-3 py-2 text-center
+            "
+          >
+            <div className="text-lg font-black leading-none text-rose-700">
+              {blockedPhones.length}
+            </div>
+
+            <div className="mt-1 text-[10px] font-black text-rose-500">
+              محظور
             </div>
           </div>
         </section>
@@ -611,3 +606,4 @@ export default function BlockedPhones() {
     </div>
   );
 }
+
