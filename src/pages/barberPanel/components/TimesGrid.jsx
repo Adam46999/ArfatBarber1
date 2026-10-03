@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 
 export default function TimesGrid({
   times,
@@ -54,14 +54,14 @@ export default function TimesGrid({
                 setSelectedBookedTime("");
                 onToggleTime(time);
               }}
-              className={`rounded-xl py-2 text-center text-sm font-medium transition-all duration-200 ${
+              className={`min-h-12 rounded-2xl border px-2 py-2.5 text-center text-sm font-black shadow-sm transition-all duration-200 active:scale-[0.97] ${
                 booked
-                  ? "cursor-pointer bg-red-700 text-white"
+                  ? "cursor-pointer border-red-700 bg-gradient-to-b from-red-600 to-red-700 text-white shadow-red-100"
                   : isBlocked
-                    ? "bg-red-200 text-red-800"
+                    ? "border-red-200 bg-gradient-to-b from-red-50 to-red-100 text-red-700"
                     : isSelected
-                      ? "bg-yellow-300 text-gray-900 ring-2 ring-yellow-500"
-                      : "bg-green-100 text-green-800 hover:bg-green-200"
+                      ? "border-amber-400 bg-gradient-to-b from-amber-100 to-amber-200 text-amber-900 ring-2 ring-amber-300"
+                      : "border-emerald-200 bg-gradient-to-b from-emerald-50 to-emerald-100 text-emerald-800 hover:border-emerald-300 hover:from-emerald-100 hover:to-emerald-200"
               }`}
               title={
                 booked
@@ -78,7 +78,7 @@ export default function TimesGrid({
       </div>
 
       {selectedBookedBooking ? (
-        <div className="-mt-2 mb-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-center">
+        <div className="-mt-2 mb-6 rounded-2xl border border-red-200 bg-gradient-to-b from-red-50 to-white px-4 py-3.5 text-center shadow-sm">
           <p className="text-xs font-black text-red-600">هذا الدور محجوز</p>
           <p className="mt-1 text-base font-black text-slate-900">
             👤 {selectedBookedBooking.fullName || "اسم الزبون غير متوفر"}
@@ -91,3 +91,5 @@ export default function TimesGrid({
     </>
   );
 }
+
+

@@ -705,6 +705,59 @@ export default function BarberPanel() {
     selectedDayBookings,
   ]);
 
+  const nextBooking = useMemo(() => {
+    const now = new Date();
+
+    return (
+      selectedDayBookings
+        .filter((booking) => {
+          const bookingDate = getBookingStartDate(booking);
+          return Boolean(bookingDate && bookingDate >= now);
+        })
+        .slice()
+        .sort((a, b) => {
+          const aDate = getBookingStartDate(a);
+          const bDate = getBookingStartDate(b);
+
+          return (aDate?.getTime?.() || 0) - (bDate?.getTime?.() || 0);
+        })[0] || null
+    );
+  }, [selectedDayBookings]);
+
+  const dayLoadStatus = (() => {
+    if (isDayBlocked || dayIsClosedByHours) {
+      return {
+        label: "مغلق",
+        className: "border-rose-200 bg-rose-50 text-rose-700",
+      };
+    }
+
+    if (weeklyHoursReady && gridTimesFiltered.length > 0 && freeSlotsCount === 0) {
+      return {
+        label: "ممتلئ",
+        className: "border-rose-200 bg-rose-50 text-rose-700",
+      };
+    }
+
+    if (weeklyHoursReady && freeSlotsCount <= 2) {
+      return {
+        label: "شبه ممتلئ",
+        className: "border-amber-200 bg-amber-50 text-amber-700",
+      };
+    }
+
+    if (remainingBookingsCount <= 2) {
+      return {
+        label: "هادئ",
+        className: "border-sky-200 bg-sky-50 text-sky-700",
+      };
+    }
+
+    return {
+      label: "مفتوح",
+      className: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    };
+  })();
 
   return (
     <div
@@ -733,14 +786,37 @@ export default function BarberPanel() {
             <div
               className={[
                 "shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-black",
-                isDayBlocked || dayIsClosedByHours
-                  ? "border-rose-200 bg-rose-50 text-rose-700"
-                  : "border-emerald-200 bg-emerald-50 text-emerald-700",
+                dayLoadStatus.className,
               ].join(" ")}
             >
-              {isDayBlocked || dayIsClosedByHours ? "مغلق" : "مفتوح"}
+              {dayLoadStatus.label}
             </div>
           </div>
+
+          {nextBooking ? (
+            <div className="mb-3 flex items-center justify-between gap-3 rounded-2xl bg-slate-900 px-4 py-3 text-white shadow-[0_8px_22px_rgba(15,23,42,0.16)]">
+              <div className="min-w-0">
+                <div className="text-[10px] font-black text-white/55">
+                  الحجز القادم
+                </div>
+
+                <div className="mt-0.5 truncate text-sm font-black">
+                  {nextBooking.fullName || "بدون اسم"}
+                </div>
+              </div>
+
+              <div
+                dir="ltr"
+                className="shrink-0 rounded-xl bg-white/10 px-3 py-2 text-base font-black"
+              >
+                {nextBooking.selectedTime}
+              </div>
+            </div>
+          ) : (
+            <div className="mb-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-center text-xs font-bold text-slate-500">
+              لا يوجد حجز قادم بهذا اليوم
+            </div>
+          )}
 
           <div className="grid grid-cols-3 gap-2">
             <div className="rounded-2xl border border-slate-200 bg-white px-3 py-3 text-center shadow-[0_3px_12px_rgba(15,23,42,0.035)]">
@@ -975,23 +1051,51 @@ export default function BarberPanel() {
                 </div>
               </div>
             ) : null}
-
-          {/* التنبيهات الذكية */}
+          {/* التنبيه الأهم */}
           {smartAlerts.length > 0 && (
-            <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
-              {smartAlerts.map((alertItem) => (
-                <button
-                  key={alertItem.id}
-                  type="button"
-                  onClick={() => setActiveAlert(alertItem)}
-                  className="flex shrink-0 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-right text-[11px] font-black text-slate-700 shadow-sm transition hover:bg-slate-50 active:scale-[0.98]"
-                >
-                  <span>{alertItem.icon}</span>
-                  <span>{alertItem.text}</span>
-                </button>
-              ))}
-            </div>
+            <>
+              <button
+                type="button"
+                onClick={() => setActiveAlert(smartAlerts[0])}
+                className="mt-3 flex w-full items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-right transition active:scale-[0.99]"
+              >
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="text-xl">{smartAlerts[0].icon}</span>
+
+                  <div className="min-w-0">
+                    <div className="text-[10px] font-black text-amber-700">
+                      انتبه
+                    </div>
+
+                    <div className="truncate text-sm font-black text-slate-900">
+                      {smartAlerts[0].text}
+                    </div>
+                  </div>
+                </div>
+
+                <span className="shrink-0 text-[11px] font-black text-amber-700">
+                  التفاصيل
+                </span>
+              </button>
+
+              {smartAlerts.length > 1 && (
+                <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
+                  {smartAlerts.slice(1).map((alertItem) => (
+                    <button
+                      key={alertItem.id}
+                      type="button"
+                      onClick={() => setActiveAlert(alertItem)}
+                      className="flex shrink-0 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-right text-[11px] font-black text-slate-700 transition active:scale-[0.98]"
+                    >
+                      <span>{alertItem.icon}</span>
+                      <span>{alertItem.text}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </>
           )}
+
 
             {/* =================================================
                 حالة اليوم
@@ -999,12 +1103,15 @@ export default function BarberPanel() {
             ================================================== */}
 
             {selectedDate && (
-              <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+              <div className={[
+                  "mt-4 rounded-2xl border p-4 transition",
+                  isDayBlocked || dayIsClosedByHours
+                    ? "border-rose-200 bg-rose-50/60"
+                    : "border-emerald-200 bg-emerald-50/50",
+                ].join(" ")}>
                 <div className="flex items-center justify-between gap-4">
                   <div>
-                    <div className="text-sm font-black text-slate-800">
-                      حالة اليوم
-                    </div>
+                    <div className="text-sm font-black text-slate-800">استقبال الحجوزات</div>
 
                     <div className="mt-1 text-xs font-black">
                       {!weeklyHoursReady ? (
@@ -1029,7 +1136,7 @@ export default function BarberPanel() {
                       loadingBlock || !weeklyHoursReady || dayIsClosedByHours
                     }
                     className={[
-                      "rounded-xl px-4 py-2 font-black text-white transition",
+                      "min-h-11 min-w-[112px] rounded-xl px-4 py-2.5 text-sm font-black text-white shadow-sm transition active:scale-[0.98]",
                       !weeklyHoursReady || dayIsClosedByHours
                         ? "cursor-not-allowed bg-slate-300"
                         : isDayBlocked
@@ -1127,32 +1234,50 @@ export default function BarberPanel() {
                   onToggleTime={handleToggleTime}
                 />
 
-                <div className="mt-2">
+                <div className="mt-3">
                   {selectedTimes.length > 0 ? (
-                    <>
-                      <button
-                      onClick={handleApplyBlock}
-                      className="w-full rounded-xl bg-rose-600 py-3 font-black text-white transition-colors hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-300"
-                    >
-                      {t("remove_selected_times") ||
-                        "تطبيق الحظر على الساعات المحددة"}
-                    </button>
-                    {selectedTimes.length === 1 ? (
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-3">
+                      <div className="mb-2 flex items-center justify-between gap-3">
+                        <span className="text-xs font-black text-slate-700">
+                          {selectedTimes.length === 1
+                            ? `الساعة المحددة: ${selectedTimes[0]}`
+                            : `${selectedTimes.length} ساعات محددة`}
+                        </span>
+
+                        <span className="text-[10px] font-bold text-slate-400">
+                          اختر الإجراء
+                        </span>
+                      </div>
+
+                      {selectedTimes.length === 1 ? (
+                        <button
+                          type="button"
+                          onClick={handleManualBooking}
+                          disabled={manualBookingSaving}
+                          className="w-full rounded-xl border border-emerald-600 bg-emerald-600 py-3 font-black text-white shadow-sm transition hover:bg-emerald-700 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {manualBookingSaving
+                            ? "جاري تثبيت الحجز..."
+                            : "حجز الدور باسم زبون"}
+                        </button>
+                      ) : null}
+
                       <button
                         type="button"
-                        onClick={handleManualBooking}
-                        disabled={manualBookingSaving}
-                        className="mt-2 w-full rounded-xl border border-emerald-300 bg-emerald-50 py-3 font-black text-emerald-800 transition-colors hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
+                        onClick={handleApplyBlock}
+                        className={[
+                          "w-full rounded-xl border border-rose-200 bg-rose-50 py-3 font-black text-rose-700 transition hover:bg-rose-100 active:scale-[0.99]",
+                          selectedTimes.length === 1 ? "mt-2" : "",
+                        ].join(" ")}
                       >
-                        {manualBookingSaving
-                          ? "جاري تثبيت الحجز..."
-                          : "حجز الدور باسم زبون"}
+                        {selectedTimes.length === 1
+                          ? "حظر الساعة المحددة"
+                          : `حظر ${selectedTimes.length} ساعات محددة`}
                       </button>
-                    ) : null}
-                  </>
+                    </div>
                   ) : (
                     <p className="text-xs font-semibold text-slate-500">
-                      اختر ساعة أو أكثر ثم اضغط لحظرها.
+                      اختر ساعة أو أكثر، وبعدها اختار إذا بدك تحجزها لزبون أو تحظرها.
                     </p>
                   )}
                 </div>
@@ -1455,6 +1580,15 @@ export default function BarberPanel() {
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
 
 
 
