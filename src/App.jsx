@@ -1,16 +1,19 @@
-// ✅ App.jsx بعد تعديل حماية FCM
+﻿// ✅ App.jsx بعد تعديل حماية FCM
 import Header from "./components/layout/Header";
 import AppRoutes from "./routes";
 import "./i18n";
 import { useTranslation } from "react-i18next";
 import FloatingWhatsappButton from "./components/layout/FloatingWhatsappButton";
 import { useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { getMessaging, onMessage } from "firebase/messaging";
 import { app } from "./firebase";
 import { showForegroundNotification } from "./services/foregroundNotification";
 
 function App() {
   const { i18n } = useTranslation();
+  const location = useLocation();
+  const isBarberRoute = location.pathname.startsWith("/barber");
   const isArabic = i18n.language === "ar";
   const fontClass = isArabic ? "font-ar" : "font-body";
 
@@ -33,7 +36,7 @@ function App() {
 
   return (
     <div className={`${fontClass} min-h-screen`}>
-      <Header />
+      {!isBarberRoute && <Header />}
       <AppRoutes />
       <FloatingWhatsappButton />
     </div>
@@ -41,3 +44,4 @@ function App() {
 }
 
 export default App;
+
