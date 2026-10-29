@@ -12,7 +12,7 @@ import { computeDayAvailability } from "../utils/calendarAvailability.js";
 import { addDaysToYMD } from "../utils/slots.js";
 
 const SOURCE_KEYS = [
-  "bookedSlots",
+  "bookings",
   "blockedDays",
   "blockedTimes",
   "slotExtras",
@@ -118,14 +118,14 @@ export default function useMonthAvailability({
     let slotExtrasByDate = {};
 
     const readiness = {
-      bookedSlots: false,
+      bookings: false,
       blockedDays: false,
       blockedTimes: false,
       slotExtras: false,
     };
 
     const sourceErrors = {
-      bookedSlots: null,
+      bookings: null,
       blockedDays: null,
       blockedTimes: null,
       slotExtras: null,
@@ -204,13 +204,17 @@ export default function useMonthAvailability({
       recompute();
     };
 
-    const bookedSlotsPhysicalEnd =
+
+    const bookingsStart =
+      addDaysToYMD(monthRange.startYMD, -1) || monthRange.startYMD;
+
+    const bookingsEnd =
       addDaysToYMD(monthRange.endYMD, 1) || monthRange.endYMD;
 
-    const bookedSlotsQuery = query(
-      collection(db, "bookedSlots"),
-      where(documentId(), ">=", `${monthRange.startYMD}_00-00`),
-      where(documentId(), "<=", `${bookedSlotsPhysicalEnd}_04-00`),
+    const bookingsQuery = query(
+      collection(db, "bookings"),
+      where("selectedDate", ">=", bookingsStart),
+      where("selectedDate", "<=", bookingsEnd),
     );
 
     const blockedDaysQuery = query(
@@ -231,31 +235,40 @@ export default function useMonthAvailability({
       where(documentId(), "<=", monthRange.endYMD),
     );
 
-    const unsubscribeBookedSlots = onSnapshot(
-      bookedSlotsQuery,
+
+    const unsubscribeBookings = onSnapshot(
+      bookingsQuery,
       (snapshot) => {
         const nextBookedSlotKeys = new Set();
 
-        snapshot.docs.forEach((snapshotDocument) => {
-          const slot = snapshotDocument.data();
+        snapshot.docs.forEach((bookingDocument) => {
+          const booking = bookingDocument.data();
 
-          if (slot?.active !== true) {
+          if (booking?.cancelledAt) {
             return;
           }
 
-          const selectedTime = slot?.selectedTime;
-          const idDate = String(snapshotDocument.id || "").slice(0, 10);
-          const physicalDate =
-            typeof slot?.slotDate === "string" &&
-            /^\d{4}-\d{2}-\d{2}$/.test(slot.slotDate)
-              ? slot.slotDate
-              : idDate;
+          const selectedTime = booking?.selectedTime;
 
           if (
-            !/^\d{4}-\d{2}-\d{2}$/.test(physicalDate) ||
             typeof selectedTime !== "string" ||
             !/^\d{2}:\d{2}$/.test(selectedTime)
           ) {
+            return;
+          }
+
+          const shiftDate =
+            typeof booking?.selectedDate === "string"
+              ? booking.selectedDate
+              : "";
+
+          const physicalDate =
+            typeof booking?.slotDate === "string" &&
+            /^\d{4}-\d{2}-\d{2}$/.test(booking.slotDate)
+              ? booking.slotDate
+              : shiftDate;
+
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(physicalDate)) {
             return;
           }
 
@@ -264,13 +277,12 @@ export default function useMonthAvailability({
 
         bookedSlotKeys = nextBookedSlotKeys;
 
-        markSuccess("bookedSlots");
+        markSuccess("bookings");
       },
       (currentError) => {
-        markError("bookedSlots", currentError);
+        markError("bookings", currentError);
       },
     );
-
     const unsubscribeBlockedDays = onSnapshot(
       blockedDaysQuery,
       (snapshot) => {
@@ -343,7 +355,7 @@ export default function useMonthAvailability({
 
       clearInterval(clockInterval);
 
-      unsubscribeBookedSlots();
+      unsubscribeBookings();
       unsubscribeBlockedDays();
       unsubscribeBlockedTimes();
       unsubscribeSlotExtras();
