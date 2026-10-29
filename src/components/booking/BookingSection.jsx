@@ -1033,7 +1033,76 @@ function BookingSection() {
 
                     clearSubmitError();
 
+
                     setActiveStep(3);
+
+
+                    /*
+
+                     * Smart scroll after choosing a date.
+
+                     */
+
+                    window.requestAnimationFrame(() => {
+
+                      window.requestAnimationFrame(() => {
+
+                        const timeSection =
+
+                          document.getElementById("field-selectedTime");
+
+
+                        if (!timeSection) {
+
+                          return;
+
+                        }
+
+
+                        const rect = timeSection.getBoundingClientRect();
+
+                        const viewportHeight =
+
+                          window.innerHeight ||
+
+                          document.documentElement.clientHeight;
+
+
+                        const alreadyComfortablyVisible =
+
+                          rect.top >= 96 &&
+
+                          rect.top <= viewportHeight * 0.8;
+
+
+                        if (alreadyComfortablyVisible) {
+
+                          return;
+
+                        }
+
+
+                        const reduceMotion =
+
+                          window.matchMedia?.(
+
+                            "(prefers-reduced-motion: reduce)",
+
+                          )?.matches === true;
+
+
+                        timeSection.scrollIntoView({
+
+                          behavior: reduceMotion ? "auto" : "smooth",
+
+                          block: "start",
+
+                        });
+
+                      });
+
+                    });
+
                   }}
                   t={t}
                   onBlur={() => {
