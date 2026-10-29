@@ -78,7 +78,6 @@ function getAvailabilityVisual(summary, language) {
 
   if (
     summary.status === "past" ||
-    summary.status === "closed" ||
     summary.status === "unavailable"
   ) {
     return null;
