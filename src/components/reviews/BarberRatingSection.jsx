@@ -958,7 +958,7 @@ export default function BarberRatingSection() {
       ref={sectionRef}
       id="ratings"
       dir="rtl"
-      className="arfat-premium-reviews relative overflow-hidden bg-gradient-to-b from-[#fffefa] via-[#fffdf8] to-[#f8f5ee] px-3 py-12 font-body sm:px-4 sm:py-16"
+      className="relative overflow-hidden bg-gradient-to-b from-[#fffefa] via-[#fffdf8] to-[#f8f5ee] px-3 py-12 font-body sm:px-4 sm:py-16"
     >
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute -right-20 top-10 h-72 w-72 rounded-full bg-gold/10 blur-3xl" />
