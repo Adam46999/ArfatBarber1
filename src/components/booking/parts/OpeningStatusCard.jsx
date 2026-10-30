@@ -278,7 +278,7 @@ export default function OpeningStatusCard({ status, workingHours = {} }) {
 
   return (
     <section
-      className="overflow-hidden rounded-[20px] border border-[#e6dcc8] bg-gradient-to-b from-[#fffefa] via-white to-[#fdfaf3] shadow-[0_12px_32px_rgba(35,29,20,0.07)] ring-1 ring-white/80"
+      className="arfat-premium-opening-status overflow-hidden rounded-[20px] border border-[#e6dcc8] bg-gradient-to-b from-[#fffefa] via-white to-[#fdfaf3] shadow-[0_12px_32px_rgba(35,29,20,0.07)] ring-1 ring-white/80"
       dir={isRTL ? "rtl" : "ltr"}
       aria-label={t("working_hours", {
         defaultValue: "ساعات العمل",

@@ -162,13 +162,7 @@ function Footer() {
 
       <a
         href="/barber"
-        className={[
-          "absolute bottom-4 left-4 z-10",
-          "font-serif text-sm font-bold text-[#c9a54f]",
-          "transition hover:text-[#e4c875]",
-          "focus-visible:outline-none focus-visible:underline",
-          "sm:bottom-5 sm:left-6 sm:text-base",
-        ].join(" ")}
+        className="sr-only"
         title={t("barber_login", {
           defaultValue: "دخول لوحة تحكم الحلاق",
         })}

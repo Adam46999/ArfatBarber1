@@ -70,7 +70,7 @@ function Header() {
   return (
     <header
       ref={headerRef}
-      className={`fixed top-0 left-0 w-full z-50 border-b border-[#c7a34f]/20 bg-[#171717] text-light shadow-[0_8px_28px_rgba(0,0,0,0.24)] ${fontClass}`}
+      className={`arfat-premium-header fixed top-0 left-0 w-full z-50 border-b border-[#c7a34f]/20 bg-[#171717] text-light shadow-[0_8px_28px_rgba(0,0,0,0.24)] ${fontClass}`}
       role="banner"
     >
       <a

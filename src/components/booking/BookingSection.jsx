@@ -696,7 +696,7 @@ function BookingSection() {
       id="booking"
       dir={isRTL ? "rtl" : "ltr"}
       className={[
-        "border-t border-[#c8a34d]/10 bg-gradient-to-b from-[#f8f6f1] via-[#f6f2e9] to-[#efe9de]",
+        "arfat-premium-booking-section border-t border-[#c8a34d]/10 bg-gradient-to-b from-[#f8f6f1] via-[#f6f2e9] to-[#efe9de]",
         "text-primary",
         "py-10 sm:py-14",
         "px-3 sm:px-4",
@@ -800,7 +800,7 @@ function BookingSection() {
 
         <div id="booking-form-start" />
 
-        <div className="space-y-6 rounded-[28px] border border-[#c8a34d]/20 bg-gradient-to-b from-white via-[#fffdf9] to-[#faf6ed] p-5 shadow-[0_24px_70px_rgba(31,24,12,0.14)] ring-1 ring-white/80 sm:p-8">
+        <div className="arfat-booking-shell space-y-6 rounded-[28px] border border-[#c8a34d]/20 bg-gradient-to-b from-white via-[#fffdf9] to-[#faf6ed] p-5 shadow-[0_24px_70px_rgba(31,24,12,0.14)] ring-1 ring-white/80 sm:p-8">
           {/* =============================================
               نافذة نجاح الحجز
               ============================================= */}
@@ -841,7 +841,7 @@ function BookingSection() {
 
           <form
             onSubmit={handleFormSubmit}
-            className="space-y-5 sm:space-y-6"
+            className="arfat-booking-form space-y-5 sm:space-y-6"
             ref={messageRef}
             noValidate
           >
@@ -849,7 +849,7 @@ function BookingSection() {
                 الاسم
                 =========================================== */}
 
-            <div id="field-fullName" className="scroll-mt-24 rounded-[20px] border border-[#e7e0d2] bg-[linear-gradient(180deg,#fffdfa_0%,#ffffff_100%)] p-4 shadow-[0_8px_24px_rgba(15,23,42,0.045)] transition-[border-color,box-shadow] duration-200 focus-within:border-[#c9a44b]/70 focus-within:shadow-[0_10px_28px_rgba(128,94,22,0.10)] sm:p-5">
+            <div id="field-fullName" className="arfat-booking-field scroll-mt-24 rounded-[20px] border border-[#e7e0d2] bg-[linear-gradient(180deg,#fffdfa_0%,#ffffff_100%)] p-4 shadow-[0_8px_24px_rgba(15,23,42,0.045)] transition-[border-color,box-shadow] duration-200 focus-within:border-[#c9a44b]/70 focus-within:shadow-[0_10px_28px_rgba(128,94,22,0.10)] sm:p-5">
               <label
                 htmlFor="booking-full-name"
                 className="mb-2 block text-sm font-semibold text-gold"
@@ -917,7 +917,7 @@ function BookingSection() {
                 الهاتف
                 =========================================== */}
 
-            <div id="field-phoneNumber" className="scroll-mt-24 rounded-[20px] border border-[#e7e0d2] bg-[linear-gradient(180deg,#fffdfa_0%,#ffffff_100%)] p-4 shadow-[0_8px_24px_rgba(15,23,42,0.045)] transition-[border-color,box-shadow] duration-200 focus-within:border-[#c9a44b]/70 focus-within:shadow-[0_10px_28px_rgba(128,94,22,0.10)] sm:p-5">
+            <div id="field-phoneNumber" className="arfat-booking-field scroll-mt-24 rounded-[20px] border border-[#e7e0d2] bg-[linear-gradient(180deg,#fffdfa_0%,#ffffff_100%)] p-4 shadow-[0_8px_24px_rgba(15,23,42,0.045)] transition-[border-color,box-shadow] duration-200 focus-within:border-[#c9a44b]/70 focus-within:shadow-[0_10px_28px_rgba(128,94,22,0.10)] sm:p-5">
               <label
                 htmlFor="booking-phone"
                 className="mb-2 block text-sm font-semibold text-gold"
@@ -989,7 +989,7 @@ function BookingSection() {
                 التاريخ
                 =========================================== */}
 
-            <div id="field-selectedDate" className="scroll-mt-24 rounded-[20px] border border-[#e7e0d2] bg-[linear-gradient(180deg,#fffdfa_0%,#ffffff_100%)] p-4 shadow-[0_8px_24px_rgba(15,23,42,0.045)] transition-[border-color,box-shadow] duration-200 focus-within:border-[#c9a44b]/70 focus-within:shadow-[0_10px_28px_rgba(128,94,22,0.10)] sm:p-5">
+            <div id="field-selectedDate" className="arfat-booking-field scroll-mt-24 rounded-[20px] border border-[#e7e0d2] bg-[linear-gradient(180deg,#fffdfa_0%,#ffffff_100%)] p-4 shadow-[0_8px_24px_rgba(15,23,42,0.045)] transition-[border-color,box-shadow] duration-200 focus-within:border-[#c9a44b]/70 focus-within:shadow-[0_10px_28px_rgba(128,94,22,0.10)] sm:p-5">
               <label className="mb-2 block text-sm font-semibold text-gold">
                 {translate(t, "choose_date", "اختر التاريخ")}
               </label>
@@ -1138,7 +1138,7 @@ function BookingSection() {
                 الساعة
                 =========================================== */}
 
-            <div id="field-selectedTime" className="scroll-mt-24 rounded-[20px] border border-[#e7e0d2] bg-[linear-gradient(180deg,#fffdfa_0%,#ffffff_100%)] p-4 shadow-[0_8px_24px_rgba(15,23,42,0.045)] transition-[border-color,box-shadow] duration-200 focus-within:border-[#c9a44b]/70 focus-within:shadow-[0_10px_28px_rgba(128,94,22,0.10)] sm:p-5">
+            <div id="field-selectedTime" className="arfat-booking-field scroll-mt-24 rounded-[20px] border border-[#e7e0d2] bg-[linear-gradient(180deg,#fffdfa_0%,#ffffff_100%)] p-4 shadow-[0_8px_24px_rgba(15,23,42,0.045)] transition-[border-color,box-shadow] duration-200 focus-within:border-[#c9a44b]/70 focus-within:shadow-[0_10px_28px_rgba(128,94,22,0.10)] sm:p-5">
               <label className="mb-3 block text-sm font-semibold text-gold">
                 {translate(t, "choose_time", "اختر الساعة")}
               </label>
@@ -1282,7 +1282,7 @@ function BookingSection() {
                 الخدمة
                 =========================================== */}
 
-            <div id="field-selectedService" className="scroll-mt-24 rounded-[20px] border border-[#e7e0d2] bg-[linear-gradient(180deg,#fffdfa_0%,#ffffff_100%)] p-4 shadow-[0_8px_24px_rgba(15,23,42,0.045)] transition-[border-color,box-shadow] duration-200 focus-within:border-[#c9a44b]/70 focus-within:shadow-[0_10px_28px_rgba(128,94,22,0.10)] sm:p-5">
+            <div id="field-selectedService" className="arfat-booking-field scroll-mt-24 rounded-[20px] border border-[#e7e0d2] bg-[linear-gradient(180deg,#fffdfa_0%,#ffffff_100%)] p-4 shadow-[0_8px_24px_rgba(15,23,42,0.045)] transition-[border-color,box-shadow] duration-200 focus-within:border-[#c9a44b]/70 focus-within:shadow-[0_10px_28px_rgba(128,94,22,0.10)] sm:p-5">
               <label className="mb-3 block text-sm font-semibold text-gold">
                 {translate(t, "choose_service", "اختر الخدمة")}
               </label>
@@ -1382,7 +1382,7 @@ function BookingSection() {
                 زر تأكيد الحجز
                 =========================================== */}
 
-            <div className="rounded-[22px] border border-[#eadfca] bg-[linear-gradient(180deg,#fffdf8_0%,#fbf7ee_100%)] p-3 shadow-[0_10px_30px_rgba(128,94,22,0.08)] sm:p-4">
+            <div className="arfat-booking-confirm rounded-[22px] border border-[#eadfca] bg-[linear-gradient(180deg,#fffdf8_0%,#fbf7ee_100%)] p-3 shadow-[0_10px_30px_rgba(128,94,22,0.08)] sm:p-4">
               <button
                 type="submit"
                 disabled={bookingSystemUnavailable}

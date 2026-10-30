@@ -10,6 +10,8 @@ import "swiper/css";
 import "swiper/css/thumbs";
 import "swiper/css/zoom";
 
+import "../../styles/homePremium.css";
+
 
 const images = [
   "/cuts/p1.jpg",
@@ -168,7 +170,7 @@ function InstagramSlider() {
 
   return (
     <>
-      <section className="relative overflow-hidden bg-[linear-gradient(180deg,#fbfaf7_0%,#f3ead7_48%,#fbfaf7_100%)] px-3 py-12 text-center sm:px-5 md:px-10 md:py-20">
+      <section className="arfat-premium-instagram relative overflow-hidden bg-[linear-gradient(180deg,#fbfaf7_0%,#f3ead7_48%,#fbfaf7_100%)] px-3 py-12 text-center sm:px-5 md:px-10 md:py-20">
         <div
           className="pointer-events-none absolute inset-0"
           aria-hidden="true"
@@ -180,7 +182,7 @@ function InstagramSlider() {
         </div>
 
         <div
-          className="relative isolate mx-auto max-w-5xl overflow-hidden rounded-[32px] border border-[#d6b864]/40 bg-[linear-gradient(180deg,rgba(255,255,255,0.96)_0%,rgba(255,252,245,0.92)_100%)] px-3 py-6 shadow-[0_28px_80px_rgba(71,52,15,0.16)] ring-1 ring-white/90 backdrop-blur-xl sm:px-5 sm:py-8 md:rounded-[38px] md:px-7 md:py-10"
+          className="arfat-instagram-card relative isolate mx-auto max-w-5xl overflow-hidden rounded-[32px] border border-[#d6b864]/40 bg-[linear-gradient(180deg,rgba(255,255,255,0.96)_0%,rgba(255,252,245,0.92)_100%)] px-3 py-6 shadow-[0_28px_80px_rgba(71,52,15,0.16)] ring-1 ring-white/90 backdrop-blur-xl sm:px-5 sm:py-8 md:rounded-[38px] md:px-7 md:py-10"
           data-aos="fade-up"
         >
           <div className="relative z-10 mx-auto mb-6 max-w-2xl px-2 md:mb-9">
@@ -250,7 +252,7 @@ function InstagramSlider() {
             </div>
           </div>
 
-          <div className="relative mx-auto max-w-4xl overflow-hidden rounded-[28px] border border-[#d4b76d]/30 bg-[linear-gradient(180deg,rgba(241,232,213,0.82)_0%,rgba(255,255,255,0.78)_100%)] p-1.5 shadow-[0_18px_48px_rgba(59,44,13,0.13)] ring-1 ring-white/75 sm:p-2 md:rounded-[34px]">
+          <div className="arfat-instagram-stage relative mx-auto max-w-4xl overflow-hidden rounded-[28px] border border-[#d4b76d]/30 bg-[linear-gradient(180deg,rgba(241,232,213,0.82)_0%,rgba(255,255,255,0.78)_100%)] p-1.5 shadow-[0_18px_48px_rgba(59,44,13,0.13)] ring-1 ring-white/75 sm:p-2 md:rounded-[34px]">
             <div className="pointer-events-none absolute inset-x-8 top-0 z-20 h-px bg-gradient-to-r from-transparent via-white to-transparent" aria-hidden="true" />
 
             <div className="pointer-events-none absolute left-3 top-3 z-20 h-7 w-7 rounded-tl-xl border-l border-t border-white/65" aria-hidden="true" />
@@ -273,16 +275,23 @@ function InstagramSlider() {
               longSwipesMs={220}
               watchSlidesProgress
               spaceBetween={10}
-              slidesPerView={1.08}
-              centeredSlides
+              slidesPerView={2.35}
+              centeredSlides={false}
               breakpoints={{
+                480: {
+                  slidesPerView: 3.2,
+                  spaceBetween: 10,
+                },
                 640: {
-                  slidesPerView: 1,
-                  centeredSlides: false,
-                  spaceBetween: 0,
+                  slidesPerView: 4.2,
+                  spaceBetween: 12,
+                },
+                900: {
+                  slidesPerView: 5.15,
+                  spaceBetween: 14,
                 },
               }}
-              className="overflow-visible"
+              className="arfat-instagram-main overflow-visible"
             >
               {images.map((image, index) => (
                 <SwiperSlide key={image}>

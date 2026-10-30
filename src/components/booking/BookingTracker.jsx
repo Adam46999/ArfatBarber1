@@ -373,7 +373,7 @@ function BookingTracker() {
     <section
       id="check-booking"
       dir="rtl"
-      className="relative scroll-mt-28 overflow-hidden bg-[#f8f6f1] px-3 py-10 font-body text-primary sm:px-4 sm:py-14 md:scroll-mt-32 md:py-16"
+      className="arfat-premium-tracker relative scroll-mt-28 overflow-hidden bg-[#f8f6f1] px-3 py-10 font-body text-primary sm:px-4 sm:py-14 md:scroll-mt-32 md:py-16"
       style={{ scrollMarginTop: 120 }}
     >
       <SuccessModal visible={Boolean(rescheduleSuccess)} onClose={() => setRescheduleSuccess(null)} code={rescheduleSuccess?.code || ""} t={t} title="تم تغيير موعدك بنجاح" oldDate={rescheduleSuccess?.oldDate ? formatDayAndDate(rescheduleSuccess.oldDate) : ""} oldTime={rescheduleSuccess?.oldTime || ""} newDate={rescheduleSuccess?.newDate ? formatDayAndDate(rescheduleSuccess.newDate) : ""} newTime={rescheduleSuccess?.newTime || ""} codeNote="هذا نفس كود الحجز السابق، لم يتغيّر." />
@@ -396,7 +396,7 @@ function BookingTracker() {
           </span>
         </SectionTitle>
 
-        <div className="mt-5 rounded-[24px] border border-[#e5dcc9] bg-[linear-gradient(180deg,#fffdf8_0%,#ffffff_100%)] p-4 shadow-[0_14px_36px_rgba(40,32,20,0.07)] ring-1 ring-white/80 sm:mt-6 sm:p-5">
+        <div className="arfat-tracker-search-card mt-5 rounded-[24px] border border-[#e5dcc9] bg-[linear-gradient(180deg,#fffdf8_0%,#ffffff_100%)] p-4 shadow-[0_14px_36px_rgba(40,32,20,0.07)] ring-1 ring-white/80 sm:mt-6 sm:p-5">
           <form
             onSubmit={handleCheck}
             className="flex flex-col gap-2.5 sm:flex-row sm:gap-3"

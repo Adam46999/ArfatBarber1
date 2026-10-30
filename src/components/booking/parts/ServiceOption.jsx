@@ -23,7 +23,7 @@ export default function ServiceOption({
     <Card
       selected={selected}
       onClick={() => onSelect?.(id)}
-      className={`h-full min-h-[72px] !rounded-[16px] !p-3.5 sm:!p-4 ${selected ? "!border-[#c9a44b] !bg-[#fffaf0] !ring-[#c9a44b] !shadow-[0_8px_24px_rgba(128,94,22,0.12)]" : "!border-[#e5dfd2] !bg-[#fffdfa] hover:!border-[#d8c89e] hover:!shadow-[0_8px_20px_rgba(31,24,12,0.07)]"} ${rtl ? "text-right" : ""}`}
+      className={`arfat-premium-service-option h-full min-h-[72px] !rounded-[16px] !p-3.5 sm:!p-4 ${selected ? "!border-[#c9a44b] !bg-[#fffaf0] !ring-[#c9a44b] !shadow-[0_8px_24px_rgba(128,94,22,0.12)]" : "!border-[#e5dfd2] !bg-[#fffdfa] hover:!border-[#d8c89e] hover:!shadow-[0_8px_20px_rgba(31,24,12,0.07)]"} ${rtl ? "text-right" : ""}`}
     >
       <div className="flex min-h-[44px] items-center gap-3">
         <div className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-[13px] border shadow-[0_4px_12px_rgba(128,94,22,0.06)] ${selected ? "border-[#ddc476] bg-[#f5e7bd] text-[#7c5b15]" : "border-[#eadfca] bg-[#f9f2df] text-[#9a7625]"}`}>

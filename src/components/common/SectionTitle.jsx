@@ -4,7 +4,7 @@ export default function SectionTitle({ children, icon }) {
     <div className="text-center mb-10">
       <div className="flex items-center justify-center gap-3">
         {icon && (
-          <div className="flex items-center justify-center w-10 h-10 rounded-full bg-gold/10 text-gold">
+          <div className="arfat-section-title-icon flex items-center justify-center w-10 h-10 rounded-full bg-gold/10 text-gold">
             {icon}
           </div>
         )}
