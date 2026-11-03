@@ -1,4 +1,4 @@
-﻿// src/pages/barberPanel/BarberPanel.jsx
+// src/pages/barberPanel/BarberPanel.jsx
 
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
@@ -111,6 +111,7 @@ export default function BarberPanel() {
     setSelectedTimes,
     handleToggleTime,
     handleApplyBlock,
+    handleBlockTimes,
   } =
     useBlockedTimes({
       selectedDate,
@@ -527,6 +528,368 @@ export default function BarberPanel() {
     () => selectedDayBookings.length - completedBookingsCount,
     [selectedDayBookings, completedBookingsCount],
   );
+
+  const closeAfterLastBookingInfo = useMemo(() => {
+    const hidden = {
+      visible: false,
+      lastTime: "",
+      times: [],
+    };
+
+    if (
+      !selectedDate ||
+      !weeklyHoursReady ||
+      dayIsClosedByHours ||
+      isDayBlocked ||
+      !gridTimesFiltered.length
+    ) {
+      return hidden;
+    }
+
+    const selectedBookings =
+      activeBookings.filter(
+        (booking) =>
+          booking.selectedDate ===
+            selectedDate &&
+          !booking.cancelledAt,
+      );
+
+    if (!selectedBookings.length) {
+      return hidden;
+    }
+
+    function parseTimestamp(
+      dateValue,
+      timeValue,
+    ) {
+      if (!dateValue || !timeValue) {
+        return null;
+      }
+
+      const parsed = new Date(
+        `${dateValue}T${timeValue}:00`,
+      );
+
+      const timestamp =
+        parsed.getTime();
+
+      return Number.isFinite(timestamp)
+        ? timestamp
+        : null;
+    }
+
+    function nextDate(dateValue) {
+      const parsed = new Date(
+        `${dateValue}T12:00:00`,
+      );
+
+      if (
+        Number.isNaN(parsed.getTime())
+      ) {
+        return dateValue;
+      }
+
+      parsed.setDate(
+        parsed.getDate() + 1,
+      );
+
+      return [
+        parsed.getFullYear(),
+        String(
+          parsed.getMonth() + 1,
+        ).padStart(2, "0"),
+        String(
+          parsed.getDate(),
+        ).padStart(2, "0"),
+      ].join("-");
+    }
+
+    function bookingSlots(booking) {
+      const result = [];
+
+      const baseDate =
+        booking.slotDate ||
+        booking.selectedDate;
+
+      const baseTime =
+        booking.selectedTime;
+
+      const baseMinutes =
+        timeToMinutes(baseTime);
+
+      function addSlot(
+        dateValue,
+        timeValue,
+      ) {
+        const timestamp =
+          parseTimestamp(
+            dateValue,
+            timeValue,
+          );
+
+        if (timestamp === null) {
+          return;
+        }
+
+        result.push({
+          date: dateValue,
+          time: timeValue,
+          timestamp,
+        });
+      }
+
+      addSlot(
+        baseDate,
+        baseTime,
+      );
+
+      if (
+        Array.isArray(
+          booking.bookedSlots,
+        )
+      ) {
+        for (
+          const slot of
+          booking.bookedSlots
+        ) {
+          if (
+            typeof slot === "string"
+          ) {
+            const slotMinutes =
+              timeToMinutes(slot);
+
+            const slotDate =
+              baseMinutes !== null &&
+              slotMinutes !== null &&
+              slotMinutes <
+                baseMinutes
+                ? nextDate(baseDate)
+                : baseDate;
+
+            addSlot(
+              slotDate,
+              slot,
+            );
+
+            continue;
+          }
+
+          if (
+            !slot ||
+            typeof slot !== "object"
+          ) {
+            continue;
+          }
+
+          const slotTime =
+            slot.time ||
+            slot.selectedTime ||
+            "";
+
+          const slotMinutes =
+            timeToMinutes(slotTime);
+
+          const inferredDate =
+            baseMinutes !== null &&
+            slotMinutes !== null &&
+            slotMinutes <
+              baseMinutes
+              ? nextDate(baseDate)
+              : baseDate;
+
+          addSlot(
+            slot.slotDate ||
+              slot.date ||
+              inferredDate,
+            slotTime,
+          );
+        }
+      }
+
+      /*
+       * Legacy VIP protection.
+       * Current VIP occupies 2 x 30-minute slots.
+       */
+      if (
+        booking.selectedService ===
+          "vip" &&
+        (
+          !Array.isArray(
+            booking.bookedSlots,
+          ) ||
+          booking.bookedSlots.length <
+            2
+        )
+      ) {
+        const start =
+          parseTimestamp(
+            baseDate,
+            baseTime,
+          );
+
+        if (start !== null) {
+          const second =
+            new Date(
+              start +
+                30 * 60 * 1000,
+            );
+
+          const secondDate = [
+            second.getFullYear(),
+            String(
+              second.getMonth() + 1,
+            ).padStart(2, "0"),
+            String(
+              second.getDate(),
+            ).padStart(2, "0"),
+          ].join("-");
+
+          const secondTime = [
+            String(
+              second.getHours(),
+            ).padStart(2, "0"),
+            String(
+              second.getMinutes(),
+            ).padStart(2, "0"),
+          ].join(":");
+
+          addSlot(
+            secondDate,
+            secondTime,
+          );
+        }
+      }
+
+      return result;
+    }
+
+    const selectedOccupiedSlots =
+      selectedBookings.flatMap(
+        bookingSlots,
+      );
+
+    if (
+      !selectedOccupiedSlots.length
+    ) {
+      return hidden;
+    }
+
+    const lastSlot =
+      selectedOccupiedSlots.reduce(
+        (latest, slot) =>
+          !latest ||
+          slot.timestamp >
+            latest.timestamp
+            ? slot
+            : latest,
+        null,
+      );
+
+    if (!lastSlot) {
+      return hidden;
+    }
+
+    /*
+     * Build a safety set from ALL active bookings,
+     * so an occupied physical slot can never be
+     * included in the closing list.
+     */
+    const occupiedKeys =
+      new Set(
+        activeBookings
+          .filter(
+            (booking) =>
+              !booking.cancelledAt,
+          )
+          .flatMap(bookingSlots)
+          .map(
+            (slot) =>
+              `${slot.date}|${slot.time}`,
+          ),
+      );
+
+    const closableTimes =
+      gridTimesFiltered.filter(
+        (time) => {
+          if (
+            blockedTimes.includes(time)
+          ) {
+            return false;
+          }
+
+          const physicalDate =
+            slotDateByTime[time] ||
+            selectedDate;
+
+          const timestamp =
+            parseTimestamp(
+              physicalDate,
+              time,
+            );
+
+          if (
+            timestamp === null ||
+            timestamp <=
+              lastSlot.timestamp
+          ) {
+            return false;
+          }
+
+          return !occupiedKeys.has(
+            `${physicalDate}|${time}`,
+          );
+        },
+      );
+
+    if (!closableTimes.length) {
+      return hidden;
+    }
+
+    return {
+      visible: true,
+      lastTime: lastSlot.time,
+      times: closableTimes,
+    };
+  }, [
+    activeBookings,
+    selectedDate,
+    weeklyHoursReady,
+    dayIsClosedByHours,
+    isDayBlocked,
+    gridTimesFiltered,
+    blockedTimes,
+    slotDateByTime,
+  ]);
+
+  async function handleCloseAfterLastBooking() {
+    const info =
+      closeAfterLastBookingInfo;
+
+    if (
+      !info.visible ||
+      !info.times.length
+    ) {
+      return;
+    }
+
+    const confirmed =
+      window.confirm(
+        "\u0633\u0643\u0631 " +
+          info.times.length +
+          " \u0623\u0648\u0642\u0627\u062a \u0641\u0627\u0636\u064a\u0629 \u0628\u0639\u062f \u0622\u062e\u0631 \u062d\u062c\u0632 (" +
+          info.lastTime +
+          ")?\n\n\u0627\u0644\u062d\u062c\u0648\u0632\u0627\u062a \u0627\u0644\u0645\u0648\u062c\u0648\u062f\u0629 \u0645\u0627 \u0631\u062d \u062a\u062a\u0623\u062b\u0631.",
+      );
+
+    if (!confirmed) {
+      return;
+    }
+
+    await handleBlockTimes(
+      info.times,
+      "\u2705 \u062a\u0645 \u062a\u0633\u0643\u064a\u0631 \u0627\u0644\u0623\u0648\u0642\u0627\u062a \u0627\u0644\u0641\u0627\u0636\u064a\u0629 \u0628\u0639\u062f \u0622\u062e\u0631 \u062d\u062c\u0632",
+    );
+  }
 
   const freeSlotsCount = useMemo(() => {
     if (
@@ -1281,6 +1644,18 @@ export default function BarberPanel() {
                     </p>
                   )}
                 </div>
+
+                {closeAfterLastBookingInfo.visible ? (
+                  <div className="mt-4 flex justify-end border-t border-slate-100 pt-3">
+                    <button
+                      type="button"
+                      onClick={handleCloseAfterLastBooking}
+                      className="text-[11px] font-bold text-slate-400 underline decoration-slate-300 underline-offset-4 transition hover:text-slate-700"
+                    >
+                      {"\u0633\u0643\u0631 \u0627\u0644\u0623\u0648\u0642\u0627\u062a \u0628\u0639\u062f \u0622\u062e\u0631 \u062d\u062c\u0632"}
+                    </button>
+                  </div>
+                ) : null}
               </div>
             )}
 

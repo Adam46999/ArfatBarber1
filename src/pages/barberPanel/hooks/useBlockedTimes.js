@@ -50,12 +50,75 @@ export default function useBlockedTimes({
   }, [selectedDate]);
 
   const isBooked = (time) =>
-    bookings.some(
-      (b) =>
-        b.selectedDate === selectedDate &&
-        b.selectedTime === time &&
-        !b.cancelledAt
-    );
+    bookings.some((booking) => {
+      if (booking.cancelledAt) {
+        return false;
+      }
+
+      const bookingDate =
+        booking.slotDate ||
+        booking.selectedDate;
+
+      if (
+        booking.selectedTime === time &&
+        (
+          bookingDate === selectedDate ||
+          booking.selectedDate === selectedDate
+        )
+      ) {
+        return true;
+      }
+
+      if (
+        !Array.isArray(
+          booking.bookedSlots,
+        )
+      ) {
+        return false;
+      }
+
+      return booking.bookedSlots.some(
+        (slot) => {
+          if (
+            typeof slot === "string"
+          ) {
+            return (
+              booking.selectedDate ===
+                selectedDate &&
+              slot === time
+            );
+          }
+
+          if (
+            !slot ||
+            typeof slot !== "object"
+          ) {
+            return false;
+          }
+
+          const slotTime =
+            slot.time ||
+            slot.selectedTime ||
+            "";
+
+          const slotDate =
+            slot.slotDate ||
+            slot.date ||
+            booking.slotDate ||
+            booking.selectedDate;
+
+          return (
+            slotTime === time &&
+            (
+              slotDate ===
+                selectedDate ||
+              booking.selectedDate ===
+                selectedDate
+            )
+          );
+        },
+      );
+    });
 
   const handleToggleTime = async (time) => {
     if (!selectedDate) return;
@@ -125,6 +188,84 @@ export default function useBlockedTimes({
     setTimeout(() => setStatusMessage?.(""), 2500);
   };
 
+  const handleBlockTimes = async (
+    times,
+    successMessage = "",
+  ) => {
+    if (!selectedDate) return 0;
+
+    const requestedTimes = [
+      ...new Set(
+        (Array.isArray(times) ? times : [])
+          .map((time) => String(time || "").trim())
+          .filter(Boolean),
+      ),
+    ];
+
+    const safeTimes = requestedTimes.filter(
+      (time) =>
+        !blockedTimes.includes(time) &&
+        !isBooked(time),
+    );
+
+    if (safeTimes.length === 0) {
+      setStatusMessage?.(
+        "ما في ساعات متاحة للحظر.",
+      );
+      return 0;
+    }
+
+    try {
+      const ref = doc(
+        db,
+        "blockedTimes",
+        selectedDate,
+      );
+
+      await setDoc(
+        ref,
+        {
+          times: arrayUnion(...safeTimes),
+        },
+        {
+          merge: true,
+        },
+      );
+
+      setBlockedTimes((current) => [
+        ...new Set([
+          ...current,
+          ...safeTimes,
+        ]),
+      ]);
+
+      setSelectedTimes([]);
+
+      setRecentChange({
+        date: selectedDate,
+        times: safeTimes,
+      });
+
+      setStatusMessage?.(
+        successMessage ||
+          `✅ تم حظر ${safeTimes.length} ساعة`,
+      );
+
+      return safeTimes.length;
+    } catch (error) {
+      console.error(
+        "block multiple times error:",
+        error,
+      );
+
+      setStatusMessage?.(
+        "حدث خطأ، حاول مرة أخرى.",
+      );
+
+      return 0;
+    }
+  };
+
   useEffect(() => {
     if (!recentChange) return undefined;
 
@@ -139,5 +280,6 @@ export default function useBlockedTimes({
     setSelectedTimes,
     handleToggleTime,
     handleApplyBlock,
+    handleBlockTimes,
   };
 }

@@ -10,6 +10,7 @@ export default function DayGroup({
   expandedIds,
   toggleExpanded,
   onCancel,
+  onEditCustomerInfo,
 }) {
   const label = getDateLabel(date);
 
@@ -83,6 +84,13 @@ export default function DayGroup({
               expanded={expanded}
               onToggleExpanded={() => toggleExpanded(b.id)}
               onCancel={() => onCancel(b)}
+              onEditCustomerInfo={(values, metadata) =>
+                onEditCustomerInfo(
+                  b,
+                  values,
+                  metadata,
+                )
+              }
             />
           );
         })}

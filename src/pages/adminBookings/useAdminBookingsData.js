@@ -16,6 +16,7 @@ import {
 } from "firebase/firestore";
 
 import { db } from "../../firebase";
+import { updateBookingCustomerInfo } from "../../services/customerInfoEdit";
 
 import {
   archiveExpiredBooking,
@@ -184,6 +185,25 @@ export function useAdminBookingsData() {
        * إذا كان الحجز انحسب سابقًا لأي سبب،
        * ينقص من الإحصائيات تلقائيًا.
        */
+      async updateCustomerInfo(booking, values, metadata = {}) {
+        const updatedBooking =
+          await updateBookingCustomerInfo(
+            booking,
+            values,
+            metadata,
+          );
+
+        setUpcoming((currentBookings) =>
+          currentBookings.map((currentBooking) =>
+            currentBooking.id === booking.id
+              ? updatedBooking
+              : currentBooking,
+          ),
+        );
+
+        return updatedBooking;
+      },
+
       async cancelBooking(booking) {
         await cancelBookingWithStats(booking.id, "BARBER");
 

@@ -10,6 +10,7 @@ import {
 } from "react-icons/fa";
 
 import { e164ToLocalPretty } from "../../utils/phone";
+import CustomerInfoEditor from "./CustomerInfoEditor";
 import { formatDateTime, serviceBadgeClasses, serviceLabel } from "./helpers";
 
 function getTodayYMD() {
@@ -90,6 +91,7 @@ export default function BookingCard({
   expanded,
   onToggleExpanded,
   onCancel,
+  onEditCustomerInfo,
 }) {
   const [copied, setCopied] = useState(false);
   const [copyError, setCopyError] = useState(false);
@@ -213,6 +215,11 @@ export default function BookingCard({
           <div className="mt-2 text-[11px] text-gray-500">
             تم الحجز: {formatDateTime(booking.createdAt)}
           </div>
+
+          <CustomerInfoEditor
+            booking={booking}
+            onSave={onEditCustomerInfo}
+          />
 
           <div className="mt-3 flex flex-col gap-2 sm:flex-row">
           {booking.manualBooking && booking.phoneNumber && <div>📞 {e164ToLocalPretty(booking.phoneNumber)}</div>}
@@ -349,6 +356,11 @@ export default function BookingCard({
           <div className="text-[11px] text-gray-500">
             تم الحجز: {formatDateTime(booking.createdAt)}
           </div>
+
+          <CustomerInfoEditor
+            booking={booking}
+            onSave={onEditCustomerInfo}
+          />
         </div>
 
         <div className="flex flex-col gap-2 sm:flex-row sm:pt-0">

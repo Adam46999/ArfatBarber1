@@ -402,6 +402,13 @@ export default function AdminBookingsPage() {
                       expandedIds={expandedIds}
                       toggleExpanded={toggleExpanded}
                       onCancel={(booking) => actions.cancelBooking(booking)}
+                      onEditCustomerInfo={(booking, values, metadata) =>
+                        actions.updateCustomerInfo(
+                          booking,
+                          values,
+                          metadata,
+                        )
+                      }
                     />
                   ))}
                 </div>
