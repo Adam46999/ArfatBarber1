@@ -325,31 +325,106 @@ export default function WeeklyHoursEditorMobile({
     }
   };
 
-  return (
-    <div className="space-y-3">
-      {/* حالة الحفظ */}
-      <div
-        className={[
-          "rounded-2xl border px-4 py-3 text-sm font-extrabold",
-          "flex items-center justify-between",
-          status.tone === "success"
-            ? "bg-emerald-50 border-emerald-200 text-emerald-800"
-            : status.tone === "warn"
-              ? "bg-amber-50 border-amber-200 text-amber-900"
-              : status.tone === "danger"
-                ? "bg-rose-50 border-rose-200 text-rose-800"
-                : "bg-white border-slate-200 text-slate-700",
-        ].join(" ")}
-      >
-        <span>{status.text}</span>
+  const openDaysCount = DAYS.reduce(
+    (count, day) =>
+      count +
+      (weekly?.[day.key] ? 1 : 0),
+    0,
+  );
 
-        <span className="text-xs font-black text-slate-500">
-          {lastSavedAt ? `${t.lastSaved}: ${lastSavedAt}` : " "}
+  const closedDaysCount =
+    DAYS.length - openDaysCount;
+
+  return (
+    <div>
+      <div className="mb-5 rounded-[22px] border border-slate-200 bg-slate-50/70 px-4 py-3.5">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <div className="text-xs font-black text-slate-500">
+              {isArabic
+                ? "\u0645\u0644\u062e\u0635 \u0627\u0644\u0623\u0633\u0628\u0648\u0639"
+                : "Week overview"}
+            </div>
+
+            <div className="mt-1 flex items-center gap-2 text-sm font-black text-slate-950">
+              <span>
+                {openDaysCount}
+                {" "}
+                {isArabic
+                  ? "\u0645\u0641\u062a\u0648\u062d"
+                  : "open"}
+              </span>
+
+              <span className="text-slate-300">
+                ?
+              </span>
+
+              <span className="text-slate-500">
+                {closedDaysCount}
+                {" "}
+                {isArabic
+                  ? "\u0645\u063a\u0644\u0642"
+                  : "closed"}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            {DAYS.map((day) => {
+              const open =
+                !!weekly?.[day.key];
+
+              return (
+                <span
+                  key={day.key}
+                  title={
+                    isArabic
+                      ? day.ar
+                      : day.en || day.key
+                  }
+                  className={[
+                    "h-2.5 w-2.5 rounded-full",
+                    open
+                      ? "bg-emerald-500"
+                      : "bg-slate-300",
+                  ].join(" ")}
+                />
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      <div className="mb-3 flex items-center justify-between gap-3 px-1">
+        <div>
+          <div className="text-sm font-black text-slate-950">
+            {isArabic
+              ? "\u0627\u0644\u062c\u062f\u0648\u0644 \u0627\u0644\u0623\u0633\u0628\u0648\u0639\u064a"
+              : "Weekly schedule"}
+          </div>
+
+          <div className="mt-0.5 text-[11px] font-bold text-slate-500">
+            {isArabic
+              ? "\u0627\u0636\u063a\u0637 \u0639\u0644\u0649 \u0623\u064a \u064a\u0648\u0645 \u0644\u062a\u0639\u062f\u064a\u0644\u0647"
+              : "Tap any day to edit it"}
+          </div>
+        </div>
+
+        <span
+          className={[
+            "rounded-full px-2.5 py-1 text-[10px] font-black",
+            hasErrors
+              ? "bg-rose-50 text-rose-700"
+              : dirty
+                ? "bg-amber-50 text-amber-800"
+                : "bg-emerald-50 text-emerald-700",
+          ].join(" ")}
+        >
+          {status.text}
         </span>
       </div>
 
-      {/* أيام الأسبوع */}
-      <div className="space-y-2 pb-2">
+      <div className="space-y-2">
         {DAYS.map((day) => (
           <WeeklyDayCard
             key={day.key}
@@ -362,7 +437,11 @@ export default function WeeklyHoursEditorMobile({
             error={errors[day.key]}
             expanded={expanded === day.key}
             onExpand={() => {
-              setExpanded((current) => (current === day.key ? null : day.key));
+              setExpanded((current) =>
+                current === day.key
+                  ? null
+                  : day.key,
+              );
             }}
             onToggleOpen={(open) => {
               onToggleDay(day.key, open);
@@ -374,24 +453,55 @@ export default function WeeklyHoursEditorMobile({
         ))}
       </div>
 
-      {/* رسالة النتيجة */}
+      <div className="mt-5 border-t border-slate-100 pt-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <div className="text-xs font-black text-slate-700">
+              {isArabic
+                ? "\u0625\u062c\u0631\u0627\u0621\u0627\u062a \u0627\u0644\u0623\u0633\u0628\u0648\u0639"
+                : "Week actions"}
+            </div>
+
+            <div className="mt-0.5 text-[10px] font-bold text-slate-400">
+              {isArabic
+                ? "\u0625\u062c\u0631\u0627\u0621 \u0646\u0627\u062f\u0631 \u0644\u0627 \u062a\u062d\u062a\u0627\u062c\u0647 \u064a\u0648\u0645\u064a\u064b\u0627"
+                : "Rare maintenance action"}
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={onReset}
+            disabled={loading || saving}
+            className="rounded-xl px-3 py-2 text-xs font-black text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 disabled:opacity-50"
+          >
+            {isArabic
+              ? "\u0627\u0633\u062a\u0631\u062c\u0627\u0639 \u0627\u0644\u0627\u0641\u062a\u0631\u0627\u0636\u064a"
+              : "Restore default"}
+          </button>
+        </div>
+      </div>
+
       {toast ? (
-        <div className="fixed left-1/2 -translate-x-1/2 bottom-24 z-20">
-          <div className="rounded-2xl bg-slate-900 text-white px-4 py-2 text-sm font-extrabold shadow-xl text-center">
+        <div className="fixed bottom-24 left-1/2 z-50 w-[calc(100%-2rem)] max-w-sm -translate-x-1/2">
+          <div className="rounded-2xl bg-slate-950 px-4 py-3 text-center text-sm font-black text-white shadow-xl">
             {toast}
           </div>
         </div>
       ) : null}
 
-      {/* شريط الحفظ */}
       <StickySaveBar
         isArabic={isArabic}
-        disabled={loading || saving || !dirty || hasErrors}
+        disabled={
+          loading ||
+          saving ||
+          !dirty ||
+          hasErrors
+        }
         saving={saving}
         dirty={dirty}
         hasErrors={hasErrors}
         onSave={onSave}
-        onReset={onReset}
       />
     </div>
   );

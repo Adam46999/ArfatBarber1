@@ -1,7 +1,5 @@
 // src/pages/barberPanel/components/StickySaveBar.jsx
 
-import React from "react";
-
 export default function StickySaveBar({
   isArabic = true,
   disabled = false,
@@ -9,97 +7,60 @@ export default function StickySaveBar({
   dirty = false,
   hasErrors = false,
   onSave,
-  onReset,
 }) {
-  const t = isArabic
-    ? {
-        save: "حفظ التغييرات",
-        saving: "جاري الحفظ...",
-        reset: "إرجاع افتراضي",
-        unsaved: "تغييرات غير محفوظة",
-        saved: "كل شيء محفوظ",
-        errors: "يوجد أخطاء",
-        tip: "لن يتم تطبيق أي تغيير إلا بعد الضغط على حفظ.",
-      }
-    : {
-        save: "Save changes",
-        saving: "Saving…",
-        reset: "Reset default",
-        unsaved: "Unsaved changes",
-        saved: "All saved",
-        errors: "Has errors",
-        tip: "Nothing applies unless you press Save.",
-      };
+  if (!dirty && !hasErrors && !saving) {
+    return null;
+  }
 
-  const renderBadge = () => {
-    if (hasErrors) {
-      return (
-        <span className="inline-flex items-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-black text-rose-800">
-          <span className="text-base leading-none">⚠️</span>
-          {t.errors}
-        </span>
-      );
-    }
-
-    if (dirty) {
-      return (
-        <span className="inline-flex items-center gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-black text-amber-900">
-          <span className="text-base leading-none">✳️</span>
-          {t.unsaved}
-        </span>
-      );
-    }
-
-    return (
-      <span className="inline-flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-800">
-        <span className="text-base leading-none">✅</span>
-        {t.saved}
-      </span>
-    );
-  };
+  const title = hasErrors
+    ? isArabic
+      ? "\u0641\u064a \u062e\u0637\u0623 \u0644\u0627\u0632\u0645 \u064a\u062a\u0635\u0644\u062d"
+      : "Fix an error first"
+    : isArabic
+      ? "\u0639\u0646\u062f\u0643 \u062a\u063a\u064a\u064a\u0631\u0627\u062a \u063a\u064a\u0631 \u0645\u062d\u0641\u0648\u0638\u0629"
+      : "You have unsaved changes";
 
   return (
-    <div className="mt-4">
-      <div className="rounded-3xl border border-slate-200 bg-white p-3 shadow-lg sm:p-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-w-0">
-            {renderBadge()}
+    <div className="sticky bottom-3 z-30 mt-5">
+      <div className="rounded-[22px] border border-slate-200 bg-white/95 p-3 shadow-[0_16px_45px_rgba(15,23,42,0.16)] backdrop-blur">
+        <div className="flex items-center gap-3">
+          <div className="min-w-0 flex-1">
+            <div
+              className={[
+                "text-xs font-black",
+                hasErrors
+                  ? "text-rose-700"
+                  : "text-amber-800",
+              ].join(" ")}
+            >
+              {title}
+            </div>
 
-            <div className="mt-2 text-[11px] font-black leading-5 text-slate-500">
-              {t.tip}
+            <div className="mt-0.5 text-[10px] font-bold text-slate-400">
+              {isArabic
+                ? "\u0645\u0627 \u0628\u062a\u062a\u0637\u0628\u0642 \u0627\u0644\u062a\u063a\u064a\u064a\u0631\u0627\u062a \u0642\u0628\u0644 \u0627\u0644\u062d\u0641\u0638"
+                : "Changes apply only after saving"}
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 sm:flex sm:shrink-0 sm:items-center">
-            <button
-              type="button"
-              onClick={onReset}
-              disabled={saving}
-              className={[
-                "min-h-11 rounded-2xl border border-slate-200 bg-white px-4",
-                "text-sm font-black text-slate-900 transition",
-                "hover:bg-slate-50",
-                "disabled:cursor-not-allowed disabled:opacity-60",
-              ].join(" ")}
-            >
-              {t.reset}
-            </button>
-
-            <button
-              type="button"
-              onClick={onSave}
-              disabled={disabled}
-              className={[
-                "min-h-11 rounded-2xl px-5",
-                "bg-emerald-600 text-sm font-black text-white",
-                "shadow-sm transition hover:bg-emerald-700",
-                "disabled:cursor-not-allowed disabled:bg-slate-300",
-                "disabled:text-slate-500 disabled:shadow-none",
-              ].join(" ")}
-            >
-              {saving ? t.saving : t.save}
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={onSave}
+            disabled={disabled}
+            className={[
+              "min-h-11 shrink-0 rounded-xl px-5 text-sm font-black transition",
+              "bg-slate-950 text-white shadow-sm hover:bg-slate-800",
+              "disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500 disabled:shadow-none",
+            ].join(" ")}
+          >
+            {saving
+              ? isArabic
+                ? "\u062c\u0627\u0631\u064a \u0627\u0644\u062d\u0641\u0638..."
+                : "Saving..."
+              : isArabic
+                ? "\u062d\u0641\u0638"
+                : "Save"}
+          </button>
         </div>
       </div>
     </div>

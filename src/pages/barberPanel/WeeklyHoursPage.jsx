@@ -460,195 +460,168 @@ export default function WeeklyHoursPage() {
   return (
     <div
       dir={rtl ? "rtl" : "ltr"}
-      className="min-h-screen bg-[#f8f8f8] px-4 pt-4 pb-6"
+      className="min-h-screen bg-[#f5f6f7] px-3 pb-8 pt-3 sm:px-4 sm:pt-5"
     >
-      <div className="max-w-xl mx-auto">
-        {/* الشريط العلوي */}
-        <div className="rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={onBackToBarber}
-              className="h-11 w-11 shrink-0 rounded-2xl border border-slate-200 bg-white font-black transition hover:bg-slate-50"
-              aria-label={isArabic ? "رجوع" : "Back"}
-              title={isArabic ? "رجوع" : "Back"}
-            >
-              {rtl ? "→" : "←"}
-            </button>
+      <div className="mx-auto max-w-xl">
+        <div className="mb-4 flex items-center gap-3">
+          <button
+            type="button"
+            onClick={onBackToBarber}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-white text-lg font-black text-slate-700 shadow-sm transition hover:bg-slate-50 active:scale-[0.97]"
+            aria-label={
+              isArabic
+                ? "\u0631\u062c\u0648\u0639"
+                : "Back"
+            }
+          >
+            {rtl ? "?" : "?"}
+          </button>
 
-            <div className="min-w-0 flex-1">
-              <div className="text-lg font-black text-slate-900">
-                {isArabic ? "ساعات العمل" : "Working hours"}
-              </div>
+          <div className="min-w-0 flex-1">
+            <h1 className="text-xl font-black tracking-tight text-slate-950">
+              {isArabic
+                ? "\u0633\u0627\u0639\u0627\u062a \u0627\u0644\u0639\u0645\u0644"
+                : "Working hours"}
+            </h1>
 
-              <div className="mt-0.5 truncate text-xs font-black text-slate-500">
-                {loading && !hasConfirmedWeekly
+            <div className="mt-0.5 flex items-center gap-2 text-[11px] font-bold text-slate-400">
+              <span
+                className={[
+                  "h-1.5 w-1.5 rounded-full",
+                  isStale || loadError
+                    ? "bg-amber-400"
+                    : "bg-emerald-500",
+                ].join(" ")}
+              />
+
+              <span className="truncate">
+                {loading &&
+                !hasConfirmedWeekly
                   ? isArabic
-                    ? "جاري المزامنة مع Firebase..."
-                    : "Syncing with Firebase…"
+                    ? "\u062c\u0627\u0631\u064a \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629..."
+                    : "Syncing..."
                   : updatedText
                     ? isArabic
-                      ? `آخر تعديل: ${updatedText}`
+                      ? `\u0622\u062e\u0631 \u062a\u0639\u062f\u064a\u0644: ${updatedText}`
                       : `Last edit: ${updatedText}`
                     : isArabic
-                      ? "مزامنة مباشرة"
+                      ? "\u0645\u0632\u0627\u0645\u0646\u0629 \u0645\u0628\u0627\u0634\u0631\u0629"
                       : "Live sync"}
-              </div>
+              </span>
             </div>
+          </div>
 
-            <button
-              type="button"
-              onClick={onResetToDefault}
-              disabled={loading || !hasConfirmedWeekly}
-              className="h-11 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-900 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {isArabic ? "افتراضي" : "Default"}
-            </button>
-
+          {hasConfirmedWeekly ? (
             <button
               type="button"
               onClick={onToggleEditMode}
-              disabled={loading || !hasConfirmedWeekly}
+              disabled={loading}
               className={[
-                "h-11 rounded-2xl px-4 text-sm font-black transition",
-                "disabled:cursor-not-allowed disabled:opacity-60",
-
+                "min-h-10 shrink-0 rounded-xl px-4 text-sm font-black transition",
+                "disabled:cursor-not-allowed disabled:opacity-50",
                 editMode
-                  ? "border border-slate-200 bg-white text-slate-900 hover:bg-slate-50"
-                  : "bg-slate-900 text-white hover:bg-slate-800",
+                  ? "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                  : "bg-slate-950 text-white shadow-sm hover:bg-slate-800",
               ].join(" ")}
             >
               {editMode
                 ? isArabic
-                  ? "إلغاء"
+                  ? "\u0625\u0644\u063a\u0627\u0621"
                   : "Cancel"
                 : isArabic
-                  ? "تعديل"
+                  ? "\u062a\u0639\u062f\u064a\u0644"
                   : "Edit"}
             </button>
-          </div>
+          ) : null}
+        </div>
 
-          <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-black leading-5 text-slate-700">
-            ℹ️{" "}
+        {isStale ? (
+          <div className="mb-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-black leading-5 text-amber-900">
             {isArabic
-              ? editMode
-                ? "عدّل الأيام والساعات، ثم اضغط حفظ. أي تحديث يصل أثناء التعديل لن يمسح تغييراتك."
-                : "هذه الساعات متصلة مباشرة مع Firebase. اضغط تعديل للتغيير."
-              : editMode
-                ? "Change the days and hours, then press Save. Incoming updates will not overwrite your changes."
-                : "These hours are live-synced with Firebase. Press Edit to change."}
+              ? "\u064a\u062a\u0645 \u0639\u0631\u0636 \u0622\u062e\u0631 \u0646\u0633\u062e\u0629 \u0645\u0624\u0643\u062f\u0629\u060c \u0644\u0643\u0646 \u0642\u062f \u0644\u0627 \u062a\u0643\u0648\u0646 \u0627\u0644\u0623\u062d\u062f\u062b \u0628\u0633\u0628\u0628 \u0645\u0634\u0643\u0644\u0629 \u0627\u062a\u0635\u0627\u0644."
+              : "Showing the last confirmed schedule. It may not be the newest because of a connection issue."}
           </div>
+        ) : null}
 
-          {isStale ? (
-            <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-black leading-5 text-amber-900">
-              {isArabic
-                ? "يتم عرض آخر نسخة حقيقية تم تحميلها، لكنها قد لا تكون الأحدث بسبب مشكلة اتصال."
-                : "The last confirmed version is visible, but it may not be the newest because of a connection problem."}
-            </div>
-          ) : null}
+        {loadError ? (
+          <div
+            className={[
+              "mb-3 rounded-2xl border px-4 py-3 text-xs font-black leading-5",
+              hasConfirmedWeekly
+                ? "border-amber-200 bg-amber-50 text-amber-900"
+                : "border-rose-200 bg-rose-50 text-rose-800",
+            ].join(" ")}
+          >
+            {loadError}
 
-          {loadError ? (
-            <div
-              className={[
-                "mt-3 rounded-2xl border px-4 py-3 text-xs font-black leading-5",
-
-                hasConfirmedWeekly
-                  ? "border-amber-200 bg-amber-50 text-amber-900"
-                  : "border-rose-200 bg-rose-50 text-rose-800",
-              ].join(" ")}
+            <button
+              type="button"
+              onClick={retryLiveSync}
+              disabled={loading}
+              className="mx-2 underline underline-offset-2 disabled:opacity-50"
             >
-              {loadError}
+              {isArabic
+                ? "\u0625\u0639\u0627\u062f\u0629 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629"
+                : "Retry"}
+            </button>
+          </div>
+        ) : null}
 
-              <div className="mt-2">
-                <button
-                  type="button"
-                  onClick={retryLiveSync}
-                  disabled={loading}
-                  className="underline underline-offset-2 disabled:opacity-60"
-                >
-                  {isArabic ? "إعادة المزامنة" : "Try syncing again"}
-                </button>
+        {!hasConfirmedWeekly ? (
+          <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+            {loading ? (
+              <div className="py-8 text-center">
+                <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-slate-800" />
+
+                <div className="mt-4 text-sm font-black text-slate-700">
+                  {isArabic
+                    ? "\u062c\u0627\u0631\u064a \u062a\u062d\u0645\u064a\u0644 \u0633\u0627\u0639\u0627\u062a \u0627\u0644\u0639\u0645\u0644..."
+                    : "Loading working hours..."}
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-2xl bg-rose-50 p-4 text-center text-sm font-black text-rose-800">
+                {isArabic
+                  ? "\u0644\u0627 \u062a\u0648\u062c\u062f \u0633\u0627\u0639\u0627\u062a \u0645\u0624\u0643\u062f\u0629 \u0644\u0639\u0631\u0636\u0647\u0627."
+                  : "No confirmed hours are available."}
+              </div>
+            )}
+          </div>
+        ) : !editMode ? (
+          <WeeklyHoursReadOnly
+            weekly={weekly}
+            isArabic={isArabic}
+            loading={false}
+            updatedText={updatedText}
+            onEdit={enterEditMode}
+            onResetToDefault={onResetToDefault}
+            showHeader={false}
+          />
+        ) : (
+          <div className="rounded-[28px] border border-slate-200 bg-white p-4 shadow-[0_14px_40px_rgba(15,23,42,0.07)] sm:p-5">
+            <div className="mb-5">
+              <div className="text-lg font-black text-slate-950">
+                {isArabic
+                  ? "\u062a\u0639\u062f\u064a\u0644 \u0627\u0644\u0623\u0633\u0628\u0648\u0639"
+                  : "Edit week"}
+              </div>
+
+              <div className="mt-1 text-xs font-bold leading-5 text-slate-500">
+                {isArabic
+                  ? "\u0627\u0641\u062a\u062d \u0627\u0644\u064a\u0648\u0645 \u0627\u0644\u0630\u064a \u0628\u062f\u0643 \u062a\u0639\u062f\u0644\u0647\u060c \u0648\u063a\u064a\u0651\u0631 \u0627\u0644\u0633\u0627\u0639\u0627\u062a. \u0627\u0644\u062d\u0641\u0638 \u0628\u064a\u0638\u0647\u0631 \u0641\u0642\u0637 \u0644\u0645\u0627 \u064a\u0643\u0648\u0646 \u0641\u064a \u062a\u063a\u064a\u064a\u0631."
+                  : "Open a day to edit it. Save appears only when something changed."}
               </div>
             </div>
-          ) : null}
-        </div>
 
-        {/* المحتوى */}
-        <div className="mt-10">
-          {!hasConfirmedWeekly ? (
-            <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl">
-              <div className="p-5">
-                {loading ? (
-                  <div className="rounded-2xl border border-sky-200 bg-sky-50 p-4">
-                    <div className="text-sm font-black text-sky-800">
-                      {isArabic
-                        ? "جاري تحميل ساعات العمل الحقيقية..."
-                        : "Loading confirmed working hours…"}
-                    </div>
-
-                    <div className="mt-1 text-xs font-black leading-5 text-sky-700">
-                      {isArabic
-                        ? "لن نعرض جدولًا افتراضيًا على أنه الجدول المحفوظ."
-                        : "A default schedule will not be shown as if it were saved."}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4">
-                    <div className="text-sm font-black text-rose-800">
-                      {isArabic
-                        ? "لا توجد ساعات مؤكدة لعرضها حاليًا."
-                        : "There are no confirmed hours available to display."}
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={retryLiveSync}
-                      className="mt-3 rounded-xl border border-rose-300 bg-white px-4 py-2 text-xs font-black text-rose-800 transition hover:bg-rose-100"
-                    >
-                      {isArabic ? "إعادة المزامنة" : "Try syncing again"}
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          ) : !editMode ? (
-            <WeeklyHoursReadOnly
-              weekly={weekly}
+            <WeeklyHoursEditorMobile
+              loading={loading}
+              initialWeekly={weekly}
+              onDirtyChange={handleDirtyChange}
+              onSaved={handleEditorSaved}
               isArabic={isArabic}
-              loading={false}
-              updatedText={updatedText}
-              onEdit={enterEditMode}
-              onResetToDefault={onResetToDefault}
-              showHeader={false}
             />
-          ) : (
-            <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl">
-              <div className="border-b border-slate-200 bg-white px-5 py-4">
-                <div className="text-lg font-black text-slate-900">
-                  {isArabic
-                    ? "تعديل ساعات العمل الأسبوعية"
-                    : "Edit weekly hours"}
-                </div>
-
-                <div className="mt-1 text-xs font-black text-slate-500">
-                  {isArabic
-                    ? "أغلق اليوم أو افتحه، وعدّل وقت البداية والنهاية، ثم احفظ."
-                    : "Open or close each day, adjust the start and end times, then save."}
-                </div>
-              </div>
-
-              <div className="p-4">
-                <WeeklyHoursEditorMobile
-                  loading={loading}
-                  initialWeekly={weekly}
-                  onDirtyChange={handleDirtyChange}
-                  onSaved={handleEditorSaved}
-                  isArabic={isArabic}
-                />
-              </div>
-            </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );
