@@ -1,15 +1,13 @@
 // src/pages/adminBookings/BookingCard.jsx
-import { useState } from "react";
 import {
-  FaCheck,
   FaClock,
-  FaCopy,
+  FaSms,
   FaCut,
   FaPhone,
   FaTimesCircle,
 } from "react-icons/fa";
 
-import { e164ToLocalPretty } from "../../utils/phone";
+import { e164ToLocalPretty, toILPhoneE164 } from "../../utils/phone";
 import CustomerInfoEditor from "./CustomerInfoEditor";
 import { formatDateTime, serviceBadgeClasses, serviceLabel } from "./helpers";
 
@@ -44,7 +42,7 @@ function formatBookingDateForMessage(selectedDate) {
 }
 
 function buildReminderMessage(booking, name) {
-  const bookingDateText = formatBookingDateForMessage(booking.selectedDate);
+  const bookingDateText = formatBookingDateForMessage(booking.slotDate || booking.selectedDate);
 
   const time = booking.selectedTime || "";
   const service = serviceLabel(booking.selectedService);
@@ -56,32 +54,18 @@ function buildReminderMessage(booking, name) {
 بانتظارك، ونرجو الحضور في الموعد المحدد ✂️`;
 }
 
-async function copyTextToClipboard(text) {
-  if (navigator.clipboard && window.isSecureContext) {
-    await navigator.clipboard.writeText(text);
-    return;
-  }
+function buildReminderSmsUrl(booking, name) {
+  const phone = toILPhoneE164(booking.phoneNumber);
 
-  const textArea = document.createElement("textarea");
+  if (booking.manualBooking || !phone) return "";
 
-  textArea.value = text;
-  textArea.style.position = "fixed";
-  textArea.style.top = "-9999px";
-  textArea.style.left = "-9999px";
-  textArea.setAttribute("readonly", "");
+  const isAppleMobile =
+    /iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+    (/Macintosh/i.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+  const separator = isAppleMobile ? "&" : "?";
+  const message = buildReminderMessage(booking, name);
 
-  document.body.appendChild(textArea);
-
-  textArea.select();
-  textArea.setSelectionRange(0, text.length);
-
-  const copied = document.execCommand("copy");
-
-  document.body.removeChild(textArea);
-
-  if (!copied) {
-    throw new Error("Copy failed");
-  }
+  return `sms:${phone}${separator}body=${encodeURIComponent(message)}`;
 }
 
 export default function BookingCard({
@@ -93,60 +77,20 @@ export default function BookingCard({
   onCancel,
   onEditCustomerInfo,
 }) {
-  const [copied, setCopied] = useState(false);
-  const [copyError, setCopyError] = useState(false);
-
   const name = booking.fullName || "بدون اسم";
 
   const timePill = "bg-indigo-600 text-white border-indigo-600";
 
-  async function handleCopyReminder() {
-    const reminderMessage = buildReminderMessage(booking, name);
-
-    setCopyError(false);
-
-    try {
-      await copyTextToClipboard(reminderMessage);
-
-      setCopied(true);
-
-      window.setTimeout(() => {
-        setCopied(false);
-      }, 2500);
-    } catch (error) {
-      console.error("Failed to copy booking reminder:", error);
-
-      setCopyError(true);
-
-      window.setTimeout(() => {
-        setCopyError(false);
-      }, 3000);
-    }
-  }
-
-  function CopyReminderButton({ fullWidth = false }) {
-    return (
-      <button
-        type="button"
-        onClick={handleCopyReminder}
-        className={`inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2 text-sm font-bold transition focus:outline-none focus:ring-2 ${
-          fullWidth ? "w-full sm:w-auto" : ""
-        } ${
-          copied
-            ? "border-emerald-200 bg-emerald-50 text-emerald-700 focus:ring-emerald-200"
-            : copyError
-              ? "border-red-200 bg-red-50 text-red-700 focus:ring-red-200"
-              : "border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100 focus:ring-amber-200"
-        }`}
-        aria-label="نسخ رسالة تذكير الحجز"
-        title="نسخ رسالة التذكير"
-      >
-        {copied ? <FaCheck /> : <FaCopy />}
-
-        {copied ? "تم النسخ" : copyError ? "فشل النسخ" : "نسخ التذكير"}
-      </button>
-    );
-  }
+  const reminderSmsUrl = buildReminderSmsUrl(booking, name);
+  const reminderSmsAction = reminderSmsUrl && (
+    <a
+      href={reminderSmsUrl}
+      className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-bold text-amber-800 transition hover:bg-amber-100 focus:outline-none focus:ring-2 focus:ring-amber-200 sm:w-auto"
+    >
+      <FaSms aria-hidden="true" />
+      إرسال تذكير SMS
+    </a>
+  );
 
   // =========================
   // COMPACT MODE
@@ -225,7 +169,7 @@ export default function BookingCard({
           {booking.manualBooking && booking.phoneNumber && <div>📞 {e164ToLocalPretty(booking.phoneNumber)}</div>}
           {booking.manualBooking && booking.selectedService && <div>✂️ {serviceLabel(booking.selectedService)}</div>}
 
-            {!booking.manualBooking && <CopyReminderButton fullWidth />}
+            {reminderSmsAction}
 
             <button
               type="button"
@@ -370,7 +314,7 @@ export default function BookingCard({
           {booking.manualBooking && booking.phoneNumber && <div>📞 {e164ToLocalPretty(booking.phoneNumber)}</div>}
           {booking.manualBooking && booking.selectedService && <div>✂️ {serviceLabel(booking.selectedService)}</div>}
 
-          {!booking.manualBooking && <CopyReminderButton fullWidth />}
+          {reminderSmsAction}
 
           <button
             type="button"
