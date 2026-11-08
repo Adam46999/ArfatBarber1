@@ -82,6 +82,10 @@ export default function BookingCard({
   const timePill = "bg-indigo-600 text-white border-indigo-600";
 
   const reminderSmsUrl = buildReminderSmsUrl(booking, name);
+  const quickActionPhone = toILPhoneE164(booking.phoneNumber);
+  const showQuickActions =
+    Boolean(quickActionPhone) &&
+    (booking.slotDate || booking.selectedDate) === getTodayYMD();
   const reminderSmsAction = reminderSmsUrl && (
     <a
       href={reminderSmsUrl}
@@ -231,6 +235,29 @@ export default function BookingCard({
             <span className="text-[11px] text-gray-400">فتح</span>
           </div>
         </button>
+        {showQuickActions && (
+          <div className="flex items-center gap-2 border-t border-slate-100 px-3 py-2">
+            <a
+              href={`tel:${quickActionPhone}`}
+              aria-label={`اتصال بـ ${name}`}
+              className="inline-flex min-h-10 items-center gap-1.5 rounded-lg bg-blue-50 px-3 text-xs font-bold text-blue-800"
+            >
+              <FaPhone aria-hidden="true" />
+              اتصال
+            </a>
+
+            {reminderSmsUrl && (
+              <a
+                href={reminderSmsUrl}
+                aria-label={`تذكير SMS لـ ${name}`}
+                className="inline-flex min-h-10 items-center gap-1.5 rounded-lg bg-amber-50 px-3 text-xs font-bold text-amber-800"
+              >
+                <FaSms aria-hidden="true" />
+                تذكير SMS
+              </a>
+            )}
+          </div>
+        )}
       </div>
     );
   }
